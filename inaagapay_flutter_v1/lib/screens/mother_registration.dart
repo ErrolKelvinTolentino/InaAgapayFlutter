@@ -156,12 +156,15 @@ class _MotherRegistrationScreenState
 
               const SizedBox(height: 8),
 
-              Align(
+              Padding(
+              padding: const EdgeInsets.only(right: 20),
+              child: Align(
                 alignment: Alignment.centerRight,
                 child: PasswordStrengthIndicator(
                   strength: strength,
                 ),
               ),
+            ),
 
               const SizedBox(height: 12),
 
@@ -202,23 +205,27 @@ class _MotherRegistrationScreenState
 
                     if (_passwordsDoNotMatch) ...[
                       const SizedBox(height: 8),
-                      Row(
-                        children: const [
-                          Icon(
-                            Icons.cancel,
-                            size: 16,
-                            color: AppColors.error,
-                          ),
-                          SizedBox(width: 6),
-                          Text(
-                            'Passwords do not match',
-                            style: TextStyle(
-                              fontSize: 13,
+                      Padding(
+                        padding: const EdgeInsets.only(left: 20),
+                        child: Row(
+                          children: const [
+                            Icon(
+                              Icons.cancel,
+                              size: 16,
                               color: AppColors.error,
                             ),
-                          ),
-                        ],
+                            SizedBox(width: 6),
+                            Text(
+                              'Passwords do not match',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: AppColors.error,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
+
                     ],
 
                     if (_passwordsMatch) ...[
@@ -278,7 +285,45 @@ class _MotherRegistrationScreenState
                 ],
               ),
 
-              const SizedBox(height: 24),
+             const SizedBox(height: 16),
+
+Text(
+  'By proceeding, you are acknowledging the',
+  textAlign: TextAlign.center,
+  style: TextStyle(
+    fontSize: 12,
+    color: AppColors.textSecondary,
+  ),
+),
+
+const SizedBox(height: 4),
+
+Row(
+  mainAxisAlignment: MainAxisAlignment.center,
+  children: [
+    ClickableText(
+      text: 'Terms of Use',
+      onTap: () {
+        // TODO: open terms
+      },
+    ),
+    const Text(
+      ' and ',
+      style: TextStyle(
+        fontSize: 12,
+        color: AppColors.textSecondary,
+      ),
+    ),
+    ClickableText(
+      text: 'Privacy Policy',
+      onTap: () {
+        // TODO: open privacy policy
+      },
+    ),
+  ],
+),
+
+const SizedBox(height: 24),
             ],
           ),
         ),
