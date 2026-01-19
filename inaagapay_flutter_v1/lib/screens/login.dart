@@ -32,7 +32,7 @@ class _LoginScreenState extends State<LoginScreen> {
               // 🔹 Logo
               Image.asset(
                 'assets/images/logo.png',
-                height: 120,
+                height: 146,
               ),
 
               const SizedBox(height: 20), // ⬅ tighter than before
@@ -40,7 +40,7 @@ class _LoginScreenState extends State<LoginScreen> {
               // 🔹 App name
               Image.asset(
                 'assets/images/inaagapay_name.png',
-                width: 240,
+                width: 282,
                 fit: BoxFit.contain,
               ),
 
@@ -51,13 +51,13 @@ class _LoginScreenState extends State<LoginScreen> {
                 'Supporting you through every step',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: 16,
                   color: AppColors.textSecondary,
                   fontWeight: FontWeight.w400,
                 ),
               ),
 
-              const SizedBox(height: 36), // ⬅ breathing room before inputs
+              const SizedBox(height: 56), // ⬅ breathing room before inputs
 
 
               // 📧 Email input
@@ -68,7 +68,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 leadingIcon: Icons.email_outlined,
               ),
 
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
 
               // 🔒 Password input
               AppInputField(
@@ -86,7 +86,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 },
               ),
 
-              const SizedBox(height: 12),
+              const SizedBox(height: 20),
 
               // 🔹 Forgot password
               Align(
@@ -99,7 +99,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
 
-              const SizedBox(height: 32),
+              const SizedBox(height: 56),
 
               // 🔹 Sign in button
               MainButton(
