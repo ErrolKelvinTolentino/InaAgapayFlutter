@@ -17,28 +17,50 @@ class PasswordStrengthIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _StrengthRow(
-          label: 'Strong',
-          isActive: strength == PasswordStrength.strong,
-          color: AppColors.success,
-          icon: Icons.check_circle,
-        ),
-        _StrengthRow(
-          label: 'Medium',
-          isActive: strength == PasswordStrength.medium,
-          color: AppColors.warning,
-          icon: Icons.radio_button_unchecked,
-        ),
-        _StrengthRow(
-          label: 'Weak',
-          isActive: strength == PasswordStrength.weak,
-          color: AppColors.error,
-          icon: Icons.cancel,
-        ),
-      ],
+    late final String label;
+    late final Color color;
+    late final IconData icon;
+
+    switch (strength) {
+      case PasswordStrength.strong:
+        label = 'Strong';
+        color = AppColors.success;
+        icon = Icons.check_circle;
+        break;
+      case PasswordStrength.medium:
+        label = 'Medium';
+        color = AppColors.warning;
+        icon = Icons.radio_button_unchecked;
+        break;
+      case PasswordStrength.weak:
+      default:
+        label = 'Weak';
+        color = AppColors.error;
+        icon = Icons.cancel;
+        break;
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              color: color,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Icon(
+            icon,
+            size: 16,
+            color: color,
+          ),
+        ],
+      ),
     );
   }
 }

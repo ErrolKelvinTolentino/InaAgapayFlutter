@@ -17,7 +17,7 @@ class PageTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color textColor = color ?? AppColors.brandPrimary;
+    final Color textColor = color ?? AppColors.brandText;
 
     return Row(
       mainAxisSize: MainAxisSize.min,

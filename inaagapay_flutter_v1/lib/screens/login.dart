@@ -126,7 +126,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ClickableText(
                     text: 'Register Here',
                     onTap: () {
-                      // TODO: navigate to register
+                      Navigator.pushNamed(context, '/register');
                     },
                   ),
                 ],

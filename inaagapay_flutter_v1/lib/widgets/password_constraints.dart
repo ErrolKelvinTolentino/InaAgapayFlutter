@@ -51,15 +51,18 @@ class _ConstraintItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = isValid ? AppColors.success : AppColors.error;
+    final Color color =
+        isValid ? AppColors.success : AppColors.error;
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
           Icon(
-            isValid ? Icons.check_circle : Icons.radio_button_unchecked,
-            size: 16,
+            isValid
+                ? Icons.circle // filled circle (green)
+                : Icons.radio_button_unchecked, // hollow circle (red)
+            size: 14,
             color: color,
           ),
           const SizedBox(width: 8),
@@ -68,6 +71,7 @@ class _ConstraintItem extends StatelessWidget {
             style: TextStyle(
               fontSize: 13,
               color: color,
+              fontWeight: FontWeight.w400,
             ),
           ),
         ],
