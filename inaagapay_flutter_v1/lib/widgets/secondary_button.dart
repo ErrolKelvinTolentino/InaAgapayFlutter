@@ -1,14 +1,19 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 
+import 'package:flutter/material.dart';
+import '../theme/app_colors.dart';
+
 class SecondaryButton extends StatelessWidget {
   final String label;
   final VoidCallback onPressed;
+  final bool showIcons; // 👈 ADD
 
   const SecondaryButton({
     super.key,
     required this.label,
     required this.onPressed,
+    this.showIcons = true, // 👈 ADD
   });
 
   @override
@@ -18,38 +23,22 @@ class SecondaryButton extends StatelessWidget {
       width: double.infinity,
       child: ElevatedButton(
         onPressed: onPressed,
-        style: ButtonStyle(
-          elevation: MaterialStateProperty.resolveWith((states) {
-            if (states.contains(MaterialState.pressed)) return 1;
-            return 4;
-          }),
-          backgroundColor: MaterialStateProperty.resolveWith((states) {
-            if (states.contains(MaterialState.pressed)) {
-              return AppColors.bgSecondary; // pressed
-            }
-            if (states.contains(MaterialState.hovered)) {
-              return AppColors.faintWhite; // hovered
-            }
-            return Colors.white; // default
-          }),
-          foregroundColor: MaterialStateProperty.all(
-            AppColors.textSecondary,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.white,
+          foregroundColor: AppColors.textSecondary,
+          elevation: 4,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(28),
           ),
-          shape: MaterialStateProperty.all(
-            RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(28),
-            ),
-          ),
-          side: MaterialStateProperty.all(
-            BorderSide(
-              color: AppColors.borderPrimary,
-            ),
+          side: BorderSide(
+            color: AppColors.borderPrimary,
           ),
         ),
         child: _ButtonContent(
           label: label,
           textColor: AppColors.textSecondary,
           iconColor: AppColors.textSecondary,
+          showIcons: showIcons, // 👈 PASS THROUGH
         ),
       ),
     );
@@ -60,11 +49,13 @@ class _ButtonContent extends StatelessWidget {
   final String label;
   final Color textColor;
   final Color iconColor;
+  final bool showIcons;
 
   const _ButtonContent({
     required this.label,
     required this.textColor,
     required this.iconColor,
+    this.showIcons = true,
   });
 
   @override
@@ -72,8 +63,10 @@ class _ButtonContent extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(Icons.arrow_forward, color: iconColor),
-        const SizedBox(width: 8),
+        if (showIcons) ...[
+          Icon(Icons.arrow_forward, color: iconColor),
+          const SizedBox(width: 8),
+        ],
         Text(
           label,
           style: TextStyle(
@@ -82,8 +75,10 @@ class _ButtonContent extends StatelessWidget {
             color: textColor,
           ),
         ),
-        const SizedBox(width: 8),
-        Icon(Icons.arrow_forward, color: iconColor),
+        if (showIcons) ...[
+          const SizedBox(width: 8),
+          Icon(Icons.arrow_forward, color: iconColor),
+        ],
       ],
     );
   }

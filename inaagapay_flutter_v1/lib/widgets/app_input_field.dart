@@ -94,19 +94,27 @@ class _AppInputFieldState extends State<AppInputField> {
                   // 🔹 Text field
                   Expanded(
                     child: TextField(
-                      controller: widget.controller,
-                      obscureText: widget.obscureText,
-                      keyboardType: widget.keyboardType,
-                      decoration: InputDecoration(
-                        border: InputBorder.none,
-                        hintText: widget.hintText,
-                        hintStyle: TextStyle(
-                          color: hasError
-                              ? AppColors.error.withOpacity(0.7)
-                              : AppColors.textSecondary,
-                        ),
-                      ),
-                    ),
+  controller: widget.controller,
+  obscureText: widget.obscureText,
+  keyboardType: widget.keyboardType,
+
+  // 👇 THIS IS THE IMPORTANT PART
+  style: const TextStyle(
+    color: AppColors.textPrimary, // typed text color
+    fontSize: 16,
+  ),
+
+  decoration: InputDecoration(
+    border: InputBorder.none,
+    hintText: widget.hintText,
+    hintStyle: TextStyle(
+      color: hasError
+          ? AppColors.error.withOpacity(0.7)
+          : AppColors.textSecondary,
+    ),
+  ),
+),
+
                   ),
 
                   // 🔹 Trailing icon

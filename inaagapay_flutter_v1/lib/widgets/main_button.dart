@@ -1,14 +1,19 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 
+import 'package:flutter/material.dart';
+import '../theme/app_colors.dart';
+
 class MainButton extends StatelessWidget {
   final String label;
   final VoidCallback onPressed;
+  final bool showIcons;
 
   const MainButton({
     super.key,
     required this.label,
     required this.onPressed,
+    this.showIcons = true,
   });
 
   @override
@@ -18,44 +23,35 @@ class MainButton extends StatelessWidget {
       width: double.infinity,
       child: ElevatedButton(
         onPressed: onPressed,
-        style: ButtonStyle(
-          elevation: MaterialStateProperty.resolveWith((states) {
-            if (states.contains(MaterialState.pressed)) return 2;
-            return 6;
-          }),
-          backgroundColor: MaterialStateProperty.resolveWith((states) {
-            if (states.contains(MaterialState.pressed)) {
-              return AppColors.brandAccent; // pressed (darker pink)
-            }
-            if (states.contains(MaterialState.hovered)) {
-              return AppColors.brandPrimary.withOpacity(0.9); // hovered
-            }
-            return AppColors.brandPrimary; // default
-          }),
-          shape: MaterialStateProperty.all(
-            RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(28),
-            ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.brandPrimary,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(28),
           ),
+          elevation: 6,
         ),
         child: _ButtonContent(
           label: label,
           textColor: AppColors.textOnColor,
           iconColor: AppColors.textOnColor,
+          showIcons: showIcons,
         ),
       ),
     );
   }
 }
+
 class _ButtonContent extends StatelessWidget {
   final String label;
   final Color textColor;
   final Color iconColor;
+  final bool showIcons;
 
   const _ButtonContent({
     required this.label,
     required this.textColor,
     required this.iconColor,
+    this.showIcons = true,
   });
 
   @override
@@ -63,8 +59,10 @@ class _ButtonContent extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(Icons.arrow_forward, color: iconColor),
-        const SizedBox(width: 8),
+        if (showIcons) ...[
+          Icon(Icons.arrow_forward, color: iconColor),
+          const SizedBox(width: 8),
+        ],
         Text(
           label,
           style: TextStyle(
@@ -73,10 +71,14 @@ class _ButtonContent extends StatelessWidget {
             color: textColor,
           ),
         ),
-        const SizedBox(width: 8),
-        Icon(Icons.arrow_forward, color: iconColor),
+        if (showIcons) ...[
+          const SizedBox(width: 8),
+          Icon(Icons.arrow_forward, color: iconColor),
+        ],
       ],
     );
   }
 }
+
+
 

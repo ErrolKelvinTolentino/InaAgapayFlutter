@@ -1,0 +1,142 @@
+import 'package:flutter/material.dart';
+import '../theme/app_colors.dart';
+import '../widgets/app_input_field.dart';
+import '../widgets/main_button.dart';
+import '../widgets/clickable_text.dart';
+
+class LoginScreen extends StatefulWidget {
+  const LoginScreen({super.key});
+
+  @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+
+  bool _obscurePassword = true;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.bgPrimary,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              const SizedBox(height: 40),
+
+              // 🔹 Logo
+              Image.asset(
+                'assets/images/logo.png',
+                height: 120,
+              ),
+
+              const SizedBox(height: 20), // ⬅ tighter than before
+
+              // 🔹 App name
+              Image.asset(
+                'assets/images/inaagapay_name.png',
+                width: 240,
+                fit: BoxFit.contain,
+              ),
+
+              const SizedBox(height: 8), // ⬅ MUCH tighter
+
+              // 🔹 Tagline
+              const Text(
+                'Supporting you through every step',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: AppColors.textSecondary,
+                  fontWeight: FontWeight.w400,
+                ),
+              ),
+
+              const SizedBox(height: 36), // ⬅ breathing room before inputs
+
+
+              // 📧 Email input
+              AppInputField(
+                hintText: 'Email Address',
+                controller: _emailController,
+                keyboardType: TextInputType.emailAddress,
+                leadingIcon: Icons.email_outlined,
+              ),
+
+              const SizedBox(height: 16),
+
+              // 🔒 Password input
+              AppInputField(
+                hintText: 'Password',
+                controller: _passwordController,
+                obscureText: _obscurePassword,
+                leadingIcon: Icons.lock_outline,
+                trailingIcon: _obscurePassword
+                    ? Icons.visibility_off
+                    : Icons.visibility,
+                onTrailingTap: () {
+                  setState(() {
+                    _obscurePassword = !_obscurePassword;
+                  });
+                },
+              ),
+
+              const SizedBox(height: 12),
+
+              // 🔹 Forgot password
+              Align(
+                alignment: Alignment.centerRight,
+                child: ClickableText(
+                  text: 'Forgot Password?',
+                  onTap: () {
+                    // TODO: navigate to forgot password
+                  },
+                ),
+              ),
+
+              const SizedBox(height: 32),
+
+              // 🔹 Sign in button
+              MainButton(
+                label: 'Sign in',
+                showIcons: false,
+                onPressed: () {
+                  // TODO: handle login
+                },
+              ),
+
+              const SizedBox(height: 32),
+
+              // 🔹 Register link
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text(
+                    'No account yet? ',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  ClickableText(
+                    text: 'Register Here',
+                    onTap: () {
+                      // TODO: navigate to register
+                    },
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 24),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
