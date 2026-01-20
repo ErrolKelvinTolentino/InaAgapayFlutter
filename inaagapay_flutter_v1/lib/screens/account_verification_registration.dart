@@ -6,6 +6,7 @@ import '../widgets/otp_input_field.dart';
 import '../widgets/validation_message.dart';
 import '../widgets/clickable_text.dart';
 import '../widgets/dialog_box.dart';
+import '../widgets/page_title.dart';
 
 class AccountVerificationRegistration extends StatefulWidget {
   const AccountVerificationRegistration({super.key});
@@ -88,31 +89,26 @@ class _AccountVerificationRegistrationState
             children: [
               const SizedBox(height: 32),
 
-              Image.asset('assets/images/logo.png', height: 90),
-              const SizedBox(height: 12),
-              Image.asset('assets/images/inaagapay_name.png', height: 32),
+              Image.asset(
+                'assets/images/logo.png',
+                height: 110,
+              ),
+              const SizedBox(height: 16),
+              Image.asset(
+                'assets/images/inaagapay_name.png',
+                width: 240,
+              ),
+              const SizedBox(height: 24),
 
               const SizedBox(height: 32),
 
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: const [
-                  Icon(Icons.email_outlined,
-                      color: AppColors.brandPrimary),
-                  SizedBox(width: 8),
-                  Text(
-                    'CODE SENT',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.brandPrimary,
-                      letterSpacing: 1,
-                    ),
-                  ),
-                  SizedBox(width: 8),
-                  Icon(Icons.check, color: AppColors.brandPrimary),
-                ],
+              
+              const PageTitle(
+                title: 'CODE SENT',
+                leadingIcon: Icons.mail,
+                trailingIcon: Icons.check,
               ),
+              
 
               const SizedBox(height: 16),
 
@@ -125,7 +121,7 @@ class _AccountVerificationRegistrationState
                 ),
               ),
 
-              const SizedBox(height: 28),
+              const SizedBox(height: 32),
 
               OtpInputField(
                 onChanged: (value) {
@@ -138,12 +134,16 @@ class _AccountVerificationRegistrationState
               ),
 
               if (_hasError) ...[
-                const SizedBox(height: 12),
-                const ValidationMessage(
-                  message: 'Incorrect code. Please try again.',
-                  type: ValidationType.error,
-                ),
-              ],
+  const SizedBox(height: 12),
+  const Padding(
+    padding: EdgeInsets.only(left: 20),
+    child: ValidationMessage(
+      message: 'Incorrect code. Please try again.',
+      type: ValidationType.error,
+    ),
+  ),
+],
+
 
               const SizedBox(height: 32),
 
@@ -155,7 +155,7 @@ class _AccountVerificationRegistrationState
                     : null,
               ),
 
-              const SizedBox(height: 16),
+              const SizedBox(height: 32),
 
               _secondsRemaining == 0
                   ? ClickableText(
