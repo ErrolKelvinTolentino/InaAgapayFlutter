@@ -218,50 +218,57 @@ class _ChangeForgotPasswordScreenState
                       },
                     ),
 
-                    if (_passwordsDoNotMatch) ...[
-                      const SizedBox(height: 8),
-                      Padding(
-                        padding: const EdgeInsets.only(left: 20),
-                        child: Row(
-                          children: const [
-                            Icon(
-                              Icons.cancel,
-                              size: 16,
-                              color: AppColors.error,
-                            ),
-                            SizedBox(width: 6),
-                            Text(
-                              'Passwords do not match',
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: AppColors.error,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+                    const SizedBox(height: 8),
 
-                    if (_passwordsMatch) ...[
-                      const SizedBox(height: 8),
-                      Row(
-                        children: const [
-                          Icon(
-                            Icons.check_circle,
-                            size: 16,
-                            color: AppColors.success,
-                          ),
-                          SizedBox(width: 6),
-                          Text(
-                            'Passwords match',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: AppColors.success,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
+Padding(
+  padding: const EdgeInsets.only(left: 20),
+  child: Builder(
+    builder: (_) {
+      if (_passwordsDoNotMatch) {
+        return Row(
+          children: const [
+            Icon(
+              Icons.cancel,
+              size: 16,
+              color: AppColors.error,
+            ),
+            SizedBox(width: 6),
+            Text(
+              'Passwords do not match',
+              style: TextStyle(
+                fontSize: 13,
+                color: AppColors.error,
+              ),
+            ),
+          ],
+        );
+      }
+
+      if (_passwordsMatch) {
+        return Row(
+          children: const [
+            Icon(
+              Icons.check_circle,
+              size: 16,
+              color: AppColors.success,
+            ),
+            SizedBox(width: 6),
+            Text(
+              'Passwords match',
+              style: TextStyle(
+                fontSize: 13,
+                color: AppColors.success,
+              ),
+            ),
+          ],
+        );
+      }
+
+      return const SizedBox.shrink();
+    },
+  ),
+),
+
                   ],
                 ),
               ),

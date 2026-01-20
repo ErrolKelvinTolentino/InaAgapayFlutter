@@ -6,6 +6,7 @@ import '../widgets/clickable_text.dart';
 import '../widgets/page_title.dart';
 import '../widgets/password_constraints.dart';
 import '../widgets/password_strength_indicator.dart';
+import '../widgets/dialog_box.dart';
 
 class MotherRegistrationScreen extends StatefulWidget {
   const MotherRegistrationScreen({super.key});
@@ -45,10 +46,12 @@ class _MotherRegistrationScreenState
       TweenSequenceItem(tween: Tween(begin: -8, end: 8), weight: 2),
       TweenSequenceItem(tween: Tween(begin: 8, end: -8), weight: 2),
       TweenSequenceItem(tween: Tween(begin: -8, end: 0), weight: 1),
-    ]).animate(CurvedAnimation(
-      parent: _shakeController,
-      curve: Curves.easeInOut,
-    ));
+    ]).animate(
+      CurvedAnimation(
+        parent: _shakeController,
+        curve: Curves.easeInOut,
+      ),
+    );
   }
 
   @override
@@ -76,8 +79,7 @@ class _MotherRegistrationScreenState
 
   bool get _passwordsMatch =>
       _confirmPasswordController.text.isNotEmpty &&
-      _passwordController.text ==
-          _confirmPasswordController.text;
+      _passwordController.text == _confirmPasswordController.text;
 
   bool get _passwordsDoNotMatch =>
       _confirmPasswordController.text.isNotEmpty &&
@@ -88,20 +90,37 @@ class _MotherRegistrationScreenState
           PasswordStrength.strong &&
       _passwordsMatch;
 
-  void _handleSubmit() {
-  if (!_canSubmit) {
-    _shakeController.forward(from: 0);
-    return;
+  // ✅ UPDATED SUBMIT HANDLER
+  Future<void> _handleSubmit() async {
+    if (!_canSubmit) {
+      _shakeController.forward(from: 0);
+      return;
+    }
+
+    // TODO: Send verification code (API / Firebase)
+
+    // ✅ Show dialog first
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => DialogBox(
+        title: 'Verification Code Sent',
+        buttonText: 'Continue',
+        type: DialogType.info, // 🩷 pink / informational
+        onPressed: () {
+          Navigator.of(context).pop();
+        },
+      ),
+    );
+
+    if (!mounted) return;
+
+    // ✅ Then navigate
+    Navigator.pushNamed(
+      context,
+      '/verify-registration',
+    );
   }
-
-  // TODO: Send verification code (API / Firebase)
-
-  Navigator.pushNamed(
-    context,
-    '/verify-registration',
-  );
-}
-
 
   @override
   Widget build(BuildContext context) {
@@ -126,6 +145,7 @@ class _MotherRegistrationScreenState
                 'assets/images/inaagapay_name.png',
                 width: 240,
               ),
+
               const SizedBox(height: 24),
 
               const PageTitle(
@@ -163,14 +183,14 @@ class _MotherRegistrationScreenState
               const SizedBox(height: 8),
 
               Padding(
-              padding: const EdgeInsets.only(right: 20),
-              child: Align(
-                alignment: Alignment.centerRight,
-                child: PasswordStrengthIndicator(
-                  strength: strength,
+                padding: const EdgeInsets.only(right: 20),
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: PasswordStrengthIndicator(
+                    strength: strength,
+                  ),
                 ),
               ),
-            ),
 
               const SizedBox(height: 12),
 
@@ -178,7 +198,6 @@ class _MotherRegistrationScreenState
                 padding: const EdgeInsets.only(left: 20),
                 child: PasswordConstraints(password: password),
               ),
-
 
               const SizedBox(height: 20),
 
@@ -209,51 +228,57 @@ class _MotherRegistrationScreenState
                       },
                     ),
 
-                    if (_passwordsDoNotMatch) ...[
-                      const SizedBox(height: 8),
-                      Padding(
-                        padding: const EdgeInsets.only(left: 20),
-                        child: Row(
-                          children: const [
-                            Icon(
-                              Icons.cancel,
-                              size: 16,
-                              color: AppColors.error,
-                            ),
-                            SizedBox(width: 6),
-                            Text(
-                              'Passwords do not match',
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: AppColors.error,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                    const SizedBox(height: 8),
 
-                    ],
+Padding(
+  padding: const EdgeInsets.only(left: 20),
+  child: Builder(
+    builder: (_) {
+      if (_passwordsDoNotMatch) {
+        return Row(
+          children: const [
+            Icon(
+              Icons.cancel,
+              size: 16,
+              color: AppColors.error,
+            ),
+            SizedBox(width: 6),
+            Text(
+              'Passwords do not match',
+              style: TextStyle(
+                fontSize: 13,
+                color: AppColors.error,
+              ),
+            ),
+          ],
+        );
+      }
 
-                    if (_passwordsMatch) ...[
-                      const SizedBox(height: 8),
-                      Row(
-                        children: const [
-                          Icon(
-                            Icons.check_circle,
-                            size: 16,
-                            color: AppColors.success,
-                          ),
-                          SizedBox(width: 6),
-                          Text(
-                            'Passwords match',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: AppColors.success,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
+      if (_passwordsMatch) {
+        return Row(
+          children: const [
+            Icon(
+              Icons.check_circle,
+              size: 16,
+              color: AppColors.success,
+            ),
+            SizedBox(width: 6),
+            Text(
+              'Passwords match',
+              style: TextStyle(
+                fontSize: 13,
+                color: AppColors.success,
+              ),
+            ),
+          ],
+        );
+      }
+
+      return const SizedBox.shrink();
+    },
+  ),
+),
+
                   ],
                 ),
               ),
@@ -291,45 +316,41 @@ class _MotherRegistrationScreenState
                 ],
               ),
 
-             const SizedBox(height: 16),
+              const SizedBox(height: 16),
 
-Text(
-  'By proceeding, you are acknowledging the',
-  textAlign: TextAlign.center,
-  style: TextStyle(
-    fontSize: 12,
-    color: AppColors.textSecondary,
-  ),
-),
+              const Text(
+                'By proceeding, you are acknowledging the',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textSecondary,
+                ),
+              ),
 
-const SizedBox(height: 4),
+              const SizedBox(height: 4),
 
-Row(
-  mainAxisAlignment: MainAxisAlignment.center,
-  children: [
-    ClickableText(
-      text: 'Terms of Use',
-      onTap: () {
-        // TODO: open terms
-      },
-    ),
-    const Text(
-      ' and ',
-      style: TextStyle(
-        fontSize: 12,
-        color: AppColors.textSecondary,
-      ),
-    ),
-    ClickableText(
-      text: 'Privacy Policy',
-      onTap: () {
-        // TODO: open privacy policy
-      },
-    ),
-  ],
-),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  ClickableText(
+                    text: 'Terms of Use',
+                    onTap: () {},
+                  ),
+                  const Text(
+                    ' and ',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  ClickableText(
+                    text: 'Privacy Policy',
+                    onTap: () {},
+                  ),
+                ],
+              ),
 
-const SizedBox(height: 24),
+              const SizedBox(height: 24),
             ],
           ),
         ),

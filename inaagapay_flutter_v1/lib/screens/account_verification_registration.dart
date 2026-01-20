@@ -52,10 +52,37 @@ class _AccountVerificationRegistrationState
   }
 
   void _verifyCode() {
+  // ❌ Incorrect code
+  if (_code != '123456') {
     setState(() {
-      _hasError = _code != '123456'; // TODO: backend validation
+      _hasError = true;
     });
+    return;
   }
+
+  // ✅ Correct code → show success dialog
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (_) => DialogBox(
+      title: 'Account Verified!',
+      buttonText: 'Continue',
+      type: DialogType.success, // 🟢 GREEN
+      onPressed: () {
+        Navigator.pop(context); // close dialog
+
+        // TODO: route based on role if needed
+        Navigator.pushNamedAndRemoveUntil(
+  context,
+  '/login',
+  (route) => false,
+);
+
+      },
+    ),
+  );
+}
+
 
   void _resendCode() {
     _startTimer();
