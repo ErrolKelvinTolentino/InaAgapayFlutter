@@ -92,11 +92,15 @@ class _LoginScreenState extends State<LoginScreen> {
               Align(
                 alignment: Alignment.centerRight,
                 child: ClickableText(
-                  text: 'Forgot Password?',
-                  onTap: () {
-                    // TODO: navigate to forgot password
-                  },
-                ),
+  text: 'Forgot Password?',
+  onTap: () {
+    Navigator.pushNamed(
+      context,
+      '/forgot-password',
+    );
+  },
+),
+
               ),
 
               const SizedBox(height: 56),

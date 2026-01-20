@@ -6,6 +6,10 @@ import 'screens/account_verification_registration.dart';
 import 'screens/mother_dashboard.dart';
 import 'screens/midwife_dashboard.dart';
 import 'screens/admin_dashboard.dart';
+import 'screens/forgot_password.dart';
+import 'screens/forgot_password_verification.dart';
+import 'screens/change_forgot_password.dart';
+
 
 void main() {
   runApp(const MyApp());
@@ -35,6 +39,12 @@ class MyApp extends StatelessWidget {
         '/mother-dashboard': (context) => const MotherDashboard(),
         '/midwife-dashboard': (context) => const MidwifeDashboard(),
         '/admin-dashboard': (context) => const AdminDashboard(),
+        '/forgot-password': (context) => const ForgotPasswordScreen(),
+        '/forgot-password-verify': (context) =>
+            const ForgotPasswordVerificationScreen(),
+        '/change-forgot-password': (context) =>
+      const ChangeForgotPasswordScreen(),
+
 
       },
     );
