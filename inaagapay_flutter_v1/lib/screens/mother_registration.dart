@@ -89,13 +89,19 @@ class _MotherRegistrationScreenState
       _passwordsMatch;
 
   void _handleSubmit() {
-    if (!_canSubmit) {
-      _shakeController.forward(from: 0);
-      return;
-    }
-
-    // TODO: Send verification code
+  if (!_canSubmit) {
+    _shakeController.forward(from: 0);
+    return;
   }
+
+  // TODO: Send verification code (API / Firebase)
+
+  Navigator.pushNamed(
+    context,
+    '/verify-registration',
+  );
+}
+
 
   @override
   Widget build(BuildContext context) {
