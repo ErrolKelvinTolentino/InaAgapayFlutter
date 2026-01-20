@@ -3,6 +3,9 @@ import 'theme/app_theme.dart';
 import 'screens/login.dart';
 import 'screens/mother_registration.dart';
 import 'screens/account_verification_registration.dart';
+import 'screens/mother_dashboard.dart';
+import 'screens/midwife_dashboard.dart';
+import 'screens/admin_dashboard.dart';
 
 void main() {
   runApp(const MyApp());
@@ -29,6 +32,10 @@ class MyApp extends StatelessWidget {
         '/register': (context) => const MotherRegistrationScreen(),
         '/verify-registration': (context) =>
           const AccountVerificationRegistration(),
+        '/mother-dashboard': (context) => const MotherDashboard(),
+        '/midwife-dashboard': (context) => const MidwifeDashboard(),
+        '/admin-dashboard': (context) => const AdminDashboard(),
+
       },
     );
   }
