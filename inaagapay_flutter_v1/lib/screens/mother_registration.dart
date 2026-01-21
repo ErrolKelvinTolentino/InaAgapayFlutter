@@ -6,6 +6,7 @@ import '../widgets/clickable_text.dart';
 import '../widgets/page_title.dart';
 import '../widgets/password_constraints.dart';
 import '../widgets/password_strength_indicator.dart';
+import '../widgets/dialog_box.dart';
 import '../services/register_service.dart';
 
 class MotherRegistrationScreen extends StatefulWidget {
@@ -47,10 +48,9 @@ class _MotherRegistrationScreenState
       TweenSequenceItem(tween: Tween(begin: -8, end: 8), weight: 2),
       TweenSequenceItem(tween: Tween(begin: 8, end: -8), weight: 2),
       TweenSequenceItem(tween: Tween(begin: -8, end: 0), weight: 1),
-    ]).animate(CurvedAnimation(
-      parent: _shakeController,
-      curve: Curves.easeInOut,
-    ));
+    ]).animate(
+      CurvedAnimation(parent: _shakeController, curve: Curves.easeInOut),
+    );
   }
 
   @override
@@ -105,14 +105,32 @@ class _MotherRegistrationScreenState
     if (!mounted) return;
 
     if (success) {
-      Navigator.pushNamed(
-        context,
-        '/verify-registration',
-        arguments: _emailController.text.trim(),
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => DialogBox(
+          title: 'Verification Code Sent',
+          buttonText: 'Continue',
+          type: DialogType.success,
+          onPressed: () {
+            Navigator.pop(context);
+            Navigator.pushNamed(
+              context,
+              '/verify-registration',
+              arguments: _emailController.text.trim(),
+            );
+          },
+        ),
       );
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Registration failed')),
+      showDialog(
+        context: context,
+        builder: (_) => DialogBox(
+          title: 'Registration Failed',
+          buttonText: 'Okay',
+          type: DialogType.error,
+          onPressed: () => Navigator.pop(context),
+        ),
       );
     }
   }
@@ -164,7 +182,6 @@ class _MotherRegistrationScreenState
               ),
 
               const SizedBox(height: 8),
-
               Align(
                 alignment: Alignment.centerRight,
                 child: PasswordStrengthIndicator(strength: strength),
@@ -190,8 +207,9 @@ class _MotherRegistrationScreenState
                   trailingIcon: _obscureConfirmPassword
                       ? Icons.visibility_off
                       : Icons.visibility,
-                  onTrailingTap: () => setState(() =>
-                      _obscureConfirmPassword = !_obscureConfirmPassword),
+                  onTrailingTap: () => setState(
+                      () => _obscureConfirmPassword =
+                          !_obscureConfirmPassword),
                 ),
               ),
 

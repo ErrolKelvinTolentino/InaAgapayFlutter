@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'theme/app_theme.dart';
+
 import 'screens/login.dart';
 import 'screens/mother_registration.dart';
 import 'screens/account_verification_registration.dart';
@@ -10,7 +11,6 @@ import 'screens/forgot_password.dart';
 import 'screens/forgot_password_verification.dart';
 import 'screens/change_forgot_password.dart';
 import 'screens/complete_profile.dart';
-
 
 void main() {
   runApp(const MyApp());
@@ -28,27 +28,28 @@ class MyApp extends StatelessWidget {
       darkTheme: AppTheme.darkTheme,
       themeMode: ThemeMode.system,
 
-      // 👇 initial screen
       initialRoute: '/login',
 
-      // 👇 named routes
       routes: {
         '/login': (context) => const LoginScreen(),
         '/register': (context) => const MotherRegistrationScreen(),
         '/verify-registration': (context) =>
-          const AccountVerificationRegistration(),
-        '/mother-dashboard': (context) => const MotherDashboard(),
-        '/midwife-dashboard': (context) => const MidwifeDashboard(),
-        '/admin-dashboard': (context) => const AdminDashboard(),
+            const AccountVerificationRegistration(),
+
+        // ✅ DASHBOARDS (USE UNDERSCORES)
+        '/mother_dashboard': (context) => const MotherDashboard(),
+        '/midwife_dashboard': (context) => const MidwifeDashboard(),
+        '/admin_dashboard': (context) => const AdminDashboard(),
+
+        // 🔐 FORGOT PASSWORD FLOW
         '/forgot-password': (context) => const ForgotPasswordScreen(),
         '/forgot-password-verify': (context) =>
             const ForgotPasswordVerificationScreen(),
         '/change-forgot-password': (context) =>
             const ChangeForgotPasswordScreen(),
+
         '/complete-profile': (context) =>
             const CompleteProfileScreen(),
-
-
       },
     );
   }

@@ -6,45 +6,55 @@ import '../widgets/secondary_button.dart';
 import '../widgets/validation_message.dart';
 import '../widgets/page_title.dart';
 import '../widgets/dialog_box.dart';
+import '../services/forgot_password_service.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
 
   @override
-  State<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
+  State<ForgotPasswordScreen> createState() =>
+      _ForgotPasswordScreenState();
 }
 
 class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final _emailController = TextEditingController();
   bool _hasError = false;
+  bool _isLoading = false;
 
   Future<void> _sendResetCode() async {
     setState(() {
-      // 🔧 mock validation (replace later)
-      _hasError = _emailController.text != 'test@email.com';
+      _isLoading = true;
+      _hasError = false;
     });
 
-    if (_hasError) return;
+    final success = await ForgotPasswordService.sendCode(
+      _emailController.text.trim(),
+    );
 
-    // ✅ Email found → show dialog
+    setState(() => _isLoading = false);
+
+    if (!mounted) return;
+
+    if (!success) {
+      setState(() => _hasError = true);
+      return;
+    }
+
     await showDialog(
       context: context,
       barrierDismissible: false,
       builder: (_) => DialogBox(
         title: 'Verification Code Sent',
         buttonText: 'Continue',
-        type: DialogType.info, // 🩷 pink / brand
-        onPressed: () {
-          Navigator.of(context).pop();
-        },
+        type: DialogType.info,
+        onPressed: () => Navigator.pop(context),
       ),
     );
-
-    if (!mounted) return;
 
     Navigator.pushNamed(
       context,
       '/forgot-password-verify',
+      arguments: _emailController.text.trim(),
     );
   }
 
@@ -102,13 +112,12 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 ),
               ],
 
-
               const SizedBox(height: 28),
 
               MainButton(
-                label: 'Send Reset Code',
+                label: _isLoading ? 'Sending...' : 'Send Reset Code',
                 showIcons: false,
-                onPressed: _sendResetCode,
+                onPressed: _isLoading ? null : _sendResetCode,
               ),
 
               const SizedBox(height: 16),
@@ -116,9 +125,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               SecondaryButton(
                 label: 'Back to Login',
                 showIcons: false,
-                onPressed: () {
-                  Navigator.pop(context);
-                },
+                onPressed: () => Navigator.pop(context),
               ),
 
               const SizedBox(height: 24),

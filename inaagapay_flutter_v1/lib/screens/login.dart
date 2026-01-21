@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 import '../theme/app_colors.dart';
 import '../widgets/app_input_field.dart';
 import '../widgets/main_button.dart';
@@ -50,15 +49,27 @@ class _LoginScreenState extends State<LoginScreen> {
     if (response.success) {
       final user = response.user;
 
-      // TODO: role-based navigation
-      // Example:
-      // if (user?['role'] == 'mother') {
-      //   Navigator.pushReplacementNamed(context, '/mother_dashboard');
-      // }
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(response.message)),
-      );
+      // ✅ ROLE-BASED NAVIGATION (MATCHES main.dart)
+      if (user?['role'] == 'mother') {
+        Navigator.pushReplacementNamed(
+          context,
+          '/mother_dashboard',
+        );
+      } else if (user?['role'] == 'midwife') {
+        Navigator.pushReplacementNamed(
+          context,
+          '/midwife_dashboard',
+        );
+      } else if (user?['role'] == 'admin') {
+        Navigator.pushReplacementNamed(
+          context,
+          '/admin_dashboard',
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Unknown user role')),
+        );
+      }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(response.message)),
@@ -78,7 +89,6 @@ class _LoginScreenState extends State<LoginScreen> {
             children: [
               const SizedBox(height: 40),
 
-              // 🔹 Logo
               Image.asset(
                 'assets/images/logo.png',
                 height: 146,
@@ -86,29 +96,24 @@ class _LoginScreenState extends State<LoginScreen> {
 
               const SizedBox(height: 20),
 
-              // 🔹 App name
               Image.asset(
                 'assets/images/inaagapay_name.png',
                 width: 282,
-                fit: BoxFit.contain,
               ),
 
               const SizedBox(height: 8),
 
-              // 🔹 Tagline
               const Text(
                 'Supporting you through every step',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 16,
                   color: AppColors.textSecondary,
-                  fontWeight: FontWeight.w400,
                 ),
               ),
 
               const SizedBox(height: 56),
 
-              // 📧 Email input
               AppInputField(
                 hintText: 'Email Address',
                 controller: _emailController,
@@ -118,7 +123,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
               const SizedBox(height: 20),
 
-              // 🔒 Password input
               AppInputField(
                 hintText: 'Password',
                 controller: _passwordController,
@@ -136,20 +140,21 @@ class _LoginScreenState extends State<LoginScreen> {
 
               const SizedBox(height: 20),
 
-              // 🔹 Forgot password
               Align(
                 alignment: Alignment.centerRight,
                 child: ClickableText(
                   text: 'Forgot Password?',
                   onTap: () {
-                    // TODO: navigate to forgot password
+                    Navigator.pushNamed(
+                      context,
+                      '/forgot-password',
+                    );
                   },
                 ),
               ),
 
               const SizedBox(height: 56),
 
-              // 🔹 Sign in button
               MainButton(
                 label: _isLoading ? 'Signing in...' : 'Sign in',
                 showIcons: false,
@@ -158,7 +163,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
               const SizedBox(height: 32),
 
-              // 🔹 Register link
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [

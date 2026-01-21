@@ -60,13 +60,27 @@ class _AccountVerificationRegistrationState
       code: _code,
     );
 
+    if (!mounted) return;
+
     setState(() => _hasError = !success);
 
-    if (success && mounted) {
-      Navigator.pushNamedAndRemoveUntil(
-        context,
-        '/login',
-        (route) => false,
+    if (success) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => DialogBox(
+          title: 'Account Verified',
+          buttonText: 'Proceed to Login',
+          type: DialogType.success,
+          onPressed: () {
+            Navigator.pop(context);
+            Navigator.pushNamedAndRemoveUntil(
+              context,
+              '/login',
+              (route) => false,
+            );
+          },
+        ),
       );
     }
   }
@@ -78,7 +92,7 @@ class _AccountVerificationRegistrationState
       context: context,
       barrierDismissible: false,
       builder: (_) => DialogBox(
-        title: 'Verification code sent',
+        title: 'Verification Code Sent',
         buttonText: 'Okay',
         type: DialogType.info,
         onPressed: () => Navigator.pop(context),

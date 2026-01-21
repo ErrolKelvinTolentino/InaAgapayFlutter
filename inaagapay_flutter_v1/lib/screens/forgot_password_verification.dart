@@ -8,6 +8,7 @@ import '../widgets/validation_message.dart';
 import '../widgets/clickable_text.dart';
 import '../widgets/dialog_box.dart';
 import '../widgets/page_title.dart';
+import '../services/forgot_password_service.dart';
 
 class ForgotPasswordVerificationScreen extends StatefulWidget {
   const ForgotPasswordVerificationScreen({super.key});
@@ -21,6 +22,7 @@ class _ForgotPasswordVerificationScreenState
     extends State<ForgotPasswordVerificationScreen> {
   static const int _initialSeconds = 300;
 
+  late String email;
   int _secondsRemaining = _initialSeconds;
   Timer? _timer;
 
@@ -28,8 +30,9 @@ class _ForgotPasswordVerificationScreenState
   bool _hasError = false;
 
   @override
-  void initState() {
-    super.initState();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    email = ModalRoute.of(context)!.settings.arguments as String;
     _startTimer();
   }
 
@@ -47,44 +50,43 @@ class _ForgotPasswordVerificationScreenState
   }
 
   String get _formattedTime {
-    final minutes = (_secondsRemaining ~/ 60);
+    final minutes = _secondsRemaining ~/ 60;
     final seconds = (_secondsRemaining % 60).toString().padLeft(2, '0');
     return '$minutes:$seconds';
   }
 
-  void _verifyCode() {
-  if (_code != '123456') {
-    setState(() {
-      _hasError = true;
-    });
-    return;
+  Future<void> _verifyCode() async {
+    final success = await ForgotPasswordService.verifyCode(
+      email,
+      _code,
+    );
+
+    setState(() => _hasError = !success);
+
+    if (!success || !mounted) return;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => DialogBox(
+        title: 'Code Verified',
+        buttonText: 'Continue',
+        type: DialogType.success,
+        onPressed: () {
+          Navigator.pop(context);
+          Navigator.pushReplacementNamed(
+            context,
+            '/change-forgot-password',
+            arguments: email,
+          );
+        },
+      ),
+    );
   }
-
-  final parentContext = context; // 👈 save parent context
-
-  showDialog(
-    context: parentContext,
-    barrierDismissible: false,
-    builder: (_) => DialogBox(
-      title: 'Account Verified!',
-      buttonText: 'Continue',
-      type: DialogType.success,
-      onPressed: () {
-        Navigator.of(parentContext, rootNavigator: true).pop();
-
-        Navigator.pushReplacementNamed(
-          parentContext,
-          '/change-forgot-password',
-        );
-      },
-    ),
-  );
-}
-
 
   void _resendCode() {
     _startTimer();
-    // TODO: resend OTP backend call
+    ForgotPasswordService.sendCode(email);
   }
 
   @override
@@ -149,8 +151,7 @@ class _ForgotPasswordVerificationScreenState
               MainButton(
                 label: 'Verify',
                 showIcons: false,
-                onPressed:
-                    _code.length == 6 ? () => _verifyCode() : null,
+                onPressed: _code.length == 6 ? _verifyCode : null,
               ),
 
               const SizedBox(height: 16),
