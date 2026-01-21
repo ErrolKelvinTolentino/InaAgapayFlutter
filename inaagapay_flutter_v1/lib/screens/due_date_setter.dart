@@ -28,21 +28,38 @@ class _DueDateSetterScreenState extends State<DueDateSetterScreen> {
   final _weeksController = TextEditingController();
   final _daysController = TextEditingController();
 
-  Future<void> _pickDate() async {
-    final pickedDate = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime(1900),
-      lastDate: DateTime.now(),
-    );
+  Future<void> _pickDateForBasis() async {
+  final now = DateTime.now();
 
-    if (pickedDate != null) {
-      _dateController.text =
-          '${pickedDate.month.toString().padLeft(2, '0')}/'
-          '${pickedDate.day.toString().padLeft(2, '0')}/'
-          '${pickedDate.year}';
-    }
+  final pickedDate = await showDatePicker(
+    context: context,
+
+    // sensible default
+    initialDate: _basis == DueDateBasis.edd
+        ? now.add(const Duration(days: 1))
+        : now,
+
+    // ✅ LMP → past allowed
+    // ❌ EDD → past NOT allowed
+    firstDate: _basis == DueDateBasis.edd
+        ? now
+        : DateTime(1900),
+
+    // ✅ LMP → up to today
+    // ✅ EDD → future allowed
+    lastDate: _basis == DueDateBasis.edd
+        ? DateTime(now.year + 2)
+        : now,
+  );
+
+  if (pickedDate != null) {
+    _dateController.text =
+        '${pickedDate.month.toString().padLeft(2, '0')}/'
+        '${pickedDate.day.toString().padLeft(2, '0')}/'
+        '${pickedDate.year}';
   }
+}
+
 
   @override
   Widget build(BuildContext context) {
@@ -119,7 +136,7 @@ class _DueDateSetterScreenState extends State<DueDateSetterScreen> {
                   controller: _dateController,
                   readOnly: false,
                   leadingIcon: Icons.calendar_today,
-                  onTap: _pickDate,
+                  onTap: _pickDateForBasis,
                 ),
                 if (_basis != DueDateBasis.aog) ...[
   const SizedBox(height: 12),
