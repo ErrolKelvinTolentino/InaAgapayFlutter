@@ -10,6 +10,7 @@ import 'screens/forgot_password.dart';
 import 'screens/forgot_password_verification.dart';
 import 'screens/change_forgot_password.dart';
 import 'screens/complete_profile.dart';
+import 'screens/welcome_screen.dart';
 
 
 void main() {
@@ -47,6 +48,8 @@ class MyApp extends StatelessWidget {
             const ChangeForgotPasswordScreen(),
         '/complete-profile': (context) =>
             const CompleteProfileScreen(),
+        '/welcome': (context) => const WelcomeScreen(),
+
 
 
       },

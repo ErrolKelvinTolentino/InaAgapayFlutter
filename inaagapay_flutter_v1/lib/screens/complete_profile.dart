@@ -5,6 +5,7 @@ import '../widgets/app_input_field.dart';
 import '../widgets/main_button.dart';
 import '../widgets/progressive_step_indicator.dart';
 import '../widgets/page_title.dart';
+import 'welcome_screen.dart';
 
 class CompleteProfileScreen extends StatefulWidget {
   const CompleteProfileScreen({super.key});
@@ -102,18 +103,43 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
             ),
 
             Padding(
-              padding: const EdgeInsets.all(24),
-              child: MainButton(
-                label: _currentStep == 2 ? 'Save Profile' : 'Next',
-                showIcons: false,
-                onPressed: _nextStep,
-              ),
-            ),
+  padding: const EdgeInsets.all(24),
+  child: MainButton(
+    label: _currentStep == 2 ? 'Save Profile' : 'Next',
+    showIcons: false,
+    onPressed: _handlePrimaryAction,
+  ),
+),
+
           ],
         ),
       ),
     );
   }
+  
+  void _handlePrimaryAction() {
+  if (_currentStep < 2) {
+    _nextStep();
+    return;
+  }
+
+  // STEP 3: SAVE PROFILE
+  _saveProfileAndContinue();
+}
+
+void _saveProfileAndContinue() {
+  // TODO: add validation here if needed
+
+  // TODO: persist data (local / firebase / api)
+
+  Navigator.pushReplacement(
+    context,
+    MaterialPageRoute(
+      builder: (_) => const WelcomeScreen(),
+    ),
+  );
+}
+
 
   // ===== HEADERS =====
   Widget _stepHeader() {
