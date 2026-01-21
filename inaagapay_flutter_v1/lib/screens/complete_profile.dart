@@ -17,6 +17,7 @@ class CompleteProfileScreen extends StatefulWidget {
 class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
   int _currentStep = 0;
 
+  // ===== Controllers =====
   final _firstName = TextEditingController();
   final _lastName = TextEditingController();
   final _middleName = TextEditingController();
@@ -30,13 +31,29 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
   final _street = TextEditingController();
   final _houseNo = TextEditingController();
 
+  late final TextEditingController _addressSummary;
+
+  @override
+  void initState() {
+    super.initState();
+    _addressSummary = TextEditingController();
+  }
 
   void _nextStep() {
-    if (_currentStep < 2) setState(() => _currentStep++);
+    if (_currentStep == 1) {
+      _addressSummary.text =
+          '${_province.text}, ${_city.text}, ${_barangay.text}';
+    }
+
+    if (_currentStep < 2) {
+      setState(() => _currentStep++);
+    }
   }
 
   void _previousStep() {
-    if (_currentStep > 0) setState(() => _currentStep--);
+    if (_currentStep > 0) {
+      setState(() => _currentStep--);
+    }
   }
 
   void _jumpToStep(int step) {
@@ -98,6 +115,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
     );
   }
 
+  // ===== HEADERS =====
   Widget _stepHeader() {
     switch (_currentStep) {
       case 0:
@@ -121,25 +139,44 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
     }
   }
 
+  // ===== STEP 1 =====
   Widget _personalInfoStep() {
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Column(
         children: [
-          AppInputField(hintText: 'First Name', controller: _firstName, isRequired: true),
+          AppInputField(
+            hintText: 'First Name',
+            controller: _firstName,
+            isRequired: true,
+          ),
           const SizedBox(height: 12),
-          AppInputField(hintText: 'Last Name', controller: _lastName, isRequired: true),
+
+          AppInputField(
+            hintText: 'Last Name',
+            controller: _lastName,
+            isRequired: true,
+          ),
           const SizedBox(height: 12),
-          AppInputField(hintText: 'Middle Name', controller: _middleName),
+
+          AppInputField(
+            hintText: 'Middle Name',
+            controller: _middleName,
+          ),
           const SizedBox(height: 12),
-          AppInputField(hintText: 'Extension Name', controller: _extensionName),
+
+          AppInputField(
+            hintText: 'Extension Name',
+            controller: _extensionName,
+          ),
           const SizedBox(height: 12),
+
           AppInputField(
             hintText: 'Birthdate',
             controller: _birthDate,
             isRequired: true,
             leadingIcon: Icons.calendar_today,
-            readOnly: true,
+            readOnly: false,
             onTap: () async {
               final pickedDate = await showDatePicker(
                 context: context,
@@ -147,6 +184,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                 firstDate: DateTime(1900),
                 lastDate: DateTime.now(),
               );
+
               if (pickedDate != null) {
                 _birthDate.text =
                     '${pickedDate.month.toString().padLeft(2, '0')}/'
@@ -156,6 +194,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
             },
           ),
           const SizedBox(height: 12),
+
           AppInputField(
             hintText: '+63 Contact Number',
             controller: _contactNumber,
@@ -169,6 +208,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
     );
   }
 
+  // ===== STEP 2 =====
   Widget _addressStep() {
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -176,12 +216,19 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
         children: [
           AppInputField(hintText: 'Province', controller: _province),
           const SizedBox(height: 12),
-          AppInputField(hintText: 'City / Municipality', controller: _city),
+
+          AppInputField(
+            hintText: 'City / Municipality',
+            controller: _city,
+          ),
           const SizedBox(height: 12),
+
           AppInputField(hintText: 'Barangay', controller: _barangay),
           const SizedBox(height: 12),
+
           AppInputField(hintText: 'Street Name', controller: _street),
           const SizedBox(height: 12),
+
           AppInputField(hintText: 'House No.', controller: _houseNo),
           const SizedBox(height: 32),
         ],
@@ -189,71 +236,74 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
     );
   }
 
+  // ===== STEP 3 =====
   Widget _reviewStep() {
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Column(
         children: [
-          AppInputField(
-            hintText: 'First Name',
+          _reviewField(
+            label: 'First Name',
             controller: _firstName,
-            readOnly: true,
-            trailingIcon: Icons.edit,
-            onTrailingTap: () => _jumpToStep(0),
+            onEdit: () => _jumpToStep(0),
           ),
           const SizedBox(height: 12),
 
-          AppInputField(
-            hintText: 'Middle Name',
+          _reviewField(
+            label: 'Middle Name',
             controller: _middleName,
-            readOnly: true,
-            trailingIcon: Icons.edit,
-            onTrailingTap: () => _jumpToStep(0),
+            onEdit: () => _jumpToStep(0),
           ),
           const SizedBox(height: 12),
 
-          AppInputField(
-            hintText: 'Last Name',
+          _reviewField(
+            label: 'Last Name',
             controller: _lastName,
-            readOnly: true,
-            trailingIcon: Icons.edit,
-            onTrailingTap: () => _jumpToStep(0),
+            onEdit: () => _jumpToStep(0),
           ),
           const SizedBox(height: 12),
 
-          AppInputField(
-            hintText: 'Birthdate',
+          _reviewField(
+            label: 'Birthdate',
             controller: _birthDate,
-            readOnly: true,
             leadingIcon: Icons.calendar_today,
-            trailingIcon: Icons.edit,
-            onTrailingTap: () => _jumpToStep(0),
+            onEdit: () => _jumpToStep(0),
           ),
           const SizedBox(height: 12),
 
-          AppInputField(
-            hintText: '+63 Contact Number',
+          _reviewField(
+            label: '+63 Contact Number',
             controller: _contactNumber,
-            readOnly: true,
             leadingIcon: Icons.phone,
-            trailingIcon: Icons.edit,
-            onTrailingTap: () => _jumpToStep(0),
+            onEdit: () => _jumpToStep(0),
           ),
           const SizedBox(height: 12),
 
-          AppInputField(
-            hintText: 'Address',
-            controller: TextEditingController(
-              text: '${_province.text}, ${_city.text}, ${_barangay.text}',
-            ),
-            readOnly: true,
-            trailingIcon: Icons.edit,
-            onTrailingTap: () => _jumpToStep(1),
+          _reviewField(
+            label: 'Address',
+            controller: _addressSummary,
+            onEdit: () => _jumpToStep(1),
           ),
-
           const SizedBox(height: 32),
         ],
       ),
+    );
+  }
+
+  // ===== REVIEW FIELD =====
+  Widget _reviewField({
+    required String label,
+    required TextEditingController controller,
+    required VoidCallback onEdit,
+    IconData? leadingIcon,
+  }) {
+    return AppInputField(
+      hintText: label,
+      controller: controller,
+      readOnly: true,
+      leadingIcon: leadingIcon,
+      trailingIcon: Icons.edit,
+      onTrailingTap: onEdit,
     );
   }
 }

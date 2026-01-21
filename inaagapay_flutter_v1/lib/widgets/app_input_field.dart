@@ -121,33 +121,35 @@ class _AppInputFieldState extends State<AppInputField> {
                         fontSize: 16,
                       ),
                       decoration: InputDecoration(
-                        border: InputBorder.none,
-                        hintText: null,
-                        label: RichText(
-                          text: TextSpan(
-                            text: widget.hintText,
-                            style: TextStyle(
-                              color: hasError
-                                  ? AppColors.error
-                                      .withOpacity(0.7)
-                                  : AppColors.textSecondary,
-                              fontSize: 14,
-                            ),
-                            children: widget.isRequired
-                                ? const [
-                                    TextSpan(
-                                      text: ' *',
-                                      style: TextStyle(
-                                        color: AppColors.error,
-                                        fontWeight:
-                                            FontWeight.w600,
-                                      ),
-                                    ),
-                                  ]
-                                : [],
-                          ),
-                        ),
-                      ),
+  border: InputBorder.none,
+  floatingLabelBehavior: widget.controller.text.isNotEmpty
+      ? FloatingLabelBehavior.always
+      : FloatingLabelBehavior.auto,
+  label: RichText(
+    text: TextSpan(
+      text: widget.hintText,
+      style: TextStyle(
+        color: hasError
+            ? AppColors.error.withOpacity(0.7)
+            : AppColors.textSecondary,
+        fontSize: 14,
+      ),
+      children: widget.isRequired
+          ? const [
+              TextSpan(
+                text: ' *',
+                style: TextStyle(
+                  color: AppColors.error,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ]
+          : [],
+    ),
+  ),
+),
+
+
                     ),
                   ),
 
