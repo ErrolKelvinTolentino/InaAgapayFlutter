@@ -194,6 +194,7 @@ packages:
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 <<<<<<< HEAD
 <<<<<<< HEAD
     version: "0.7.7"
@@ -214,6 +215,9 @@ packages:
 =======
     version: "0.7.6"
 >>>>>>> parent of c0fc56b (Working login-register)
+=======
+    version: "0.7.7"
+>>>>>>> Stashed changes
 =======
     version: "0.7.7"
 >>>>>>> Stashed changes
