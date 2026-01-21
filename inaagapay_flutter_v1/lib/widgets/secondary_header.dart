@@ -2,63 +2,45 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 
 class SecondaryHeader extends StatelessWidget {
-  /// Header title (e.g. COMPLETE PROFILE)
   final String title;
-
-  /// Whether to show the leading/back icon
-  final bool showLeading;
-
-  /// Callback when leading icon is tapped
-  final VoidCallback? onLeadingTap;
+  final VoidCallback? onBack;
 
   const SecondaryHeader({
     super.key,
     required this.title,
-    this.showLeading = false,
-    this.onLeadingTap,
+    this.onBack, // 👈 optional
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return SizedBox(
       height: 56,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        color: AppColors.bgSecondary,
-        border: Border.all(
-          color: AppColors.brandPrimary,
-        ),
-      ),
       child: Row(
         children: [
-          // ◀ Back icon (optional)
-          if (showLeading)
+          // 👈 Back button ONLY if onBack is provided
+          if (onBack != null)
             IconButton(
-              onPressed: onLeadingTap ?? () => Navigator.of(context).maybePop(),
-              icon: const Icon(
-                Icons.arrow_back,
-                color: AppColors.brandPrimary,
-              ),
-            ),
+              icon: const Icon(Icons.arrow_back_ios_new),
+              color: AppColors.brandPrimary,
+              onPressed: onBack,
+            )
+          else
+            const SizedBox(width: 48), // keeps title centered
 
-          // Title
           Expanded(
-            child: Center(
-              child: Text(
-                title.toUpperCase(),
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.brandPrimary,
-                  letterSpacing: 0.5,
-                ),
+            child: Text(
+              title,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+                color: AppColors.brandPrimary,
               ),
             ),
           ),
 
-          // Spacer to balance layout when back icon is shown
-          if (showLeading)
-            const SizedBox(width: 48),
+          // right spacer to balance layout
+          const SizedBox(width: 48),
         ],
       ),
     );

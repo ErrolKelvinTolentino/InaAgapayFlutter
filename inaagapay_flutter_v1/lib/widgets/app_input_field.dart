@@ -5,16 +5,22 @@ class AppInputField extends StatefulWidget {
   final String hintText;
   final TextEditingController controller;
 
+  /// Required indicator
+  final bool isRequired;
+
   /// Optional icons
   final IconData? leadingIcon;
   final IconData? trailingIcon;
 
-  /// Trailing icon tap (e.g. toggle password visibility)
+  /// Callbacks
   final VoidCallback? onTrailingTap;
+  final VoidCallback? onTap;
+  final ValueChanged<String>? onChanged;
 
   /// Input behavior
   final bool obscureText;
   final TextInputType keyboardType;
+  final bool readOnly;
 
   /// Error
   final String? errorText;
@@ -23,11 +29,15 @@ class AppInputField extends StatefulWidget {
     super.key,
     required this.hintText,
     required this.controller,
+    this.isRequired = false,
     this.leadingIcon,
     this.trailingIcon,
     this.onTrailingTap,
+    this.onTap,
+    this.onChanged,
     this.obscureText = false,
     this.keyboardType = TextInputType.text,
+    this.readOnly = false,
     this.errorText,
   });
 
@@ -79,7 +89,6 @@ class _AppInputFieldState extends State<AppInputField> {
               ),
               child: Row(
                 children: [
-                  // 🔹 Leading icon
                   if (widget.leadingIcon != null)
                     Icon(
                       widget.leadingIcon,
@@ -91,33 +100,57 @@ class _AppInputFieldState extends State<AppInputField> {
                   if (widget.leadingIcon != null)
                     const SizedBox(width: 12),
 
-                  // 🔹 Text field
                   Expanded(
                     child: TextField(
-  controller: widget.controller,
-  obscureText: widget.obscureText,
-  keyboardType: widget.keyboardType,
+                      controller: widget.controller,
+                      obscureText: widget.obscureText,
+                      keyboardType: widget.keyboardType,
+                      readOnly: widget.readOnly,
 
-  // 👇 THIS IS THE IMPORTANT PART
-  style: const TextStyle(
-    color: AppColors.textPrimary, // typed text color
-    fontSize: 16,
-  ),
+                      // 🔒 Prevent taps when read-only
+                      onTap:
+                          widget.readOnly ? null : widget.onTap,
 
-  decoration: InputDecoration(
-    border: InputBorder.none,
-    hintText: widget.hintText,
-    hintStyle: TextStyle(
-      color: hasError
-          ? AppColors.error.withOpacity(0.7)
-          : AppColors.textSecondary,
-    ),
-  ),
-),
+                      // 🔑 Needed for validation
+                      onChanged: widget.onChanged,
 
+                      style: TextStyle(
+                        color: widget.readOnly
+                            ? AppColors.textSecondary
+                            : AppColors.textPrimary,
+                        fontSize: 16,
+                      ),
+                      decoration: InputDecoration(
+                        border: InputBorder.none,
+                        hintText: null,
+                        label: RichText(
+                          text: TextSpan(
+                            text: widget.hintText,
+                            style: TextStyle(
+                              color: hasError
+                                  ? AppColors.error
+                                      .withOpacity(0.7)
+                                  : AppColors.textSecondary,
+                              fontSize: 14,
+                            ),
+                            children: widget.isRequired
+                                ? const [
+                                    TextSpan(
+                                      text: ' *',
+                                      style: TextStyle(
+                                        color: AppColors.error,
+                                        fontWeight:
+                                            FontWeight.w600,
+                                      ),
+                                    ),
+                                  ]
+                                : [],
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
 
-                  // 🔹 Trailing icon
                   if (widget.trailingIcon != null)
                     GestureDetector(
                       onTap: widget.onTrailingTap,
@@ -132,10 +165,10 @@ class _AppInputFieldState extends State<AppInputField> {
               ),
             ),
 
-            // 🔴 Error text
             if (hasError)
               Padding(
-                padding: const EdgeInsets.only(left: 16, top: 6),
+                padding:
+                    const EdgeInsets.only(left: 16, top: 6),
                 child: Text(
                   widget.errorText!,
                   style: const TextStyle(

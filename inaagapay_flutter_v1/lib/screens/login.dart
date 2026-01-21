@@ -92,14 +92,14 @@ class _LoginScreenState extends State<LoginScreen> {
               Align(
                 alignment: Alignment.centerRight,
                 child: ClickableText(
-  text: 'Forgot Password?',
-  onTap: () {
-    Navigator.pushNamed(
-      context,
-      '/forgot-password',
-    );
-  },
-),
+                text: 'Forgot Password?',
+                onTap: () {
+                  Navigator.pushNamed(
+                    context,
+                    '/forgot-password',
+                  );
+                },
+              ),
 
               ),
 
@@ -110,7 +110,10 @@ class _LoginScreenState extends State<LoginScreen> {
                 label: 'Sign in',
                 showIcons: false,
                 onPressed: () {
-                  // TODO: handle login
+                  Navigator.pushNamed(
+                    context,
+                    '/complete-profile',
+                  );
                 },
               ),
 

@@ -92,15 +92,15 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               ),
 
               if (_hasError) ...[
-  const SizedBox(height: 12),
-  const Padding(
-    padding: EdgeInsets.only(left: 20),
-    child: ValidationMessage(
-      message: 'Email not found',
-      type: ValidationType.error,
-    ),
-  ),
-],
+                const SizedBox(height: 12),
+                const Padding(
+                  padding: EdgeInsets.only(left: 20),
+                  child: ValidationMessage(
+                    message: 'Email not found',
+                    type: ValidationType.error,
+                  ),
+                ),
+              ],
 
 
               const SizedBox(height: 28),

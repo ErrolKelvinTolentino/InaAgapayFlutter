@@ -9,6 +9,7 @@ import 'screens/admin_dashboard.dart';
 import 'screens/forgot_password.dart';
 import 'screens/forgot_password_verification.dart';
 import 'screens/change_forgot_password.dart';
+import 'screens/complete_profile.dart';
 
 
 void main() {
@@ -43,7 +44,9 @@ class MyApp extends StatelessWidget {
         '/forgot-password-verify': (context) =>
             const ForgotPasswordVerificationScreen(),
         '/change-forgot-password': (context) =>
-      const ChangeForgotPasswordScreen(),
+            const ChangeForgotPasswordScreen(),
+        '/complete-profile': (context) =>
+            const CompleteProfileScreen(),
 
 
       },

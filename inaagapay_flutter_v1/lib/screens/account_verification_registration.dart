@@ -73,10 +73,10 @@ class _AccountVerificationRegistrationState
 
         // TODO: route based on role if needed
         Navigator.pushNamedAndRemoveUntil(
-  context,
-  '/login',
-  (route) => false,
-);
+          context,
+          '/login',
+          (route) => false,
+        );
 
       },
     ),
