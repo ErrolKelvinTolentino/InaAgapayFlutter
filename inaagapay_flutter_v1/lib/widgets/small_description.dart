@@ -5,12 +5,16 @@ class SmallDescription extends StatelessWidget {
   final String text;
   final IconData? icon;
   final Color? color;
+  final TextAlign? textAlign;
+  final MainAxisAlignment rowAlignment;
 
   const SmallDescription({
     super.key,
     required this.text,
     this.icon,
     this.color,
+    this.textAlign,
+    this.rowAlignment = MainAxisAlignment.start,
   });
 
   @override
@@ -18,7 +22,9 @@ class SmallDescription extends StatelessWidget {
     final Color textColor = color ?? AppColors.textSecondary;
 
     return Row(
+      mainAxisAlignment: rowAlignment,
       crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min, // 🔑 THIS IS CRITICAL
       children: [
         if (icon != null)
           Icon(
@@ -29,13 +35,12 @@ class SmallDescription extends StatelessWidget {
 
         if (icon != null) const SizedBox(width: 8),
 
-        Expanded(
-          child: Text(
-            text,
-            style: TextStyle(
-              fontSize: 13,
-              color: textColor,
-            ),
+        Text(
+          text,
+          textAlign: textAlign,
+          style: TextStyle(
+            fontSize: 13,
+            color: textColor,
           ),
         ),
       ],

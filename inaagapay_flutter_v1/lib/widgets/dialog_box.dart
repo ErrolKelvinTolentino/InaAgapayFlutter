@@ -8,6 +8,7 @@ class DialogBox extends StatelessWidget {
   final String buttonText;
   final VoidCallback onPressed;
   final DialogType type;
+  final String? subtitle; // ✅ NEW (optional)
 
   const DialogBox({
     super.key,
@@ -15,6 +16,7 @@ class DialogBox extends StatelessWidget {
     required this.buttonText,
     required this.onPressed,
     this.type = DialogType.info,
+    this.subtitle, // ✅ optional
   });
 
   Color get _accentColor {
@@ -93,6 +95,20 @@ class DialogBox extends StatelessWidget {
                 color: _accentColor,
               ),
             ),
+
+            // ✅ SUBTEXT (only if provided)
+            if (subtitle != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                subtitle!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 13,
+                  height: 1.4,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ],
 
             const SizedBox(height: 28),
 
