@@ -4,6 +4,7 @@ import '../widgets/app_input_field.dart';
 import '../widgets/main_button.dart';
 import '../widgets/clickable_text.dart';
 import '../services/auth_service.dart';
+import '../services/auth_storage.dart'; // ✅ ADD THIS
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -27,8 +28,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _handleLogin() async {
-    if (_emailController.text.isEmpty ||
-        _passwordController.text.isEmpty) {
+    if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please fill in all fields')),
       );
@@ -47,33 +47,29 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!mounted) return;
 
     if (response.success) {
+      // 🔐 SAVE TOKEN (NEW)
+      if (response.token != null) {
+        await AuthStorage.saveToken(response.token!);
+      }
+
       final user = response.user;
 
-      // ✅ ROLE-BASED NAVIGATION (MATCHES main.dart)
+      // ✅ ROLE-BASED NAVIGATION (UNCHANGED)
       if (user?['role'] == 'mother') {
-        Navigator.pushReplacementNamed(
-          context,
-          '/mother_dashboard',
-        );
+        Navigator.pushReplacementNamed(context, '/mother_dashboard');
       } else if (user?['role'] == 'midwife') {
-        Navigator.pushReplacementNamed(
-          context,
-          '/midwife_dashboard',
-        );
+        Navigator.pushReplacementNamed(context, '/midwife_dashboard');
       } else if (user?['role'] == 'admin') {
-        Navigator.pushReplacementNamed(
-          context,
-          '/admin_dashboard',
-        );
+        Navigator.pushReplacementNamed(context, '/admin_dashboard');
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Unknown user role')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Unknown user role')));
       }
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(response.message)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(response.message)));
     }
   }
 
@@ -89,27 +85,18 @@ class _LoginScreenState extends State<LoginScreen> {
             children: [
               const SizedBox(height: 40),
 
-              Image.asset(
-                'assets/images/logo.png',
-                height: 146,
-              ),
+              Image.asset('assets/images/logo.png', height: 146),
 
               const SizedBox(height: 20),
 
-              Image.asset(
-                'assets/images/inaagapay_name.png',
-                width: 282,
-              ),
+              Image.asset('assets/images/inaagapay_name.png', width: 282),
 
               const SizedBox(height: 8),
 
               const Text(
                 'Supporting you through every step',
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 16,
-                  color: AppColors.textSecondary,
-                ),
+                style: TextStyle(fontSize: 16, color: AppColors.textSecondary),
               ),
 
               const SizedBox(height: 56),
@@ -145,10 +132,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: ClickableText(
                   text: 'Forgot Password?',
                   onTap: () {
-                    Navigator.pushNamed(
-                      context,
-                      '/forgot-password',
-                    );
+                    Navigator.pushNamed(context, '/forgot-password');
                   },
                 ),
               ),

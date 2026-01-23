@@ -15,14 +15,10 @@ class AuthService {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
-        body: jsonEncode({
-          'email': email,
-          'password': password,
-        }),
+        body: jsonEncode({'email': email, 'password': password}),
       );
 
-      if (response.statusCode != 200 ||
-          !response.body.trim().startsWith('{')) {
+      if (response.statusCode != 200 || !response.body.trim().startsWith('{')) {
         return AuthResponse(
           success: false,
           message: 'Server error. Please try again.',
@@ -35,6 +31,7 @@ class AuthService {
         success: data['success'] ?? false,
         message: data['message'] ?? 'Login failed',
         user: data['user'],
+        token: data['token'], // ✅ ADD THIS
       );
     } catch (e) {
       return AuthResponse(
@@ -49,10 +46,12 @@ class AuthResponse {
   final bool success;
   final String message;
   final Map<String, dynamic>? user;
+  final String? token; // ✅ ADD THIS
 
   AuthResponse({
     required this.success,
     required this.message,
     this.user,
+    this.token,
   });
 }

@@ -55,41 +55,13 @@ class _AccountVerificationRegistrationState
   }
 
   Future<void> _verifyCode() async {
-    final result = await VerifyService.verifyCodeWithStatus(
-      email: email,
-      code: _code,
-    );
+    final success = await VerifyService.verifyCode(email: email, code: _code);
 
-    if (!mounted) return;
+    setState(() => _hasError = !success);
 
-    if (!result.success) {
-      setState(() => _hasError = true);
-      return;
+    if (success && mounted) {
+      Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
     }
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => DialogBox(
-        title: result.isLinked
-            ? 'Account Linked'
-            : 'Account Verified',
-        subtitle: result.isLinked
-            ? 'Existing data found from Barangay Health Center'
-            : null,
-        buttonText: 'Continue',
-        type: DialogType.success,
-        onPressed: () {
-          Navigator.pop(context);
-
-          Navigator.pushNamedAndRemoveUntil(
-            context,
-            result.isLinked ? '/mother_dashboard' : '/login',
-            (route) => false,
-          );
-        },
-      ),
-    );
   }
 
   void _resendCode() {
@@ -99,7 +71,7 @@ class _AccountVerificationRegistrationState
       context: context,
       barrierDismissible: false,
       builder: (_) => DialogBox(
-        title: 'Verification Code Sent',
+        title: 'Verification code sent',
         buttonText: 'Okay',
         type: DialogType.info,
         onPressed: () => Navigator.pop(context),
@@ -120,8 +92,8 @@ class _AccountVerificationRegistrationState
               Image.asset('assets/images/logo.png', height: 110),
               const SizedBox(height: 16),
               Image.asset('assets/images/inaagapay_name.png', width: 240),
-
               const SizedBox(height: 32),
+
               const PageTitle(
                 title: 'CODE SENT',
                 leadingIcon: Icons.mail,
@@ -129,6 +101,7 @@ class _AccountVerificationRegistrationState
               ),
 
               const SizedBox(height: 16),
+
               const Text(
                 'Enter the 6-digit code sent to your email',
                 textAlign: TextAlign.center,
