@@ -5,10 +5,7 @@ class VerifyResult {
   final bool success;
   final bool isLinked;
 
-  VerifyResult({
-    required this.success,
-    required this.isLinked,
-  });
+  VerifyResult({required this.success, required this.isLinked});
 }
 
 class VerifyService {
@@ -23,25 +20,16 @@ class VerifyService {
     // 🧪 MOCK LOGIC (replace with real API later)
     // 654321 → existing/linked account
     if (code == '654321') {
-      return VerifyResult(
-        success: true,
-        isLinked: true,
-      );
+      return VerifyResult(success: true, isLinked: true);
     }
 
     // 123456 → new valid account
     if (code == '123456') {
-      return VerifyResult(
-        success: true,
-        isLinked: false,
-      );
+      return VerifyResult(success: true, isLinked: false);
     }
 
     // ❌ Invalid code
-    return VerifyResult(
-      success: false,
-      isLinked: false,
-    );
+    return VerifyResult(success: false, isLinked: false);
   }
 
   /// OPTIONAL: keep your old method if other screens use it
