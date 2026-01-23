@@ -45,78 +45,81 @@ class _MidwifeDashboardState extends State<MidwifeDashboard> {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<DashboardStats>(
-      future: statsFuture,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
+    return Scaffold(
+      backgroundColor: AppColors.bgPrimary,
+      body: SafeArea(
+        child: FutureBuilder<DashboardStats>(
+          future: statsFuture,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
-        if (snapshot.hasError) {
-          return Center(
-            child: Text(
-              snapshot.error.toString(),
-              style: const TextStyle(color: AppColors.error),
-            ),
-          );
-        }
+            if (snapshot.hasError) {
+              return Center(
+                child: Text(
+                  snapshot.error.toString(),
+                  style: const TextStyle(color: AppColors.error),
+                ),
+              );
+            }
 
-        final s = snapshot.data!;
+            final s = snapshot.data!;
 
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const PageTitle(
-                title: 'Midwife Dashboard',
-                leadingIcon: Icons.medical_services,
-                trailingIcon: Icons.check_circle,
-              ),
-
-              const SizedBox(height: 16),
-
-              Wrap(
-                spacing: 8,
+            return SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  filterChip('ALL', 'all'),
-                  filterChip('TODAY', 'today'),
-                  filterChip('THIS WEEK', 'week'),
-                  filterChip('THIS MONTH', 'month'),
+                  const PageTitle(
+                    title: 'Midwife Dashboard',
+                    leadingIcon: Icons.medical_services,
+                    trailingIcon: Icons.check_circle,
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  Wrap(
+                    spacing: 8,
+                    children: [
+                      filterChip('ALL', 'all'),
+                      filterChip('TODAY', 'today'),
+                      filterChip('THIS WEEK', 'week'),
+                      filterChip('THIS MONTH', 'month'),
+                    ],
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  section('Mothers by Trimester'),
+                  statRow('1st Trimester', s.firstTrimester),
+                  statRow('2nd Trimester', s.secondTrimester),
+                  statRow('3rd Trimester', s.thirdTrimester),
+
+                  const SizedBox(height: 20),
+
+                  section('Scheduled Checkups'),
+                  statRow('Mothers', s.mothers),
+                  statRow('Children', s.children),
+
+                  const SizedBox(height: 20),
+
+                  section('Birth Outcomes'),
+                  statRow('Live Births', s.liveBirths),
+                  statRow('Stillbirths', s.stillBirths),
+
+                  const SizedBox(height: 20),
+
+                  section('Place of Delivery'),
+                  statRow('Hospital', s.hospital),
+                  statRow('Center', s.center),
+                  statRow('Home', s.home),
                 ],
               ),
-
-              const SizedBox(height: 20),
-
-              section('Mothers by Trimester'),
-              statRow('1st Trimester', s.firstTrimester),
-              statRow('2nd Trimester', s.secondTrimester),
-              statRow('3rd Trimester', s.thirdTrimester),
-
-              const SizedBox(height: 20),
-
-              section('Scheduled Checkups'),
-              statRow('Mothers', s.mothers),
-              statRow('Children', s.children),
-
-              const SizedBox(height: 20),
-
-              section('Birth Outcomes'),
-              statRow('Live Births', s.liveBirths),
-              statRow('Stillbirths', s.stillBirths),
-
-              const SizedBox(height: 20),
-
-              section('Place of Delivery'),
-              statRow('Hospital', s.hospital),
-              statRow('Center', s.center),
-              statRow('Home', s.home),
-
-              const SizedBox(height: 80),
-            ],
-          ),
-        );
-      },
+            );
+          },
+        ),
+      ),
     );
   }
 
@@ -127,6 +130,12 @@ class _MidwifeDashboardState extends State<MidwifeDashboard> {
       selected: selected,
       onSelected: (_) => changeFilter(value),
       selectedColor: AppColors.brandPrimary.withOpacity(0.2),
+      labelStyle: TextStyle(
+        fontWeight: FontWeight.bold,
+        color: selected
+            ? AppColors.brandAccent
+            : AppColors.textPrimary,
+      ),
     );
   }
 
@@ -152,7 +161,7 @@ class _MidwifeDashboardState extends State<MidwifeDashboard> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(label),
+            Text(label, style: const TextStyle(color: AppColors.textSecondary)),
             Text(
               value.toString(),
               style: const TextStyle(
@@ -165,7 +174,7 @@ class _MidwifeDashboardState extends State<MidwifeDashboard> {
       );
 }
 
-/* MODEL */
+/* ================= MODEL (NULL-SAFE) ================= */
 
 class DashboardStats {
   final int firstTrimester;
