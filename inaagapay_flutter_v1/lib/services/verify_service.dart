@@ -8,16 +8,24 @@ class VerifyService {
     required String email,
     required String code,
   }) async {
-    final response = await http.post(
-      Uri.parse('${baseUrl}verify.php'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'email': email,
-        'code': code,
-      }),
-    );
+    try {
+      final response = await http.post(
+        Uri.parse('${baseUrl}verify.php'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'email': email,
+          'code': code,
+        }),
+      );
 
-    final data = jsonDecode(response.body);
-    return data['success'] == true;
+      if (!response.body.trim().startsWith('{')) {
+        return false;
+      }
+
+      final data = jsonDecode(response.body);
+      return data['success'] == true;
+    } catch (e) {
+      return false;
+    }
   }
 }

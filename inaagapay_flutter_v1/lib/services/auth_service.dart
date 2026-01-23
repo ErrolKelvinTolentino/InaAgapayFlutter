@@ -8,11 +8,9 @@ class AuthService {
     required String email,
     required String password,
   }) async {
-    final Uri url = Uri.parse('${baseUrl}login.php');
-
     try {
       final response = await http.post(
-        url,
+        Uri.parse('${baseUrl}login.php'),
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
@@ -23,25 +21,29 @@ class AuthService {
         }),
       );
 
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> data = jsonDecode(response.body);
-        return AuthResponse.fromJson(data);
-      } else {
+      if (response.statusCode != 200 ||
+          !response.body.trim().startsWith('{')) {
         return AuthResponse(
           success: false,
-          message: 'Server error (${response.statusCode})',
+          message: 'Server error. Please try again.',
         );
       }
+
+      final data = jsonDecode(response.body);
+
+      return AuthResponse(
+        success: data['success'] ?? false,
+        message: data['message'] ?? 'Login failed',
+        user: data['user'],
+      );
     } catch (e) {
       return AuthResponse(
         success: false,
-        message: 'Connection failed. Please try again.',
+        message: 'Connection failed. Check your internet.',
       );
     }
   }
 }
-
-/* 🔽 PUT AuthResponse HERE (BOTTOM OF FILE) 🔽 */
 
 class AuthResponse {
   final bool success;
@@ -53,12 +55,4 @@ class AuthResponse {
     required this.message,
     this.user,
   });
-
-  factory AuthResponse.fromJson(Map<String, dynamic> json) {
-    return AuthResponse(
-      success: json['success'] ?? false,
-      message: json['message'] ?? 'Unknown error',
-      user: json['user'],
-    );
-  }
 }
