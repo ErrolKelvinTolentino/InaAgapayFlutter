@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 
 import '../theme/app_colors.dart';
 import '../widgets/page_title.dart';
+import '../services/auth_storage.dart';
 
 class MidwifeDashboard extends StatefulWidget {
   const MidwifeDashboard({super.key});
@@ -45,80 +46,169 @@ class _MidwifeDashboardState extends State<MidwifeDashboard> {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<DashboardStats>(
-      future: statsFuture,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
+    return Scaffold(
+      backgroundColor: AppColors.bgPrimary,
 
-        if (snapshot.hasError) {
-          return Center(
-            child: Text(
-              snapshot.error.toString(),
-              style: const TextStyle(color: AppColors.error),
+      // 🔝 APP BAR WITH AVATAR MENU
+      appBar: AppBar(
+        backgroundColor: AppColors.bgPrimary,
+        elevation: 0,
+        title: const Text(
+          'Midwife Dashboard',
+          style: TextStyle(color: AppColors.brandText),
+        ),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: PopupMenuButton<_ProfileAction>(
+              offset: const Offset(0, 52), // ⬅️ pushes menu DOWN
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+              onSelected: (action) async {
+                switch (action) {
+                  case _ProfileAction.profile:
+                    // TODO: Profile screen
+                    break;
+
+                  case _ProfileAction.settings:
+                    // TODO: Settings screen
+                    break;
+
+                  case _ProfileAction.logout:
+                    await AuthStorage.clearToken();
+                    if (!mounted) return;
+                    Navigator.pushNamedAndRemoveUntil(
+                      context,
+                      '/login',
+                      (route) => false,
+                    );
+                    break;
+                }
+              },
+              itemBuilder: (context) => const [
+                PopupMenuItem(
+                  value: _ProfileAction.profile,
+                  child: ListTile(
+                    leading: Icon(Icons.person),
+                    title: Text('Profile'),
+                  ),
+                ),
+                PopupMenuItem(
+                  value: _ProfileAction.settings,
+                  child: ListTile(
+                    leading: Icon(Icons.settings),
+                    title: Text('Settings'),
+                  ),
+                ),
+                PopupMenuItem(
+                  value: _ProfileAction.logout,
+                  child: ListTile(
+                    leading: Icon(Icons.logout, color: Colors.red),
+                    title: Text('Logout', style: TextStyle(color: Colors.red)),
+                  ),
+                ),
+              ],
+              child: const CircleAvatar(
+                radius: 18,
+                backgroundColor: AppColors.brandPrimary,
+                child: Icon(Icons.person, color: Colors.white, size: 20),
+              ),
+            ),
+          ),
+        ],
+      ),
+
+      // 🔽 BODY
+      body: FutureBuilder<DashboardStats>(
+        future: statsFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (snapshot.hasError) {
+            return Center(
+              child: Text(
+                snapshot.error.toString(),
+                style: const TextStyle(color: AppColors.error),
+              ),
+            );
+          }
+
+          final s = snapshot.data!;
+
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 12),
+
+                const PageTitle(
+                  title: 'Overview',
+                  leadingIcon: Icons.medical_services,
+                  trailingIcon: Icons.check_circle,
+                ),
+
+                const SizedBox(height: 24),
+
+                // 🔘 FILTERS
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.bgSecondary,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: AppColors.borderPrimary),
+                  ),
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      filterChip('ALL', 'all'),
+                      filterChip('TODAY', 'today'),
+                      filterChip('THIS WEEK', 'week'),
+                      filterChip('THIS MONTH', 'month'),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                section('Mothers by Trimester'),
+                statRow('1st Trimester', s.firstTrimester),
+                statRow('2nd Trimester', s.secondTrimester),
+                statRow('3rd Trimester', s.thirdTrimester),
+
+                const SizedBox(height: 20),
+
+                section('Scheduled Checkups'),
+                statRow('Mothers', s.mothers),
+                statRow('Children', s.children),
+
+                const SizedBox(height: 20),
+
+                section('Birth Outcomes'),
+                statRow('Live Births', s.liveBirths),
+                statRow('Stillbirths', s.stillBirths),
+
+                const SizedBox(height: 20),
+
+                section('Place of Delivery'),
+                statRow('Hospital', s.hospital),
+                statRow('Center', s.center),
+                statRow('Home', s.home),
+
+                const SizedBox(height: 80),
+              ],
             ),
           );
-        }
-
-        final s = snapshot.data!;
-
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const PageTitle(
-                title: 'Midwife Dashboard',
-                leadingIcon: Icons.medical_services,
-                trailingIcon: Icons.check_circle,
-              ),
-
-              const SizedBox(height: 16),
-
-              Wrap(
-                spacing: 8,
-                children: [
-                  filterChip('ALL', 'all'),
-                  filterChip('TODAY', 'today'),
-                  filterChip('THIS WEEK', 'week'),
-                  filterChip('THIS MONTH', 'month'),
-                ],
-              ),
-
-              const SizedBox(height: 20),
-
-              section('Mothers by Trimester'),
-              statRow('1st Trimester', s.firstTrimester),
-              statRow('2nd Trimester', s.secondTrimester),
-              statRow('3rd Trimester', s.thirdTrimester),
-
-              const SizedBox(height: 20),
-
-              section('Scheduled Checkups'),
-              statRow('Mothers', s.mothers),
-              statRow('Children', s.children),
-
-              const SizedBox(height: 20),
-
-              section('Birth Outcomes'),
-              statRow('Live Births', s.liveBirths),
-              statRow('Stillbirths', s.stillBirths),
-
-              const SizedBox(height: 20),
-
-              section('Place of Delivery'),
-              statRow('Hospital', s.hospital),
-              statRow('Center', s.center),
-              statRow('Home', s.home),
-
-              const SizedBox(height: 80),
-            ],
-          ),
-        );
-      },
+        },
+      ),
     );
   }
+
+  // ================= UI HELPERS =================
 
   Widget filterChip(String label, String value) {
     final selected = selectedFilter == value;
@@ -131,41 +221,45 @@ class _MidwifeDashboardState extends State<MidwifeDashboard> {
   }
 
   Widget section(String title) => Padding(
-        padding: const EdgeInsets.only(bottom: 8),
-        child: Text(
-          title,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            color: AppColors.brandText,
-          ),
-        ),
-      );
+    padding: const EdgeInsets.only(bottom: 8),
+    child: Text(
+      title,
+      style: const TextStyle(
+        fontWeight: FontWeight.bold,
+        color: AppColors.brandText,
+      ),
+    ),
+  );
 
   Widget statRow(String label, int value) => Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: AppColors.faintWhite,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.borderPrimary),
+    margin: const EdgeInsets.only(bottom: 10),
+    padding: const EdgeInsets.all(14),
+    decoration: BoxDecoration(
+      color: AppColors.faintWhite,
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: AppColors.borderPrimary),
+    ),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label),
+        Text(
+          value.toString(),
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            color: AppColors.brandAccent,
+          ),
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(label),
-            Text(
-              value.toString(),
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                color: AppColors.brandAccent,
-              ),
-            ),
-          ],
-        ),
-      );
+      ],
+    ),
+  );
 }
 
-/* MODEL */
+// ================= ENUM =================
+
+enum _ProfileAction { profile, settings, logout }
+
+// ================= MODEL =================
 
 class DashboardStats {
   final int firstTrimester;

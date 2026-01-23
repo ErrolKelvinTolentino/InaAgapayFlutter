@@ -13,18 +13,18 @@ class MotherDashboard extends StatelessWidget {
 
       // 🔝 Header
       appBar: PreferredSize(
-  preferredSize: const Size.fromHeight(72),
-  child: MainHeader(
-    title: 'HOME',
-    onNotificationTap: () {
-      // TODO: open notifications
-    },
-    onAvatarTap: () {
-      // TODO: open profile
-    },
-    // avatarImage: AssetImage('assets/images/avatar.png'), // optional
-  ),
-),
+        preferredSize: const Size.fromHeight(72),
+        child: MainHeader(
+          title: 'HOME',
+          onNotificationTap: () {
+            // TODO: open notifications
+          },
+          onAvatarTap: () {
+            // TODO: open profile
+          },
+          // avatarImage: AssetImage('assets/images/avatar.png'), // optional
+        ),
+      ),
 
       // 🔽 Body
       body: SafeArea(
@@ -92,7 +92,9 @@ class MotherDashboard extends StatelessWidget {
                         ),
                         Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 4),
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
                           decoration: BoxDecoration(
                             color: AppColors.brandPrimary,
                             borderRadius: BorderRadius.circular(20),
@@ -162,10 +164,7 @@ class MotherDashboard extends StatelessWidget {
                 ),
                 child: Row(
                   children: const [
-                    Icon(
-                      Icons.calendar_month,
-                      color: AppColors.brandPrimary,
-                    ),
+                    Icon(Icons.calendar_month, color: AppColors.brandPrimary),
                     SizedBox(width: 12),
                     Expanded(
                       child: Text(
@@ -218,10 +217,7 @@ class MotherDashboard extends StatelessWidget {
                         ),
                       ),
                     ),
-                    Image.asset(
-                      'assets/images/blueberry.png',
-                      height: 60,
-                    ),
+                    Image.asset('assets/images/blueberry.png', height: 60),
                   ],
                 ),
               ),
@@ -237,10 +233,7 @@ class MotherDashboard extends StatelessWidget {
                 ),
                 child: Row(
                   children: const [
-                    Icon(
-                      Icons.notifications,
-                      color: AppColors.brandPrimary,
-                    ),
+                    Icon(Icons.notifications, color: AppColors.brandPrimary),
                     SizedBox(width: 12),
                     Expanded(
                       child: Text(
@@ -285,8 +278,7 @@ class MotherDashboard extends StatelessWidget {
           // example:
           // if (index == 0) Navigator.pushNamed(context, '/home');
         },
-),
-
+      ),
     );
   }
 
@@ -341,18 +333,15 @@ class MotherDashboard extends StatelessWidget {
         onPressed: () {},
         icon: Icon(
           icon,
-          color:
-              filled ? AppColors.textOnColor : AppColors.brandPrimary,
+          color: filled ? AppColors.textOnColor : AppColors.brandPrimary,
         ),
         label: Text(text),
         style: ElevatedButton.styleFrom(
-          backgroundColor:
-              filled ? AppColors.brandPrimary : Colors.transparent,
-          foregroundColor:
-              filled ? AppColors.textOnColor : AppColors.brandPrimary,
-          side: filled
-              ? null
-              : const BorderSide(color: AppColors.brandPrimary),
+          backgroundColor: filled ? AppColors.brandPrimary : Colors.transparent,
+          foregroundColor: filled
+              ? AppColors.textOnColor
+              : AppColors.brandPrimary,
+          side: filled ? null : const BorderSide(color: AppColors.brandPrimary),
           padding: const EdgeInsets.symmetric(vertical: 14),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(30),

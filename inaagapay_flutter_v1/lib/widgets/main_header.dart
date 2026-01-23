@@ -82,10 +82,7 @@ class MainHeader extends StatelessWidget {
                 shape: BoxShape.circle,
                 color: AppColors.brandPrimary,
                 image: avatarImage != null
-                    ? DecorationImage(
-                        image: avatarImage!,
-                        fit: BoxFit.cover,
-                      )
+                    ? DecorationImage(image: avatarImage!, fit: BoxFit.cover)
                     : null,
               ),
             ),
