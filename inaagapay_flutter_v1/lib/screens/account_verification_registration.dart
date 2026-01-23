@@ -52,42 +52,60 @@ class _AccountVerificationRegistrationState
   }
 
   void _verifyCode() {
-  // ❌ Incorrect code
-  if (_code != '123456') {
-    setState(() {
-      _hasError = true;
-    });
-    return;
+    // ❌ Invalid code
+    if (_code != '123456' && _code != '654321') {
+      setState(() {
+        _hasError = true;
+      });
+      return;
+    }
+
+    // 🧪 Existing account linked
+    if (_code == '654321') {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => DialogBox(
+          title: 'Account Linked',
+          subtitle:
+              'You have existing data from a Barangay Health Center',
+          buttonText: 'Continue',
+          type: DialogType.success,
+          onPressed: () {
+            Navigator.pop(context);
+            Navigator.pushNamedAndRemoveUntil(
+              context,
+              '/login',
+              (route) => false,
+            );
+          },
+        ),
+      );
+      return;
+    }
+
+    // ✅ New account verified
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => DialogBox(
+        title: 'Account Verified!',
+        buttonText: 'Continue',
+        type: DialogType.success,
+        onPressed: () {
+          Navigator.pop(context);
+          Navigator.pushNamedAndRemoveUntil(
+            context,
+            '/login',
+            (route) => false,
+          );
+        },
+      ),
+    );
   }
-
-  // ✅ Correct code → show success dialog
-  showDialog(
-    context: context,
-    barrierDismissible: false,
-    builder: (_) => DialogBox(
-      title: 'Account Verified!',
-      buttonText: 'Continue',
-      type: DialogType.success, // 🟢 GREEN
-      onPressed: () {
-        Navigator.pop(context); // close dialog
-
-        // TODO: route based on role if needed
-        Navigator.pushNamedAndRemoveUntil(
-          context,
-          '/login',
-          (route) => false,
-        );
-
-      },
-    ),
-  );
-}
-
 
   void _resendCode() {
     _startTimer();
-
-    // TODO: resend OTP via backend
 
     showDialog(
       context: context,
@@ -116,26 +134,17 @@ class _AccountVerificationRegistrationState
             children: [
               const SizedBox(height: 32),
 
-              Image.asset(
-                'assets/images/logo.png',
-                height: 110,
-              ),
+              Image.asset('assets/images/logo.png', height: 110),
               const SizedBox(height: 16),
-              Image.asset(
-                'assets/images/inaagapay_name.png',
-                width: 240,
-              ),
-              const SizedBox(height: 24),
+              Image.asset('assets/images/inaagapay_name.png', width: 240),
 
-              const SizedBox(height: 32),
+              const SizedBox(height: 56),
 
-              
               const PageTitle(
                 title: 'CODE SENT',
                 leadingIcon: Icons.mail,
                 trailingIcon: Icons.check,
               ),
-              
 
               const SizedBox(height: 16),
 
@@ -161,25 +170,22 @@ class _AccountVerificationRegistrationState
               ),
 
               if (_hasError) ...[
-  const SizedBox(height: 12),
-  const Padding(
-    padding: EdgeInsets.only(left: 20),
-    child: ValidationMessage(
-      message: 'Incorrect code. Please try again.',
-      type: ValidationType.error,
-    ),
-  ),
-],
-
+                const SizedBox(height: 12),
+                const Padding(
+                  padding: EdgeInsets.only(left: 20),
+                  child: ValidationMessage(
+                    message: 'Incorrect code. Please try again.',
+                    type: ValidationType.error,
+                  ),
+                ),
+              ],
 
               const SizedBox(height: 32),
 
               MainButton(
                 label: 'Verify',
                 showIcons: false,
-                onPressed: _code.length == 6
-                    ? () => _verifyCode()
-                    : null,
+                onPressed: _code.length == 6 ? _verifyCode : null,
               ),
 
               const SizedBox(height: 32),

@@ -26,12 +26,21 @@ class _MotherRegistrationScreenState
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
 
+  bool _emailExists = false;
+
   late final AnimationController _shakeController;
   late final Animation<double> _shakeAnimation;
 
   @override
   void initState() {
     super.initState();
+
+    _emailController.addListener(() {
+      final email = _emailController.text.trim().toLowerCase();
+      setState(() {
+        _emailExists = email == 'existing@gmail.com';
+      });
+    });
 
     _passwordController.addListener(() => setState(() {}));
     _confirmPasswordController.addListener(() => setState(() {}));
@@ -77,6 +86,11 @@ class _MotherRegistrationScreenState
     return PasswordStrength.strong;
   }
 
+  bool get _isEmailValid {
+    final email = _emailController.text.trim();
+    return RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(email);
+  }
+
   bool get _passwordsMatch =>
       _confirmPasswordController.text.isNotEmpty &&
       _passwordController.text == _confirmPasswordController.text;
@@ -86,27 +100,26 @@ class _MotherRegistrationScreenState
       !_passwordsMatch;
 
   bool get _canSubmit =>
+      _isEmailValid &&
+      !_emailExists &&
       _calculateStrength(_passwordController.text) ==
           PasswordStrength.strong &&
       _passwordsMatch;
 
-  // ✅ UPDATED SUBMIT HANDLER
+  // ✅ Submit handler
   Future<void> _handleSubmit() async {
     if (!_canSubmit) {
       _shakeController.forward(from: 0);
       return;
     }
 
-    // TODO: Send verification code (API / Firebase)
-
-    // ✅ Show dialog first
     await showDialog(
       context: context,
       barrierDismissible: false,
       builder: (_) => DialogBox(
         title: 'Verification Code Sent',
         buttonText: 'Continue',
-        type: DialogType.info, // 🩷 pink / informational
+        type: DialogType.info,
         onPressed: () {
           Navigator.of(context).pop();
         },
@@ -115,11 +128,7 @@ class _MotherRegistrationScreenState
 
     if (!mounted) return;
 
-    // ✅ Then navigate
-    Navigator.pushNamed(
-      context,
-      '/verify-registration',
-    );
+    Navigator.pushNamed(context, '/verify-registration');
   }
 
   @override
@@ -136,15 +145,9 @@ class _MotherRegistrationScreenState
             children: [
               const SizedBox(height: 32),
 
-              Image.asset(
-                'assets/images/logo.png',
-                height: 110,
-              ),
+              Image.asset('assets/images/logo.png', height: 110),
               const SizedBox(height: 16),
-              Image.asset(
-                'assets/images/inaagapay_name.png',
-                width: 240,
-              ),
+              Image.asset('assets/images/inaagapay_name.png', width: 240),
 
               const SizedBox(height: 24),
 
@@ -156,6 +159,7 @@ class _MotherRegistrationScreenState
 
               const SizedBox(height: 24),
 
+              // 📧 Email Field
               AppInputField(
                 hintText: 'Enter Email Address*',
                 controller: _emailController,
@@ -163,8 +167,32 @@ class _MotherRegistrationScreenState
                 leadingIcon: Icons.email_outlined,
               ),
 
+              const SizedBox(height: 8),
+
+              Padding(
+                padding: const EdgeInsets.only(left: 20),
+                child: Builder(
+                  builder: (_) {
+                    if (_emailController.text.isEmpty) {
+                      return const SizedBox.shrink();
+                    }
+
+                    if (!_isEmailValid) {
+                      return _errorRow('Enter a valid email address');
+                    }
+
+                    if (_emailExists) {
+                      return _errorRow('Email already exists');
+                    }
+
+                    return _successRow('Email looks good');
+                  },
+                ),
+              ),
+
               const SizedBox(height: 16),
 
+              // 🔐 Password
               AppInputField(
                 hintText: 'Create Password',
                 controller: _passwordController,
@@ -186,9 +214,7 @@ class _MotherRegistrationScreenState
                 padding: const EdgeInsets.only(right: 20),
                 child: Align(
                   alignment: Alignment.centerRight,
-                  child: PasswordStrengthIndicator(
-                    strength: strength,
-                  ),
+                  child: PasswordStrengthIndicator(strength: strength),
                 ),
               ),
 
@@ -201,6 +227,7 @@ class _MotherRegistrationScreenState
 
               const SizedBox(height: 20),
 
+              // 🔁 Confirm Password + Shake
               AnimatedBuilder(
                 animation: _shakeAnimation,
                 builder: (context, child) {
@@ -230,65 +257,33 @@ class _MotherRegistrationScreenState
 
                     const SizedBox(height: 8),
 
-Padding(
-  padding: const EdgeInsets.only(left: 20),
-  child: Builder(
-    builder: (_) {
-      if (_passwordsDoNotMatch) {
-        return Row(
-          children: const [
-            Icon(
-              Icons.cancel,
-              size: 16,
-              color: AppColors.error,
-            ),
-            SizedBox(width: 6),
-            Text(
-              'Passwords do not match',
-              style: TextStyle(
-                fontSize: 13,
-                color: AppColors.error,
-              ),
-            ),
-          ],
-        );
-      }
+                    Padding(
+                      padding: const EdgeInsets.only(left: 20),
+                      child: Builder(
+                        builder: (_) {
+                          if (_passwordsDoNotMatch) {
+                            return _errorRow('Passwords do not match');
+                          }
 
-      if (_passwordsMatch) {
-        return Row(
-          children: const [
-            Icon(
-              Icons.check_circle,
-              size: 16,
-              color: AppColors.success,
-            ),
-            SizedBox(width: 6),
-            Text(
-              'Passwords match',
-              style: TextStyle(
-                fontSize: 13,
-                color: AppColors.success,
-              ),
-            ),
-          ],
-        );
-      }
+                          if (_passwordsMatch) {
+                            return _successRow('Passwords match');
+                          }
 
-      return const SizedBox.shrink();
-    },
-  ),
-),
-
+                          return const SizedBox.shrink();
+                        },
+                      ),
+                    ),
                   ],
                 ),
               ),
 
               const SizedBox(height: 32),
 
+              // 🚀 Submit Button
               MainButton(
                 label: 'Send Verification Code',
                 showIcons: false,
-                onPressed: _handleSubmit,
+                onPressed: _canSubmit ? _handleSubmit : null,
               ),
 
               const SizedBox(height: 24),
@@ -316,45 +311,36 @@ Padding(
                 ],
               ),
 
-              const SizedBox(height: 16),
-
-              const Text(
-                'By proceeding, you are acknowledging the',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: AppColors.textSecondary,
-                ),
-              ),
-
-              const SizedBox(height: 4),
-
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  ClickableText(
-                    text: 'Terms of Use',
-                    onTap: () {},
-                  ),
-                  const Text(
-                    ' and ',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                  ClickableText(
-                    text: 'Privacy Policy',
-                    onTap: () {},
-                  ),
-                ],
-              ),
-
               const SizedBox(height: 24),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  // 🔧 Helper rows
+  Widget _errorRow(String text) {
+    return Row(
+      children: [
+        const Icon(Icons.cancel, size: 16, color: AppColors.error),
+        const SizedBox(width: 6),
+        Text(text,
+            style: const TextStyle(fontSize: 13, color: AppColors.error)),
+      ],
+    );
+  }
+
+  Widget _successRow(String text) {
+    return Row(
+      children: [
+        const Icon(Icons.check_circle,
+            size: 16, color: AppColors.success),
+        const SizedBox(width: 6),
+        Text(text,
+            style:
+                const TextStyle(fontSize: 13, color: AppColors.success)),
+      ],
     );
   }
 }
