@@ -11,6 +11,9 @@ import 'screens/forgot_password.dart';
 import 'screens/forgot_password_verification.dart';
 import 'screens/change_forgot_password.dart';
 import 'screens/complete_profile.dart';
+import 'screens/welcome_screen.dart';
+import 'screens/congrats_page.dart';
+import 'screens/due_date_setter.dart';
 
 void main() {
   runApp(const MyApp());
@@ -36,20 +39,30 @@ class MyApp extends StatelessWidget {
         '/verify-registration': (context) =>
             const AccountVerificationRegistration(),
 
-        // ✅ DASHBOARDS (USE UNDERSCORES)
+        // dashboards
         '/mother_dashboard': (context) => const MotherDashboard(),
         '/midwife_dashboard': (context) => const MidwifeDashboard(),
         '/admin_dashboard': (context) => const AdminDashboard(),
 
-        // 🔐 FORGOT PASSWORD FLOW
+        // auth flows
         '/forgot-password': (context) => const ForgotPasswordScreen(),
         '/forgot-password-verify': (context) =>
             const ForgotPasswordVerificationScreen(),
         '/change-forgot-password': (context) =>
             const ChangeForgotPasswordScreen(),
 
-        '/complete-profile': (context) =>
-            const CompleteProfileScreen(),
+        '/complete-profile': (context) => const CompleteProfileScreen(),
+        '/welcome': (context) => const WelcomeScreen(),
+      },
+
+      onGenerateRoute: (settings) {
+        if (settings.name == '/congrats') {
+          final mode = settings.arguments as DueDateMode;
+          return MaterialPageRoute(
+            builder: (_) => CongratsPage(mode: mode),
+          );
+        }
+        return null;
       },
     );
   }
