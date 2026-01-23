@@ -72,12 +72,12 @@ class _AccountVerificationRegistrationState
           buttonText: 'Continue',
           type: DialogType.success,
           onPressed: () {
-            Navigator.pop(context);
             Navigator.pushNamedAndRemoveUntil(
-              context,
-              '/login',
-              (route) => false,
-            );
+  context,
+  '/mother-dashboard',
+  (route) => false,
+);
+
           },
         ),
       );

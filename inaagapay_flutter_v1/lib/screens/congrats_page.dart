@@ -170,7 +170,11 @@ class CongratsPage extends StatelessWidget {
                     ? "Let's begin your journey!"
                     : "Let's begin the journey!",
                 onPressed: () {
-                  Navigator.pushReplacementNamed(context, '/home');
+                  Navigator.pushNamedAndRemoveUntil(
+  context,
+  '/mother-dashboard',
+  (route) => false,
+);
                 },
               ),
 
