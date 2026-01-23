@@ -6,6 +6,7 @@ import '../widgets/main_button.dart';
 import '../widgets/calculation_dropdown.dart';
 import '../widgets/aog_input.dart';
 import '../models/due_date_basis.dart';
+import 'congrats_page.dart';
 
 enum DueDateMode { pregnant, supporting }
 
@@ -184,13 +185,19 @@ class _DueDateSetterScreenState extends State<DueDateSetterScreen> {
               const Spacer(),
 
               MainButton(
-                label: isPregnant
-                    ? 'Calculate My Due Date'
-                    : 'Calculate Their Due Date',
-                onPressed: () {
-                  // calculation step next
-                },
-              ),
+  label: isPregnant
+      ? 'Calculate My Due Date'
+      : 'Calculate Their Due Date',
+  onPressed: () {
+    Navigator.pushNamed(
+  context,
+  '/congrats',
+  arguments: widget.mode, // DueDateMode.pregnant or supporting
+);
+
+  },
+),
+
             ],
           ),
         ),

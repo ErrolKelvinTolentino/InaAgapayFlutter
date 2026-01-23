@@ -11,6 +11,9 @@ import 'screens/forgot_password_verification.dart';
 import 'screens/change_forgot_password.dart';
 import 'screens/complete_profile.dart';
 import 'screens/welcome_screen.dart';
+import 'screens/congrats_page.dart';
+import 'screens/due_date_setter.dart'; // gives access to DueDateMode
+
 
 
 void main() {
@@ -49,10 +52,18 @@ class MyApp extends StatelessWidget {
         '/complete-profile': (context) =>
             const CompleteProfileScreen(),
         '/welcome': (context) => const WelcomeScreen(),
-
-
-
       },
+      onGenerateRoute: (settings) {
+    if (settings.name == '/congrats') {
+      final mode = settings.arguments as DueDateMode;
+
+      return MaterialPageRoute(
+        builder: (_) => CongratsPage(mode: mode),
+      );
+    }
+    return null;
+      },
+
     );
   }
 }
