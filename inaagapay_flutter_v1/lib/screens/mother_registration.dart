@@ -28,12 +28,21 @@ class _MotherRegistrationScreenState
   bool _obscureConfirmPassword = true;
   bool _isLoading = false;
 
+  bool _emailExists = false;
+
   late final AnimationController _shakeController;
   late final Animation<double> _shakeAnimation;
 
   @override
   void initState() {
     super.initState();
+
+    _emailController.addListener(() {
+      final email = _emailController.text.trim().toLowerCase();
+      setState(() {
+        _emailExists = email == 'existing@gmail.com';
+      });
+    });
 
     _passwordController.addListener(() => setState(() {}));
     _confirmPasswordController.addListener(() => setState(() {}));
@@ -75,6 +84,11 @@ class _MotherRegistrationScreenState
     return PasswordStrength.strong;
   }
 
+  bool get _isEmailValid {
+    final email = _emailController.text.trim();
+    return RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(email);
+  }
+
   bool get _passwordsMatch =>
       _confirmPasswordController.text.isNotEmpty &&
       _passwordController.text == _confirmPasswordController.text;
@@ -83,10 +97,13 @@ class _MotherRegistrationScreenState
       _confirmPasswordController.text.isNotEmpty && !_passwordsMatch;
 
   bool get _canSubmit =>
+      _isEmailValid &&
+      !_emailExists &&
       _calculateStrength(_passwordController.text) ==
           PasswordStrength.strong &&
       _passwordsMatch;
 
+  // 🚀 Submit handler
   Future<void> _handleSubmit() async {
     if (!_canSubmit) {
       _shakeController.forward(from: 0);
@@ -104,25 +121,7 @@ class _MotherRegistrationScreenState
 
     if (!mounted) return;
 
-    if (success) {
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (_) => DialogBox(
-          title: 'Verification Code Sent',
-          buttonText: 'Continue',
-          type: DialogType.success,
-          onPressed: () {
-            Navigator.pop(context);
-            Navigator.pushNamed(
-              context,
-              '/verify-registration',
-              arguments: _emailController.text.trim(),
-            );
-          },
-        ),
-      );
-    } else {
+    if (!success) {
       showDialog(
         context: context,
         builder: (_) => DialogBox(
@@ -132,7 +131,26 @@ class _MotherRegistrationScreenState
           onPressed: () => Navigator.pop(context),
         ),
       );
+      return;
     }
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => DialogBox(
+        title: 'Verification Code Sent',
+        buttonText: 'Continue',
+        type: DialogType.success,
+        onPressed: () {
+          Navigator.pop(context);
+          Navigator.pushNamed(
+            context,
+            '/verify-registration',
+            arguments: _emailController.text.trim(),
+          );
+        },
+      ),
+    );
   }
 
   @override
@@ -161,6 +179,7 @@ class _MotherRegistrationScreenState
 
               const SizedBox(height: 24),
 
+              // 📧 Email
               AppInputField(
                 hintText: 'Enter Email Address*',
                 controller: _emailController,
@@ -168,8 +187,28 @@ class _MotherRegistrationScreenState
                 leadingIcon: Icons.email_outlined,
               ),
 
+              const SizedBox(height: 8),
+              Padding(
+                padding: const EdgeInsets.only(left: 20),
+                child: Builder(
+                  builder: (_) {
+                    if (_emailController.text.isEmpty) {
+                      return const SizedBox.shrink();
+                    }
+                    if (!_isEmailValid) {
+                      return _errorRow('Enter a valid email address');
+                    }
+                    if (_emailExists) {
+                      return _errorRow('Email already exists');
+                    }
+                    return _successRow('Email looks good');
+                  },
+                ),
+              ),
+
               const SizedBox(height: 16),
 
+              // 🔐 Password
               AppInputField(
                 hintText: 'Create Password',
                 controller: _passwordController,
@@ -189,8 +228,10 @@ class _MotherRegistrationScreenState
 
               const SizedBox(height: 12),
               PasswordConstraints(password: password),
+
               const SizedBox(height: 20),
 
+              // 🔁 Confirm Password + Shake
               AnimatedBuilder(
                 animation: _shakeAnimation,
                 builder: (context, child) {
@@ -225,7 +266,8 @@ class _MotherRegistrationScreenState
               const SizedBox(height: 32),
 
               MainButton(
-                label: _isLoading ? 'Sending...' : 'Send Verification Code',
+                label:
+                    _isLoading ? 'Sending...' : 'Send Verification Code',
                 showIcons: false,
                 onPressed: _isLoading ? null : _handleSubmit,
               ),
@@ -252,6 +294,31 @@ class _MotherRegistrationScreenState
           ),
         ),
       ),
+    );
+  }
+
+  // 🔧 Helper rows
+  Widget _errorRow(String text) {
+    return Row(
+      children: [
+        const Icon(Icons.cancel, size: 16, color: AppColors.error),
+        const SizedBox(width: 6),
+        Text(text,
+            style: const TextStyle(fontSize: 13, color: AppColors.error)),
+      ],
+    );
+  }
+
+  Widget _successRow(String text) {
+    return Row(
+      children: [
+        const Icon(Icons.check_circle,
+            size: 16, color: AppColors.success),
+        const SizedBox(width: 6),
+        Text(text,
+            style:
+                const TextStyle(fontSize: 13, color: AppColors.success)),
+      ],
     );
   }
 }
