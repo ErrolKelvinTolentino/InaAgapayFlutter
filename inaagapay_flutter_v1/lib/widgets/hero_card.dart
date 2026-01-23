@@ -4,7 +4,7 @@ import '../theme/app_colors.dart';
 class HeroCard extends StatelessWidget {
   final String imagePath;
   final String message;
-  final int? week; // 👈 optional
+  final int? week;
   final bool showWeekBadge;
 
   const HeroCard({
@@ -20,50 +20,66 @@ class HeroCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.bgSecondary,
+        color: AppColors.bgPrimary,
         borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08), // 👈 soft but visible
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
       ),
       child: Column(
         children: [
           Stack(
-            alignment: Alignment.topRight,
+            clipBehavior: Clip.none, // 👈 allow overlap
             children: [
               Center(
                 child: Container(
-                  padding: const EdgeInsets.all(24),
+                  padding: const EdgeInsets.all(26),
                   decoration: const BoxDecoration(
                     shape: BoxShape.circle,
-                    color: AppColors.faintWhite,
+                    color: AppColors.bgSecondary,
                   ),
-                  child: Image.asset(
-                    imagePath,
-                    height: 140,
-                  ),
+                  child: Image.asset(imagePath, height: 150),
                 ),
               ),
 
               if (showWeekBadge && week != null)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.brandPrimary,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    'Week $week',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: AppColors.textOnColor,
+                Positioned(
+                  top: 6, // 👈 lower
+                  right: 24, // 👈 pushed left, overlaps circle more
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.brandPrimary,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.15),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Text(
+                      'Week $week',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textOnColor,
+                      ),
                     ),
                   ),
                 ),
             ],
           ),
 
-          const SizedBox(height: 16),
+          const SizedBox(height: 18),
 
           Row(
             mainAxisAlignment: MainAxisAlignment.center,

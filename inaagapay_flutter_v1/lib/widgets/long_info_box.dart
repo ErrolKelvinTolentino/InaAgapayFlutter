@@ -3,16 +3,14 @@ import '../theme/app_colors.dart';
 
 class LongInfoBox extends StatelessWidget {
   final IconData icon;
-  final String title;
-  final String subtitle;
+  final List<InlineSpan> text; // 👈 fully dynamic
   final Color? borderColor;
   final Color? iconColor;
 
   const LongInfoBox({
     super.key,
     required this.icon,
-    required this.title,
-    required this.subtitle,
+    required this.text,
     this.borderColor,
     this.iconColor,
   });
@@ -28,29 +26,23 @@ class LongInfoBox extends StatelessWidget {
         ),
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(
             icon,
+            size: 36, // 👈 prototype weight
             color: iconColor ?? AppColors.brandPrimary,
           ),
           const SizedBox(width: 12),
+
           Expanded(
             child: RichText(
               text: TextSpan(
                 style: const TextStyle(
                   fontSize: 13,
-                  height: 1.4,
-                  color: AppColors.textSecondary,
+                  height: 1.45,
                 ),
-                children: [
-                  TextSpan(text: '$title\n'),
-                  TextSpan(
-                    text: subtitle,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
+                children: text,
               ),
             ),
           ),

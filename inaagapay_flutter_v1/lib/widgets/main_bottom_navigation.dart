@@ -13,52 +13,60 @@ class MainBottomNavigation extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
+    return SafeArea(
+      top: false,
+      child: Container(
+        // ✅ FULL WIDTH, FLUSH TO EDGES
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(24),
+            topRight: Radius.circular(24),
           ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _NavItem(
-            icon: Icons.home_filled,
-            label: 'Home',
-            isActive: currentIndex == 0,
-            onTap: () => onTap(0),
-          ),
-          _NavItem(
-            icon: Icons.menu_book_outlined,
-            label: 'Journal',
-            isActive: currentIndex == 1,
-            onTap: () => onTap(1),
-          ),
-          _NavItem(
-            icon: Icons.child_care_outlined,
-            label: 'Children',
-            isActive: currentIndex == 2,
-            onTap: () => onTap(2),
-          ),
-          _NavItem(
-            icon: Icons.description_outlined,
-            label: 'Records',
-            isActive: currentIndex == 3,
-            onTap: () => onTap(3),
-          ),
-        ],
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 20,
+              offset: const Offset(0, -6), // 👈 shadow goes UP only
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            _NavItem(
+              icon: Icons.home_filled,
+              label: 'Home',
+              isActive: currentIndex == 0,
+              onTap: () => onTap(0),
+            ),
+            _NavItem(
+              icon: Icons.menu_book_outlined,
+              label: 'Journal',
+              isActive: currentIndex == 1,
+              onTap: () => onTap(1),
+            ),
+            _NavItem(
+              icon: Icons.child_care_outlined,
+              label: 'Children',
+              isActive: currentIndex == 2,
+              onTap: () => onTap(2),
+            ),
+            _NavItem(
+              icon: Icons.description_outlined,
+              label: 'Records',
+              isActive: currentIndex == 3,
+              onTap: () => onTap(3),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
+
 class _NavItem extends StatelessWidget {
   final IconData icon;
   final String label;

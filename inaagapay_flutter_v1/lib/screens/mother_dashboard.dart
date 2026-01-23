@@ -48,15 +48,23 @@ class MotherDashboard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // 👋 Welcome
-              const Headline(
-                text: 'Welcome, First Name! 🌸',
-              ),
+              Center(
+                child: Column(
+                  children: [
+                    const Headline(
+                      text: 'Welcome, [First Name]! 🌸',
+                      textAlign: TextAlign.center,
+                    ),
 
-              const SizedBox(height: 8),
+                    const SizedBox(height: 8),
 
-              SmallDescription(
-                icon: Icons.calendar_today,
-                text: 'Week $week • $trimester',
+                    SmallDescription(
+                      icon: Icons.calendar_today,
+                      text: 'Week $week • $trimester',
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
               ),
 
               const SizedBox(height: 20),
@@ -92,10 +100,43 @@ class MotherDashboard extends StatelessWidget {
 
               // 📅 Due date
               const LongInfoBox(
-                icon: Icons.calendar_month,
-                title: 'Due Date: Month Day, Year',
-                subtitle: 'You are X weeks away from meeting!',
-              ),
+  icon: Icons.calendar_month,
+  text: const [
+    TextSpan(
+      text: 'Due Date: ',
+      style: TextStyle(
+        fontWeight: FontWeight.w600,
+        color: AppColors.textPrimary,
+      ),
+    ),
+    TextSpan(
+      text: 'Month Day, Year\n',
+      style: TextStyle(
+        color: AppColors.textSecondary,
+      ),
+    ),
+    TextSpan(
+      text: 'You are ',
+      style: TextStyle(
+        color: AppColors.textSecondary,
+      ),
+    ),
+    TextSpan(
+      text: 'X Weeks away',
+      style: TextStyle(
+        fontWeight: FontWeight.w600,
+        color: AppColors.brandPrimary,
+      ),
+    ),
+    TextSpan(
+      text: ' from meeting!',
+      style: TextStyle(
+        color: AppColors.textSecondary,
+      ),
+    ),
+  ],
+),
+
 
               const SizedBox(height: 16),
 
@@ -110,11 +151,26 @@ class MotherDashboard extends StatelessWidget {
 
               // 🔔 Next check-up
               const LongInfoBox(
-                icon: Icons.notifications,
-                title: 'Next Check-up',
-                subtitle: 'Month Day, Year – Day',
-                borderColor: AppColors.borderPrimary,
-              ),
+  icon: Icons.notifications,
+  borderColor: AppColors.borderPrimary,
+  iconColor: AppColors.brandPrimary,
+  text: const [
+    TextSpan(
+      text: 'Next Check-up\n',
+      style: TextStyle(
+        fontWeight: FontWeight.w600,
+        color: AppColors.textPrimary,
+      ),
+    ),
+    TextSpan(
+      text: 'Month Day, Year – Day',
+      style: TextStyle(
+        color: AppColors.textSecondary,
+      ),
+    ),
+  ],
+),
+
 
               const SizedBox(height: 24),
 
@@ -131,16 +187,15 @@ class MotherDashboard extends StatelessWidget {
               const SizedBox(height: 12),
 
               SecondaryButton(
-  label: 'Conclude Pregnancy',
-  showIcons: true,
-  leadingIcon: Icons.check,
-  onPressed: () {
-    // TODO
-  },
-),
+                label: 'Conclude Pregnancy',
+                showIcons: true,
+                leadingIcon: Icons.check,
+                onPressed: () {
+                  // TODO
+                },
+              ),
 
-
-              const SizedBox(height: 40),
+              const SizedBox(height: 10),
             ],
           ),
         ),
