@@ -20,7 +20,7 @@ class MotherDashboard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // 🔧 TEMP HARD-CODED DATA (backend later)
-    const int week = 10;
+    const int week = 8;
     const String trimester = 'First Trimester';
 
     return Scaffold(
@@ -141,11 +141,8 @@ class MotherDashboard extends StatelessWidget {
               const SizedBox(height: 16),
 
               // 🫐 Comparison
-              const ComparisonCard(
-                label: 'Your baby is now as big as',
-                comparison: 'A Blueberry!',
-                imagePath: 'assets/images/blueberry.png',
-              ),
+              const ComparisonCard(week: week),
+
 
               const SizedBox(height: 20),
 
