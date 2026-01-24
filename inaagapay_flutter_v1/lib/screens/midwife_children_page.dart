@@ -14,12 +14,8 @@ class MidwifeChildrenPage extends StatelessWidget {
       ),
     );
 
-    if (res.statusCode != 200) {
-      throw Exception('Failed to load children');
-    }
-
     final data = jsonDecode(res.body);
-    return data['data'] ?? [];
+    return data['data'];
   }
 
   @override
@@ -30,41 +26,21 @@ class MidwifeChildrenPage extends StatelessWidget {
       body: FutureBuilder<List>(
         future: fetchChildren(),
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
+          if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          if (snapshot.hasError) {
-            return Center(
-              child: Text(snapshot.error.toString()),
-            );
-          }
-
           final children = snapshot.data!;
-
-          if (children.isEmpty) {
-            return const Center(
-              child: Text('No children found'),
-            );
-          }
 
           return ListView.builder(
             itemCount: children.length,
             itemBuilder: (context, i) {
               final c = children[i];
-
               return ListTile(
                 leading: const Icon(Icons.child_care),
-                title: Text(
-                  '${c['first_name']} ${c['last_name']}',
-                ),
-                subtitle: Text(
-                  'Mother: ${c['mother_name'] ?? 'N/A'}',
-                ),
-                trailing: Text(
-                  c['sex'] ?? '',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
+                title: Text('${c['first_name']} ${c['last_name']}'),
+                subtitle: Text('Mother: ${c['mother_name']}'),
+                trailing: Text(c['sex']),
               );
             },
           );
@@ -77,7 +53,7 @@ class MidwifeChildrenPage extends StatelessWidget {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) => const AddChildStep1(),
+              builder: (_) => const AddChildStep1Parent(),
             ),
           );
         },

@@ -1,24 +1,8 @@
 import 'package:flutter/material.dart';
 import 'add_child_step3.dart';
 
-class AddChildStep2 extends StatefulWidget {
-  final Map<String, dynamic> payload;
-
-  const AddChildStep2({
-    super.key,
-    required this.payload,
-  });
-
-  @override
-  State<AddChildStep2> createState() => _AddChildStep2State();
-}
-
-class _AddChildStep2State extends State<AddChildStep2> {
-  final provinceCtrl = TextEditingController();
-  final cityCtrl = TextEditingController();
-  final barangayCtrl = TextEditingController();
-  final streetCtrl = TextEditingController();
-  final houseCtrl = TextEditingController();
+class AddChildStep2 extends StatelessWidget {
+  const AddChildStep2({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -34,25 +18,20 @@ class _AddChildStep2State extends State<AddChildStep2> {
             ),
             const SizedBox(height: 12),
 
-            TextField(
-              controller: provinceCtrl,
+            TextFormField(
               decoration: const InputDecoration(labelText: 'Province'),
             ),
-            TextField(
-              controller: cityCtrl,
+            TextFormField(
               decoration:
                   const InputDecoration(labelText: 'City / Municipality'),
             ),
-            TextField(
-              controller: barangayCtrl,
+            TextFormField(
               decoration: const InputDecoration(labelText: 'Barangay'),
             ),
-            TextField(
-              controller: streetCtrl,
+            TextFormField(
               decoration: const InputDecoration(labelText: 'Street Name'),
             ),
-            TextField(
-              controller: houseCtrl,
+            TextFormField(
               decoration: const InputDecoration(labelText: 'House Number'),
             ),
 
@@ -70,22 +49,10 @@ class _AddChildStep2State extends State<AddChildStep2> {
                 Expanded(
                   child: ElevatedButton(
                     onPressed: () {
-                      // ✅ BUILD PAYLOAD HERE
-                      final payload = {
-                        ...widget.payload,
-                        'province': provinceCtrl.text.trim(),
-                        'city_municipality': cityCtrl.text.trim(),
-                        'barangay': barangayCtrl.text.trim(),
-                        'street': streetCtrl.text.trim(),
-                        'house_number': houseCtrl.text.trim(),
-                      };
-
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => AddChildStep3(
-                            payload: payload, // ✅ NOW EXISTS
-                          ),
+                          builder: (_) => AddChildStep3Child(), // ✅ NO const
                         ),
                       );
                     },
