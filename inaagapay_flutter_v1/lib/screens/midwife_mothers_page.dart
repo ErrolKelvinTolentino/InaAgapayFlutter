@@ -52,15 +52,40 @@ class _MidwifeMothersPageState extends State<MidwifeMothersPage> {
             itemBuilder: (context, index) {
               final m = mothers[index];
 
-              return ListTile(
-                leading: const Icon(Icons.pregnant_woman),
-                title: Text('${m['first_name']} ${m['last_name']}'),
-                subtitle: Text(
-                  'Risk: ${m['pregnancy_risk_level'] ?? 'N/A'}',
+              final fullName = [
+                m['first_name'],
+                m['middle_name'],
+                m['last_name'],
+                m['extension_name']
+              ].where((e) => e != null && e.toString().isNotEmpty).join(' ');
+
+              return Card(
+                margin: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
                 ),
-                trailing: Text(
-                  m['pregnancy_status'] ?? '',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: ListTile(
+                  leading: const Icon(Icons.pregnant_woman),
+                  title: Text(fullName),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('BHC: ${m['bhc_name'] ?? 'Unassigned'}'),
+                      Text(
+                        'Risk Level: ${m['pregnancy_risk_level'] ?? 'N/A'}',
+                      ),
+                    ],
+                  ),
+                  trailing: Text(
+                    m['pregnancy_status'] ?? '',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.pink,
+                    ),
+                  ),
                 ),
               );
             },

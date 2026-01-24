@@ -53,7 +53,7 @@ class MidwifeChildrenPage extends StatelessWidget {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) => const AddChildStep1(),
+              builder: (_) => const AddChildStep1Parent(),
             ),
           );
         },

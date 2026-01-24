@@ -1,15 +1,13 @@
 <?php
-require_once __DIR__ . '/../db.php';
-
-
 header('Content-Type: application/json');
+require_once '../db.php';
 
 $data = json_decode(file_get_contents("php://input"), true);
 
-$email = $data['email'] ?? '';
+$email = trim($data['email'] ?? '');
 $password = $data['password'] ?? '';
 
-if (empty($email) || empty($password)) {
+if ($email === '' || $password === '') {
     echo json_encode([
         'success' => false,
         'message' => 'Email and password are required'
@@ -17,8 +15,14 @@ if (empty($email) || empty($password)) {
     exit;
 }
 
+// 🔍 Get account
 $stmt = $conn->prepare("
-    SELECT account_id, password_hash, account_type, is_verified, status
+    SELECT
+        account_id,
+        password_hash,
+        account_type,
+        is_verified,
+        status
     FROM accounts
     WHERE email_address = ?
     LIMIT 1
@@ -27,17 +31,27 @@ $stmt->bind_param("s", $email);
 $stmt->execute();
 $result = $stmt->get_result();
 
-if ($result->num_rows !== 1) {
+if ($result->num_rows === 0) {
     echo json_encode([
         'success' => false,
-        'message' => 'Invalid credentials'
+        'message' => 'Invalid email or password'
     ]);
     exit;
 }
 
 $user = $result->fetch_assoc();
 
-if (!$user['is_verified']) {
+// 🚫 Status check
+if ($user['status'] !== 'active') {
+    echo json_encode([
+        'success' => false,
+        'message' => 'Account is not active'
+    ]);
+    exit;
+}
+
+// 🚫 Verification check
+if ((int)$user['is_verified'] !== 1) {
     echo json_encode([
         'success' => false,
         'message' => 'Account not verified'
@@ -45,34 +59,43 @@ if (!$user['is_verified']) {
     exit;
 }
 
-if ($user['status'] !== 'active') {
+// 🔐 PASSWORD CHECK (supports BOTH hashed & plain text)
+$passwordValid = false;
+
+// Case 1: hashed password
+if (!empty($user['password_hash']) && password_verify($password, $user['password_hash'])) {
+    $passwordValid = true;
+}
+
+// Case 2: legacy plain-text password
+if (!$passwordValid && $password === $user['password_hash']) {
+    $passwordValid = true;
+}
+
+if (!$passwordValid) {
     echo json_encode([
         'success' => false,
-        'message' => 'Account inactive'
+        'message' => 'Invalid email or password'
     ]);
     exit;
 }
 
-if (!password_verify($password, $user['password_hash'])) {
-    echo json_encode([
-        'success' => false,
-        'message' => 'Invalid credentials'
-    ]);
-    exit;
-}
+// 🔑 Generate login token
+$token = bin2hex(random_bytes(64));
+$now = date('Y-m-d H:i:s');
 
-/**
- * 🔐 TOKEN GENERATION
- * Simple secure token (no DB change yet)
- */
-$token = bin2hex(random_bytes(32)); // 64-character secure token
+// 💾 Update login info
+$update = $conn->prepare("
+    UPDATE accounts
+    SET last_login_token = ?, last_login_at = ?
+    WHERE account_id = ?
+");
+$update->bind_param("ssi", $token, $now, $user['account_id']);
+$update->execute();
 
+// ✅ SUCCESS
 echo json_encode([
     'success' => true,
-    'message' => 'Login successful',
-    'token' => $token, // ✅ NEW
-    'user' => [
-        'id' => $user['account_id'],
-        'role' => $user['account_type'],
-    ]
+    'token' => $token,
+    'account_type' => $user['account_type']
 ]);

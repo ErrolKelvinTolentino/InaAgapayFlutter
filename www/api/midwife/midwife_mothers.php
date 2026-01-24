@@ -3,11 +3,16 @@ header('Content-Type: application/json');
 require_once '../db.php';
 
 $sql = "
-SELECT 
+SELECT
     m.mother_id,
     a.first_name,
+    a.middle_name,
     a.last_name,
+    a.extension_name,
     a.phone_number,
+    m.barangay,
+    m.city_municipality,
+    m.province,
     p.pregnancy_risk_level,
     p.status AS pregnancy_status
 FROM mothers m
