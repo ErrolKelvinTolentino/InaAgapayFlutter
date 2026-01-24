@@ -1,4 +1,4 @@
-INAAGAPAY SADD DATABASE -- =====================================================
+-- =====================================================
 -- DATABASE: Maternal & Child Health Information System
 -- MySQL 8+
 -- =====================================================
@@ -67,6 +67,7 @@ CREATE TABLE midwives (
 CREATE TABLE mothers (
     mother_id BIGINT AUTO_INCREMENT PRIMARY KEY,
     account_id BIGINT NOT NULL UNIQUE,
+    assigned_bhc_id BIGINT NULL,
     house_number VARCHAR(50),
     street VARCHAR(100),
     barangay VARCHAR(100),
@@ -75,7 +76,8 @@ CREATE TABLE mothers (
     status ENUM('active', 'inactive') DEFAULT 'active',
     height DECIMAL(5, 2),
     blood_type VARCHAR(100),
-    FOREIGN KEY (account_id) REFERENCES accounts(account_id) ON DELETE CASCADE
+    FOREIGN KEY (account_id) REFERENCES accounts(account_id),
+    FOREIGN KEY (assigned_bhc_id) REFERENCES bhc(bhc_id) ON DELETE CASCADE
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = 'Mother profiles';
 COMMENT = 'Emergency contacts';
 CREATE TABLE emergency_contacts (

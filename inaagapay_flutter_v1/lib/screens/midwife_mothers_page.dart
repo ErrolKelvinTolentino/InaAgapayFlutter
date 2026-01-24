@@ -55,9 +55,7 @@ class _MidwifeMothersPageState extends State<MidwifeMothersPage> {
               return ListTile(
                 leading: const Icon(Icons.pregnant_woman),
                 title: Text('${m['first_name']} ${m['last_name']}'),
-                subtitle: Text(
-                  'Risk: ${m['pregnancy_risk_level'] ?? 'N/A'}',
-                ),
+                subtitle: Text('Risk: ${m['pregnancy_risk_level'] ?? 'N/A'}'),
                 trailing: Text(
                   m['pregnancy_status'] ?? '',
                   style: const TextStyle(fontWeight: FontWeight.bold),

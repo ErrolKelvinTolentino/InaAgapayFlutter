@@ -1,7 +1,6 @@
 <?php
 require_once __DIR__ . '/../db.php';
 
-
 header('Content-Type: application/json');
 
 $data = json_decode(file_get_contents("php://input"), true);
@@ -61,16 +60,24 @@ if (!password_verify($password, $user['password_hash'])) {
     exit;
 }
 
-/**
- * 🔐 TOKEN GENERATION
- * Simple secure token (no DB change yet)
- */
-$token = bin2hex(random_bytes(32)); // 64-character secure token
+// 🔐 TOKEN GENERATION
+$token = bin2hex(random_bytes(32));
 
+// ✅ STORE LOGIN STATE (THIS IS THE IMPORTANT PART)
+$update = $conn->prepare("
+    UPDATE accounts
+    SET last_login_token = ?,
+        last_login_at = NOW()
+    WHERE account_id = ?
+");
+$update->bind_param("si", $token, $user['account_id']);
+$update->execute();
+
+// 🎉 RESPONSE
 echo json_encode([
     'success' => true,
     'message' => 'Login successful',
-    'token' => $token, // ✅ NEW
+    'token' => $token,
     'user' => [
         'id' => $user['account_id'],
         'role' => $user['account_type'],
