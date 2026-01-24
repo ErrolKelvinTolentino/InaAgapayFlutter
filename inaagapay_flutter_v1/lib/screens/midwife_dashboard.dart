@@ -23,11 +23,19 @@ class _MidwifeDashboardState extends State<MidwifeDashboard> {
     statsFuture = fetchStats();
   }
 
+  // ================= API =================
+
   Future<DashboardStats> fetchStats() async {
+    final uri = Uri.parse(
+      'https://inaagapay.alwaysdata.net/api/midwife/dashboard_stats.php'
+      '?filter=$selectedFilter',
+    );
+
     final res = await http.get(
-      Uri.parse(
-        'https://inaagapay.alwaysdata.net/dashboard_stats.php?filter=$selectedFilter',
-      ),
+      uri,
+      headers: {
+        'Accept': 'application/json',
+      },
     );
 
     if (res.statusCode == 200) {
@@ -44,12 +52,14 @@ class _MidwifeDashboardState extends State<MidwifeDashboard> {
     });
   }
 
+  // ================= UI =================
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
 
-      // 🔝 APP BAR WITH AVATAR MENU
+      // 🔝 APP BAR
       appBar: AppBar(
         backgroundColor: AppColors.bgPrimary,
         elevation: 0,
@@ -61,18 +71,16 @@ class _MidwifeDashboardState extends State<MidwifeDashboard> {
           Padding(
             padding: const EdgeInsets.only(right: 12),
             child: PopupMenuButton<_ProfileAction>(
-              offset: const Offset(0, 52), // ⬅️ pushes menu DOWN
+              offset: const Offset(0, 52),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(14),
               ),
               onSelected: (action) async {
                 switch (action) {
                   case _ProfileAction.profile:
-                    // TODO: Profile screen
                     break;
 
                   case _ProfileAction.settings:
-                    // TODO: Settings screen
                     break;
 
                   case _ProfileAction.logout:
@@ -105,7 +113,10 @@ class _MidwifeDashboardState extends State<MidwifeDashboard> {
                   value: _ProfileAction.logout,
                   child: ListTile(
                     leading: Icon(Icons.logout, color: Colors.red),
-                    title: Text('Logout', style: TextStyle(color: Colors.red)),
+                    title: Text(
+                      'Logout',
+                      style: TextStyle(color: Colors.red),
+                    ),
                   ),
                 ),
               ],
@@ -208,7 +219,7 @@ class _MidwifeDashboardState extends State<MidwifeDashboard> {
     );
   }
 
-  // ================= UI HELPERS =================
+  // ================= HELPERS =================
 
   Widget filterChip(String label, String value) {
     final selected = selectedFilter == value;
@@ -221,38 +232,38 @@ class _MidwifeDashboardState extends State<MidwifeDashboard> {
   }
 
   Widget section(String title) => Padding(
-    padding: const EdgeInsets.only(bottom: 8),
-    child: Text(
-      title,
-      style: const TextStyle(
-        fontWeight: FontWeight.bold,
-        color: AppColors.brandText,
-      ),
-    ),
-  );
-
-  Widget statRow(String label, int value) => Container(
-    margin: const EdgeInsets.only(bottom: 10),
-    padding: const EdgeInsets.all(14),
-    decoration: BoxDecoration(
-      color: AppColors.faintWhite,
-      borderRadius: BorderRadius.circular(12),
-      border: Border.all(color: AppColors.borderPrimary),
-    ),
-    child: Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(label),
-        Text(
-          value.toString(),
+        padding: const EdgeInsets.only(bottom: 8),
+        child: Text(
+          title,
           style: const TextStyle(
             fontWeight: FontWeight.bold,
-            color: AppColors.brandAccent,
+            color: AppColors.brandText,
           ),
         ),
-      ],
-    ),
-  );
+      );
+
+  Widget statRow(String label, int value) => Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppColors.faintWhite,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.borderPrimary),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(label),
+            Text(
+              value.toString(),
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                color: AppColors.brandAccent,
+              ),
+            ),
+          ],
+        ),
+      );
 }
 
 // ================= ENUM =================

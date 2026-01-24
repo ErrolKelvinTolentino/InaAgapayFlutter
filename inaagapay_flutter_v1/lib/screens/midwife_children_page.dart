@@ -1,125 +1,64 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 
-import '../theme/app_colors.dart';
-import '../widgets/page_title.dart';
+import 'add_child_step1.dart';
 
-class MidwifeChildrenPage extends StatefulWidget {
+class MidwifeChildrenPage extends StatelessWidget {
   const MidwifeChildrenPage({super.key});
 
-  @override
-  State<MidwifeChildrenPage> createState() => _MidwifeChildrenPageState();
-}
-
-class _MidwifeChildrenPageState extends State<MidwifeChildrenPage> {
-  late Future<List<ChildRecord>> _childrenFuture;
-
-  @override
-  void initState() {
-    super.initState();
-    _childrenFuture = fetchChildren();
-  }
-
-  // 🟢 MOCK DATA
-  Future<List<ChildRecord>> fetchChildren() async {
-    await Future.delayed(const Duration(seconds: 1));
-
-    return [
-      ChildRecord(
-        fullName: 'Juan Santos',
-        motherName: 'Maria Santos',
+  Future<List> fetchChildren() async {
+    final res = await http.get(
+      Uri.parse(
+        'https://inaagapay.alwaysdata.net/api/midwife/midwife_children.php',
       ),
-      ChildRecord(
-        fullName: 'Anna Cruz',
-        motherName: 'Ana Cruz',
-      ),
-      ChildRecord(
-        fullName: 'Leo Reyes',
-        motherName: 'Liza Reyes',
-      ),
-    ];
+    );
+
+    final data = jsonDecode(res.body);
+    return data['data'];
   }
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<List<ChildRecord>>(
-      future: _childrenFuture,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
+    return Scaffold(
+      appBar: AppBar(title: const Text('Children')),
 
-        if (snapshot.hasError) {
-          return Center(
-            child: Text(
-              snapshot.error.toString(),
-              style: const TextStyle(color: AppColors.error),
+      body: FutureBuilder<List>(
+        future: fetchChildren(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final children = snapshot.data!;
+
+          return ListView.builder(
+            itemCount: children.length,
+            itemBuilder: (context, i) {
+              final c = children[i];
+              return ListTile(
+                leading: const Icon(Icons.child_care),
+                title: Text('${c['first_name']} ${c['last_name']}'),
+                subtitle: Text('Mother: ${c['mother_name']}'),
+                trailing: Text(c['sex']),
+              );
+            },
+          );
+        },
+      ),
+
+      // ➕ ADD CHILD BUTTON
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const AddChildStep1(),
             ),
           );
-        }
-
-        final children = snapshot.data!;
-
-        return ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            const PageTitle(
-              title: 'Children',
-              leadingIcon: Icons.child_care,
-              trailingIcon: Icons.favorite,
-            ),
-            const SizedBox(height: 12),
-
-            ...children.map(
-              (c) => Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: AppColors.faintWhite,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.borderPrimary),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.child_friendly,
-                        color: AppColors.brandPrimary),
-                    const SizedBox(width: 12),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          c.fullName,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        Text(
-                          'Mother: ${c.motherName}',
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        );
-      },
+        },
+        child: const Icon(Icons.add),
+      ),
     );
   }
-}
-
-/* ================= MODEL ================= */
-
-class ChildRecord {
-  final String fullName;
-  final String motherName;
-
-  ChildRecord({
-    required this.fullName,
-    required this.motherName,
-  });
 }
