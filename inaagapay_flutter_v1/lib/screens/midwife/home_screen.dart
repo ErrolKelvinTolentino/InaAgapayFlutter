@@ -23,7 +23,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<DashboardStats> fetchStats() async {
     final response = await http.get(
       Uri.parse(
-        'https://inaagapay.alwaysdata.net/api/dashboard_stats.php?filter=$selectedFilter',
+        'https://inaagapay.alwaysdata.net/api/midwife/dashboard_stats.php?filter=$selectedFilter',
       ),
     );
 
@@ -99,25 +99,16 @@ class _HomeScreenState extends State<HomeScreen> {
                 Row(
                   children: [
                     Expanded(
-                      child: statCard(
-                        '1st Trimester',
-                        stats.firstTrimester,
-                      ),
+                      child: statCard('1st Trimester', stats.firstTrimester),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
-                      child: statCard(
-                        '2nd Trimester',
-                        stats.secondTrimester,
-                      ),
+                      child: statCard('2nd Trimester', stats.secondTrimester),
                     ),
                   ],
                 ),
                 const SizedBox(height: 10),
-                statCard(
-                  '3rd Trimester',
-                  stats.thirdTrimester,
-                ),
+                statCard('3rd Trimester', stats.thirdTrimester),
 
                 const SizedBox(height: 20),
 
@@ -134,19 +125,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 sectionTitle('Birth Outcomes'),
                 Row(
                   children: [
-                    Expanded(
-                      child: statCard(
-                        'Live Births',
-                        stats.liveBirths,
-                      ),
-                    ),
+                    Expanded(child: statCard('Live Births', stats.liveBirths)),
                     const SizedBox(width: 10),
-                    Expanded(
-                      child: statCard(
-                        'Stillbirths',
-                        stats.stillBirths,
-                      ),
-                    ),
+                    Expanded(child: statCard('Stillbirths', stats.stillBirths)),
                   ],
                 ),
 
@@ -156,26 +137,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 sectionTitle('Place of Delivery'),
                 Row(
                   children: [
-                    Expanded(
-                      child: statCard(
-                        'Hospital',
-                        stats.hospital,
-                      ),
-                    ),
+                    Expanded(child: statCard('Hospital', stats.hospital)),
                     const SizedBox(width: 10),
-                    Expanded(
-                      child: statCard(
-                        'Center',
-                        stats.center,
-                      ),
-                    ),
+                    Expanded(child: statCard('Center', stats.center)),
                     const SizedBox(width: 10),
-                    Expanded(
-                      child: statCard(
-                        'Home',
-                        stats.home,
-                      ),
-                    ),
+                    Expanded(child: statCard('Home', stats.home)),
                   ],
                 ),
               ],
@@ -199,9 +165,7 @@ class _HomeScreenState extends State<HomeScreen> {
         color: isSelected ? Colors.pink : Colors.black,
         fontWeight: FontWeight.bold,
       ),
-      shape: StadiumBorder(
-        side: BorderSide(color: Colors.pink),
-      ),
+      shape: StadiumBorder(side: BorderSide(color: Colors.pink)),
     );
   }
 
@@ -296,11 +260,15 @@ class DashboardStats {
 
   factory DashboardStats.fromJson(Map<String, dynamic> json) {
     return DashboardStats(
-      firstTrimester: int.parse(json['trimester']['first_trimester'].toString()),
-      secondTrimester:
-          int.parse(json['trimester']['second_trimester'].toString()),
-      thirdTrimester:
-          int.parse(json['trimester']['third_trimester'].toString()),
+      firstTrimester: int.parse(
+        json['trimester']['first_trimester'].toString(),
+      ),
+      secondTrimester: int.parse(
+        json['trimester']['second_trimester'].toString(),
+      ),
+      thirdTrimester: int.parse(
+        json['trimester']['third_trimester'].toString(),
+      ),
       mothers: int.parse(json['checkups']['mothers'].toString()),
       children: int.parse(json['checkups']['children'].toString()),
       liveBirths: int.parse(json['outcomes']['live_births'].toString()),

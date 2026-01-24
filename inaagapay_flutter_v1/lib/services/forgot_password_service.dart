@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
-const String baseUrl = 'https://inaagapay.alwaysdata.net/';
+const String baseUrl = 'https://inaagapay.alwaysdata.net/api/auth/';
 
 class ForgotPasswordService {
   static Future<bool> sendCode(String email) async {
@@ -54,10 +54,7 @@ class ForgotPasswordService {
       final response = await http.post(
         Uri.parse('${baseUrl}forgot_password_reset.php'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'email': email,
-          'password': password,
-        }),
+        body: jsonEncode({'email': email, 'password': password}),
       );
 
       if (!response.body.trim().startsWith('{')) {

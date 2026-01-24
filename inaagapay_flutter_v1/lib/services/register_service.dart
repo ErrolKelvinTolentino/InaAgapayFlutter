@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
-const String baseUrl = "https://inaagapay.alwaysdata.net/";
+const String baseUrl = "https://inaagapay.alwaysdata.net/api/auth/";
 
 class RegisterService {
   static Future<bool> registerMother({
@@ -15,10 +15,7 @@ class RegisterService {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
-        body: jsonEncode({
-          'email': email,
-          'password': password,
-        }),
+        body: jsonEncode({'email': email, 'password': password}),
       );
 
       // 🔴 IMPORTANT: Check response BEFORE decoding
@@ -29,8 +26,7 @@ class RegisterService {
       }
 
       // 🔴 Guard against HTML / empty responses
-      if (response.body.isEmpty ||
-          !response.body.trim().startsWith('{')) {
+      if (response.body.isEmpty || !response.body.trim().startsWith('{')) {
         print('INVALID RESPONSE (NOT JSON)');
         print(response.body);
         return false;

@@ -1,7 +1,7 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
-const String baseUrl = "https://inaagapay.alwaysdata.net/";
+const String baseUrl = "https://inaagapay.alwaysdata.net/api/auth/";
 
 class AuthService {
   static Future<AuthResponse> login({
