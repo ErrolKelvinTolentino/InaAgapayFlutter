@@ -37,13 +37,13 @@ class _MidwifeDashboardState extends State<MidwifeDashboard> {
       headers: {'Authorization': 'Bearer $token', 'Accept': 'application/json'},
     );
 
-    final json = jsonDecode(res.body);
+    final Map<String, dynamic> decoded = jsonDecode(res.body);
 
-    if (json['success'] == true) {
-      return GreetingModel.fromJson(json);
+    if (decoded['success'] != true) {
+      throw Exception('Greeting API failed');
     }
 
-    throw Exception('Failed to load greeting');
+    return GreetingModel.fromJson(decoded);
   }
 
   Future<DashboardStats> fetchStats() async {
@@ -97,7 +97,6 @@ class _MidwifeDashboardState extends State<MidwifeDashboard> {
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
 
-      // 🔝 APP BAR
       appBar: AppBar(
         backgroundColor: AppColors.bgPrimary,
         elevation: 0,
@@ -106,49 +105,45 @@ class _MidwifeDashboardState extends State<MidwifeDashboard> {
           style: TextStyle(color: AppColors.brandText),
         ),
         actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: PopupMenuButton<_ProfileAction>(
-              offset: const Offset(0, 52),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
-              ),
-              onSelected: (action) async {
-                if (action == _ProfileAction.logout) {
-                  await logout();
-                  if (!mounted) return;
-                  Navigator.pushNamedAndRemoveUntil(
-                    context,
-                    '/login',
-                    (_) => false,
-                  );
-                }
-              },
-              itemBuilder: (context) => const [
-                PopupMenuItem(
-                  value: _ProfileAction.logout,
-                  child: ListTile(
-                    leading: Icon(Icons.logout, color: Colors.red),
-                    title: Text('Logout', style: TextStyle(color: Colors.red)),
-                  ),
+          PopupMenuButton<_ProfileAction>(
+            onSelected: (action) async {
+              if (action == _ProfileAction.logout) {
+                await logout();
+                if (!mounted) return;
+                Navigator.pushNamedAndRemoveUntil(
+                  context,
+                  '/login',
+                  (_) => false,
+                );
+              }
+            },
+            itemBuilder: (_) => const [
+              PopupMenuItem(
+                value: _ProfileAction.logout,
+                child: ListTile(
+                  leading: Icon(Icons.logout, color: Colors.red),
+                  title: Text('Logout', style: TextStyle(color: Colors.red)),
                 ),
-              ],
-              child: const CircleAvatar(
-                radius: 18,
-                backgroundColor: AppColors.brandPrimary,
-                child: Icon(Icons.person, color: Colors.white, size: 20),
               ),
-            ),
+            ],
           ),
         ],
       ),
 
-      // 🔽 BODY
       body: FutureBuilder<GreetingModel>(
         future: greetingFuture,
         builder: (context, greetingSnap) {
-          if (!greetingSnap.hasData) {
+          if (greetingSnap.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
+          }
+
+          if (greetingSnap.hasError) {
+            return Center(
+              child: Text(
+                greetingSnap.error.toString(),
+                style: const TextStyle(color: Colors.red),
+              ),
+            );
           }
 
           final g = greetingSnap.data!;
@@ -164,7 +159,7 @@ class _MidwifeDashboardState extends State<MidwifeDashboard> {
                 return Center(
                   child: Text(
                     statsSnap.error.toString(),
-                    style: const TextStyle(color: AppColors.error),
+                    style: const TextStyle(color: Colors.red),
                   ),
                 );
               }
@@ -190,7 +185,7 @@ class _MidwifeDashboardState extends State<MidwifeDashboard> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Welcome, ${g.roleLabel} ${g.displayName}!',
+                            'Welcome, ${g.roleLabel} ${g.displayName}',
                             style: const TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
@@ -198,13 +193,12 @@ class _MidwifeDashboardState extends State<MidwifeDashboard> {
                             ),
                           ),
                           const SizedBox(height: 6),
-                          if (g.bhcName != null)
-                            Text(
-                              'Assigned BHC: ${g.bhcName}',
-                              style: const TextStyle(
-                                color: AppColors.brandAccent,
-                              ),
+                          Text(
+                            'Assigned BHC: ${g.bhcName ?? 'No Barangay Assigned'}',
+                            style: const TextStyle(
+                              color: AppColors.brandAccent,
                             ),
+                          ),
                         ],
                       ),
                     ),
@@ -221,27 +215,6 @@ class _MidwifeDashboardState extends State<MidwifeDashboard> {
                     statRow('1st Trimester', s.firstTrimester),
                     statRow('2nd Trimester', s.secondTrimester),
                     statRow('3rd Trimester', s.thirdTrimester),
-
-                    const SizedBox(height: 20),
-
-                    section('Scheduled Checkups'),
-                    statRow('Mothers', s.mothers),
-                    statRow('Children', s.children),
-
-                    const SizedBox(height: 20),
-
-                    section('Birth Outcomes'),
-                    statRow('Live Births', s.liveBirths),
-                    statRow('Stillbirths', s.stillBirths),
-
-                    const SizedBox(height: 20),
-
-                    section('Place of Delivery'),
-                    statRow('Hospital', s.hospital),
-                    statRow('Center', s.center),
-                    statRow('Home', s.home),
-
-                    const SizedBox(height: 80),
                   ],
                 ),
               );
@@ -253,16 +226,6 @@ class _MidwifeDashboardState extends State<MidwifeDashboard> {
   }
 
   // ================= HELPERS =================
-
-  Widget filterChip(String label, String value) {
-    final selected = selectedFilter == value;
-    return ChoiceChip(
-      label: Text(label),
-      selected: selected,
-      onSelected: (_) => changeFilter(value),
-      selectedColor: AppColors.brandPrimary.withOpacity(0.2),
-    );
-  }
 
   static Widget section(String title) => Padding(
     padding: const EdgeInsets.only(bottom: 8),
@@ -306,47 +269,53 @@ enum _ProfileAction { logout }
 // ================= MODELS =================
 
 class GreetingModel {
-  final String role;
-  final String firstName;
+  final String? accountType;
+  final String? firstName;
   final String? middleName;
-  final String lastName;
+  final String? lastName;
   final String? extensionName;
   final String? bhcName;
 
   GreetingModel({
-    required this.role,
-    required this.firstName,
+    this.accountType,
+    this.firstName,
     this.middleName,
-    required this.lastName,
+    this.lastName,
     this.extensionName,
     this.bhcName,
   });
 
   factory GreetingModel.fromJson(Map<String, dynamic> json) {
     return GreetingModel(
-      role: json['role'],
-      firstName: json['first_name'],
-      middleName: json['middle_name'],
-      lastName: json['last_name'],
-      extensionName: json['extension_name'],
-      bhcName: json['bhc_name'],
+      accountType: json['role']?.toString(), // PHP sends role = account_type
+      firstName: json['first_name']?.toString(),
+      middleName: json['middle_name']?.toString(),
+      lastName: json['last_name']?.toString(),
+      extensionName: json['extension_name']?.toString(),
+      bhcName: json['bhc_name']?.toString(),
     );
   }
 
   String get displayName {
-    final parts = [
-      firstName,
-      if (middleName != null && middleName!.isNotEmpty) middleName,
-      lastName,
-      if (extensionName != null && extensionName!.isNotEmpty) extensionName,
-    ];
-    return parts.join(' ');
+    final parts = [firstName, middleName, lastName, extensionName];
+
+    return parts
+        .where((p) => p != null && p!.trim().isNotEmpty)
+        .map((p) => p!.trim())
+        .join(' ');
   }
 
   String get roleLabel {
-    if (role == 'midwife') return 'Midwife';
-    if (role == 'mother') return 'Mother';
-    return 'User';
+    switch (accountType) {
+      case 'midwife':
+        return 'Midwife';
+      case 'mother':
+        return 'Mother';
+      case 'admin':
+        return 'Admin';
+      default:
+        return 'User';
+    }
   }
 }
 
@@ -354,25 +323,11 @@ class DashboardStats {
   final int firstTrimester;
   final int secondTrimester;
   final int thirdTrimester;
-  final int mothers;
-  final int children;
-  final int liveBirths;
-  final int stillBirths;
-  final int hospital;
-  final int center;
-  final int home;
 
   DashboardStats({
     required this.firstTrimester,
     required this.secondTrimester,
     required this.thirdTrimester,
-    required this.mothers,
-    required this.children,
-    required this.liveBirths,
-    required this.stillBirths,
-    required this.hospital,
-    required this.center,
-    required this.home,
   });
 
   factory DashboardStats.fromJson(Map<String, dynamic> json) {
@@ -382,13 +337,6 @@ class DashboardStats {
       firstTrimester: safe(json['trimester']['first_trimester']),
       secondTrimester: safe(json['trimester']['second_trimester']),
       thirdTrimester: safe(json['trimester']['third_trimester']),
-      mothers: safe(json['checkups']['mothers']),
-      children: safe(json['checkups']['children']),
-      liveBirths: safe(json['outcomes']['live_births']),
-      stillBirths: safe(json['outcomes']['stillbirths']),
-      hospital: safe(json['delivery']['hospital']),
-      center: safe(json['delivery']['center']),
-      home: safe(json['delivery']['home']),
     );
   }
 }
