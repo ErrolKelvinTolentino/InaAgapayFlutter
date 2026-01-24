@@ -1,8 +1,24 @@
 import 'package:flutter/material.dart';
 import 'add_child_step3.dart';
 
-class AddChildStep2 extends StatelessWidget {
-  const AddChildStep2({super.key});
+class AddChildStep2 extends StatefulWidget {
+  final Map<String, dynamic> payload;
+
+  const AddChildStep2({
+    super.key,
+    required this.payload,
+  });
+
+  @override
+  State<AddChildStep2> createState() => _AddChildStep2State();
+}
+
+class _AddChildStep2State extends State<AddChildStep2> {
+  final provinceCtrl = TextEditingController();
+  final cityCtrl = TextEditingController();
+  final barangayCtrl = TextEditingController();
+  final streetCtrl = TextEditingController();
+  final houseCtrl = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
@@ -18,20 +34,25 @@ class AddChildStep2 extends StatelessWidget {
             ),
             const SizedBox(height: 12),
 
-            TextFormField(
+            TextField(
+              controller: provinceCtrl,
               decoration: const InputDecoration(labelText: 'Province'),
             ),
-            TextFormField(
+            TextField(
+              controller: cityCtrl,
               decoration:
                   const InputDecoration(labelText: 'City / Municipality'),
             ),
-            TextFormField(
+            TextField(
+              controller: barangayCtrl,
               decoration: const InputDecoration(labelText: 'Barangay'),
             ),
-            TextFormField(
+            TextField(
+              controller: streetCtrl,
               decoration: const InputDecoration(labelText: 'Street Name'),
             ),
-            TextFormField(
+            TextField(
+              controller: houseCtrl,
               decoration: const InputDecoration(labelText: 'House Number'),
             ),
 
@@ -49,10 +70,22 @@ class AddChildStep2 extends StatelessWidget {
                 Expanded(
                   child: ElevatedButton(
                     onPressed: () {
+                      // ✅ BUILD PAYLOAD HERE
+                      final payload = {
+                        ...widget.payload,
+                        'province': provinceCtrl.text.trim(),
+                        'city_municipality': cityCtrl.text.trim(),
+                        'barangay': barangayCtrl.text.trim(),
+                        'street': streetCtrl.text.trim(),
+                        'house_number': houseCtrl.text.trim(),
+                      };
+
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => AddChildStep3Child(), // ✅ NO const
+                          builder: (_) => AddChildStep3(
+                            payload: payload, // ✅ NOW EXISTS
+                          ),
                         ),
                       );
                     },
