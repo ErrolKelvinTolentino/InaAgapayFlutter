@@ -1,13 +1,14 @@
 <?php
 header('Content-Type: application/json');
 
-require 'db.php';
+require_once __DIR__ . '/../db.php';
+
 
 // Read JSON input
 $input = json_decode(file_get_contents("php://input"), true);
 
 $email = $input['email'] ?? '';
-$code  = $input['code'] ?? '';
+$code = $input['code'] ?? '';
 
 // 🔒 Basic validation
 if (empty($email) || empty($code)) {
@@ -40,7 +41,7 @@ if ($result->num_rows !== 1) {
 $account = $result->fetch_assoc();
 
 // 🚫 Already verified
-if ((int)$account['is_verified'] === 1) {
+if ((int) $account['is_verified'] === 1) {
     echo json_encode([
         'success' => false,
         'message' => 'Account already verified'

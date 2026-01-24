@@ -3,7 +3,8 @@ ini_set('display_errors', 1);
 error_reporting(E_ALL);
 
 header("Content-Type: application/json");
-require_once "db.php";
+require_once __DIR__ . '/../db.php';
+
 
 $filter = $_GET['filter'] ?? 'all';
 
@@ -68,7 +69,7 @@ $delivery = $conn->query($deliverySql)->fetch_assoc();
 /* ================= OUTPUT ================= */
 echo json_encode([
     "trimester" => $trimester,
-    "checkups"  => $checkups,
-    "outcomes"  => $outcomes,
-    "delivery"  => $delivery
+    "checkups" => $checkups,
+    "outcomes" => $outcomes,
+    "delivery" => $delivery
 ]);

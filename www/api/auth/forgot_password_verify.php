@@ -1,5 +1,6 @@
 <?php
-require 'db.php';
+require_once __DIR__ . '/../db.php';
+
 $data = json_decode(file_get_contents("php://input"), true);
 
 $email = $data['email'];
@@ -13,8 +14,10 @@ $stmt->bind_param("s", $email);
 $stmt->execute();
 $res = $stmt->get_result()->fetch_assoc();
 
-if (!$res || $res['reset_code'] !== $code ||
-    strtotime($res['reset_expires']) < time()) {
+if (
+    !$res || $res['reset_code'] !== $code ||
+    strtotime($res['reset_expires']) < time()
+) {
     echo json_encode(['success' => false]);
     exit;
 }
