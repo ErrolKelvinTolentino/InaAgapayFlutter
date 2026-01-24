@@ -30,7 +30,7 @@ class MotherDashboard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // 🔧 TEMP HARD-CODED DATA (backend later)
-    const int week = 26;
+    const int week = 27;
     final String trimester = _getTrimester(week);
 
     // 🧠 IDEAL BABY DATA (size + weight)
@@ -84,11 +84,13 @@ class MotherDashboard extends StatelessWidget {
 
               // 🧸 HERO CARD
               HeroCard(
-                imagePath: 'assets/images/pregnant1.png',
-                message: 'Your baby is growing beautifully!',
-                week: week,
-                showWeekBadge: true,
-              ),
+  image: const AssetImage('assets/images/pregnant1.png'),
+  week: 39,
+  showWeekBadge: true,
+  showHeartRow: true,
+),
+
+
 
               const SizedBox(height: 20),
 

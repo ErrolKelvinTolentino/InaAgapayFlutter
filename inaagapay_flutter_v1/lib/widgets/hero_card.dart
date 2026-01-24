@@ -2,17 +2,21 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 
 class HeroCard extends StatelessWidget {
-  final String imagePath;
-  final String message;
+  final ImageProvider image;
+  final String? title;
+  final String? subtitle;
   final int? week;
   final bool showWeekBadge;
+  final bool showHeartRow;
 
   const HeroCard({
     super.key,
-    required this.imagePath,
-    required this.message,
+    required this.image,
+    this.title,
+    this.subtitle,
     this.week,
-    this.showWeekBadge = true,
+    this.showWeekBadge = false,
+    this.showHeartRow = true,
   });
 
   @override
@@ -24,7 +28,7 @@ class HeroCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08), // 👈 soft but visible
+            color: Colors.black.withOpacity(0.08),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -33,7 +37,7 @@ class HeroCard extends StatelessWidget {
       child: Column(
         children: [
           Stack(
-            clipBehavior: Clip.none, // 👈 allow overlap
+            clipBehavior: Clip.none,
             children: [
               Center(
                 child: Container(
@@ -42,64 +46,90 @@ class HeroCard extends StatelessWidget {
                     shape: BoxShape.circle,
                     color: AppColors.bgSecondary,
                   ),
-                  child: Image.asset(imagePath, height: 150),
+                  child: Image(
+                    image: image,
+                    height: 140,
+                    fit: BoxFit.cover,
+                  ),
                 ),
               ),
 
               if (showWeekBadge && week != null)
                 Positioned(
-                  top: 6, // 👈 lower
-                  right: 24, // 👈 pushed left, overlaps circle more
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.brandPrimary,
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.15),
-                          blurRadius: 8,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Text(
-                      'Week $week',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textOnColor,
-                      ),
-                    ),
-                  ),
+                  top: 6,
+                  right: 24,
+                  child: _WeekBadge(week: week!),
                 ),
             ],
           ),
 
-          const SizedBox(height: 18),
-
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(
-                Icons.favorite,
-                size: 16,
+          if (title != null) ...[
+            const SizedBox(height: 16),
+            Text(
+              title!,
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
                 color: AppColors.brandPrimary,
               ),
-              const SizedBox(width: 6),
-              Text(
-                message,
-                style: const TextStyle(
-                  fontSize: 13,
-                  color: AppColors.textSecondary,
-                ),
+            ),
+          ],
+
+          if (subtitle != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              subtitle!,
+              style: const TextStyle(
+                fontSize: 13,
+                color: AppColors.textSecondary,
               ),
-            ],
-          ),
+            ),
+          ],
+
+          if (showHeartRow) ...[
+            const SizedBox(height: 14),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: const [
+                Icon(Icons.favorite,
+                    size: 16, color: AppColors.brandPrimary),
+                SizedBox(width: 6),
+                Text(
+                  'Your baby is growing beautifully!',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
+      ),
+    );
+  }
+}
+
+class _WeekBadge extends StatelessWidget {
+  final int week;
+
+  const _WeekBadge({required this.week});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: AppColors.brandPrimary,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        'Week $week',
+        style: const TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: AppColors.textOnColor,
+        ),
       ),
     );
   }

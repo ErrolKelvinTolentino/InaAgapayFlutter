@@ -14,6 +14,11 @@ import 'screens/welcome_screen.dart';
 import 'screens/congrats_page.dart';
 import 'screens/due_date_setter.dart'; // gives access to DueDateMode
 import 'screens/mother_children_page.dart';
+import 'screens/mother_view_child.dart';
+import 'screens/mother_child_stack.dart';
+import 'screens/mother_child_growth.dart';
+import 'screens/mother_child_vaccine.dart';
+
 
 
 void main() {
@@ -42,7 +47,9 @@ class MyApp extends StatelessWidget {
         '/verify-registration': (context) =>
           const AccountVerificationRegistration(),
         '/mother-dashboard': (context) => MotherDashboard(),
+        '/mother-children-stack': (context) => MotherChildStack(),
         '/mother-children': (context) => MotherChildrenPage(),
+        '/mother-children-stack': (context) => MotherChildStack(),
         '/midwife-dashboard': (context) => const MidwifeDashboard(),
         '/admin-dashboard': (context) => const AdminDashboard(),
         '/forgot-password': (context) => const ForgotPasswordScreen(),

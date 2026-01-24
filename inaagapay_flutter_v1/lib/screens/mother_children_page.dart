@@ -7,6 +7,7 @@ import '../widgets/small_description.dart';
 import '../widgets/app_input_field.dart';
 import '../widgets/child_card.dart';
 import '../widgets/vaccine_schedule_status.dart';
+import '../screens/mother_child_stack.dart';
 
 class MotherChildrenPage extends StatefulWidget {
   const MotherChildrenPage({super.key});
@@ -20,6 +21,16 @@ class _MotherChildrenPageState extends State<MotherChildrenPage> {
 
   // 🔧 TEMP MOCK DATA (backend later)
   final int childCount = 2;
+
+void _openChildProfile() {
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (_) => MotherChildStack(),
+    ),
+  );
+}
+
 
   @override
   Widget build(BuildContext context) {
@@ -131,9 +142,7 @@ class _MotherChildrenPageState extends State<MotherChildrenPage> {
                     ageText: '0 years 5 months old',
                     vaccineStatus: VaccineScheduleStatus.overdue,
                     image: const AssetImage('assets/images/child.png'),
-                    onTap: () {
-                      // TODO: navigate to child profile
-                    },
+                    onTap: _openChildProfile, // 👈 NAVIGATION
                   ),
 
                   const SizedBox(height: 12),
@@ -143,9 +152,7 @@ class _MotherChildrenPageState extends State<MotherChildrenPage> {
                     ageText: '0 years 5 months old',
                     vaccineStatus: VaccineScheduleStatus.onSchedule,
                     image: const AssetImage('assets/images/child.png'),
-                    onTap: () {
-                      // TODO
-                    },
+                    onTap: _openChildProfile, // 👈 NAVIGATION
                   ),
                 ],
               ),
@@ -157,7 +164,7 @@ class _MotherChildrenPageState extends State<MotherChildrenPage> {
       ),
 
       // 🔻 Bottom Nav
-      bottomNavigationBar: MainBottomNavigation(
+      bottomNavigationBar: const MainBottomNavigation(
         currentIndex: 2, // Children tab
       ),
     );
