@@ -2,9 +2,9 @@
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
-require __DIR__ . '/PHPMailer/src/Exception.php';
-require __DIR__ . '/PHPMailer/src/PHPMailer.php';
-require __DIR__ . '/PHPMailer/src/SMTP.php';
+require 'PHPMailer/src/Exception.php';
+require 'PHPMailer/src/PHPMailer.php';
+require 'PHPMailer/src/SMTP.php';
 
 function sendMail($to, $subject, $message)
 {
@@ -13,15 +13,15 @@ function sendMail($to, $subject, $message)
     try {
         // 🔐 SMTP CONFIG
         $mail->isSMTP();
-        $mail->Host = 'mail.alwaysdata.com';
+        $mail->Host = 'smtp.gmail.com';
         $mail->SMTPAuth = true;
-        $mail->Username = 'inaagapay';
-        $mail->Password = 'Mine@0729';
+        $mail->Username = 'inaagapay.official@gmail.com';
+        $mail->Password = 'rutq gsjd qawb wihi';
         $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
         $mail->Port = 587;
 
         // ✉️ EMAIL HEADERS
-        $mail->setFrom('inaagapay@alwaysdata.net', 'InaAgapay');
+        $mail->setFrom('inaagapay.official@gmail.com', 'InaAgapay');
         $mail->addAddress($to);
 
         // 📩 EMAIL CONTENT

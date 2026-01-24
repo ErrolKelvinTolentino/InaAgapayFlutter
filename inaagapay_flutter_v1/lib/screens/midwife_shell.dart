@@ -4,7 +4,7 @@ import '../theme/app_colors.dart';
 import '../widgets/midwife_bottom_navigation.dart';
 
 import 'midwife_dashboard.dart';
-import 'midwife_patients_page.dart';
+import 'midwife_mothers_page.dart';
 import 'midwife_children_page.dart';
 import 'midwife_schedules_page.dart';
 
@@ -18,11 +18,11 @@ class MidwifeShell extends StatefulWidget {
 class _MidwifeShellState extends State<MidwifeShell> {
   int _currentIndex = 0;
 
-  final List<Widget> _pages = const [
-    MidwifeDashboard(),      // 0 - Home
-    MidwifePatientsPage(),   // 1 - Patients
-    MidwifeChildrenPage(),   // 2 - Children
-    MidwifeSchedulesPage(),  // 3 - Schedules
+  final List<Widget> _pages = [
+    const MidwifeDashboard(),     // 0 - Dashboard
+    const MidwifeMothersPage(),   // 1 - Mothers ✅ FIXED
+    const MidwifeChildrenPage(),  // 2 - Children
+    const MidwifeSchedulesPage(), // 3 - Schedules
   ];
 
   @override

@@ -49,7 +49,9 @@ class MyApp extends StatelessWidget {
         if (snapshot.connectionState != ConnectionState.done) {
           return const MaterialApp(
             debugShowCheckedModeBanner: false,
-            home: Scaffold(body: Center(child: CircularProgressIndicator())),
+            home: Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            ),
           );
         }
 
@@ -60,8 +62,8 @@ class MyApp extends StatelessWidget {
           darkTheme: AppTheme.darkTheme,
           themeMode: ThemeMode.system,
 
-          // ✅ SAFE AUTH ENTRY POINT
-          home: snapshot.data,
+          // ✅ FIX: guarantee a widget (no null, no const error)
+          home: snapshot.data ?? const LoginScreen(),
 
           routes: {
             // ================= AUTH =================
@@ -78,13 +80,17 @@ class MyApp extends StatelessWidget {
                 const ChangeForgotPasswordScreen(),
 
             // ============== ONBOARDING ==============
-            '/complete-profile': (context) => const CompleteProfileScreen(),
+            '/complete-profile': (context) =>
+                const CompleteProfileScreen(),
             '/welcome': (context) => const WelcomeScreen(),
 
             // ============== DASHBOARDS ===============
-            '/mother_dashboard': (context) => const MotherDashboard(),
-            '/midwife_dashboard': (context) => const MidwifeShell(),
-            '/admin_dashboard': (context) => const AdminDashboard(),
+            '/mother_dashboard': (context) =>
+                const MotherDashboard(),
+            '/midwife_dashboard': (context) =>
+                const MidwifeShell(),
+            '/admin_dashboard': (context) =>
+                const AdminDashboard(),
           },
 
           onGenerateRoute: (settings) {
