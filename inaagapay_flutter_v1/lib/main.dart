@@ -41,7 +41,8 @@ class MyApp extends StatelessWidget {
         '/register': (context) => const MotherRegistrationScreen(),
         '/verify-registration': (context) =>
           const AccountVerificationRegistration(),
-        '/mother-dashboard': (context) => const MotherDashboard(),
+        '/mother-dashboard': (context) => MotherDashboard(),
+
         '/midwife-dashboard': (context) => const MidwifeDashboard(),
         '/admin-dashboard': (context) => const AdminDashboard(),
         '/forgot-password': (context) => const ForgotPasswordScreen(),

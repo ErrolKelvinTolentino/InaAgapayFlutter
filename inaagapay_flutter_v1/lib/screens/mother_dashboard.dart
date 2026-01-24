@@ -14,14 +14,27 @@ import '../widgets/comparison_card.dart';
 import '../widgets/main_button.dart';
 import '../widgets/secondary_button.dart';
 
+// 🆕 MODEL IMPORT
+import '../models/baby_growth_model.dart';
+
 class MotherDashboard extends StatelessWidget {
   const MotherDashboard({super.key});
+
+  // 🧠 Trimester logic
+  String _getTrimester(int week) {
+    if (week <= 13) return 'First Trimester';
+    if (week <= 27) return 'Second Trimester';
+    return 'Third Trimester';
+  }
 
   @override
   Widget build(BuildContext context) {
     // 🔧 TEMP HARD-CODED DATA (backend later)
-    const int week = 3;
-    const String trimester = 'First Trimester';
+    const int week = 39;
+    final String trimester = _getTrimester(week);
+
+    // 🧠 IDEAL BABY DATA (size + weight)
+    final babyGrowth = BabyGrowthData.getForWeek(week);
 
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
@@ -70,7 +83,7 @@ class MotherDashboard extends StatelessWidget {
               const SizedBox(height: 20),
 
               // 🧸 HERO CARD
-              const HeroCard(
+              HeroCard(
                 imagePath: 'assets/images/pregnant1.png',
                 message: 'Your baby is growing beautifully!',
                 week: week,
@@ -81,17 +94,17 @@ class MotherDashboard extends StatelessWidget {
 
               // 📦 Baby stats
               Row(
-                children: const [
+                children: [
                   SmallInfoBox(
                     icon: Icons.straighten,
-                    title: 'Baby Size',
-                    value: '0.1 – 0.2 cm',
+                    title: 'Ideal Baby Size',
+                    value: babyGrowth.size,
                   ),
-                  SizedBox(width: 12),
+                  const SizedBox(width: 12),
                   SmallInfoBox(
                     icon: Icons.monitor_weight,
-                    title: 'Baby Weight',
-                    value: '< 1 g',
+                    title: 'Ideal Baby Weight',
+                    value: babyGrowth.weight,
                   ),
                 ],
               ),
@@ -100,84 +113,73 @@ class MotherDashboard extends StatelessWidget {
 
               // 📅 Due date
               const LongInfoBox(
-  icon: Icons.calendar_month,
-  text: const [
-    TextSpan(
-      text: 'Due Date: ',
-      style: TextStyle(
-        fontWeight: FontWeight.w600,
-        color: AppColors.textPrimary,
-      ),
-    ),
-    TextSpan(
-      text: 'Month Day, Year\n',
-      style: TextStyle(
-        color: AppColors.textSecondary,
-      ),
-    ),
-    TextSpan(
-      text: 'You are ',
-      style: TextStyle(
-        color: AppColors.textSecondary,
-      ),
-    ),
-    TextSpan(
-      text: 'X Weeks away',
-      style: TextStyle(
-        fontWeight: FontWeight.w600,
-        color: AppColors.brandPrimary,
-      ),
-    ),
-    TextSpan(
-      text: ' from meeting!',
-      style: TextStyle(
-        color: AppColors.textSecondary,
-      ),
-    ),
-  ],
-),
-
+                icon: Icons.calendar_month,
+                text: [
+                  TextSpan(
+                    text: 'Due Date: ',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  TextSpan(
+                    text: 'Month Day, Year\n',
+                    style: TextStyle(color: AppColors.textSecondary),
+                  ),
+                  TextSpan(
+                    text: 'You are ',
+                    style: TextStyle(color: AppColors.textSecondary),
+                  ),
+                  TextSpan(
+                    text: 'X Weeks away',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.brandPrimary,
+                    ),
+                  ),
+                  TextSpan(
+                    text: ' from meeting!',
+                    style: TextStyle(color: AppColors.textSecondary),
+                  ),
+                ],
+              ),
 
               const SizedBox(height: 16),
 
               // 🫐 Comparison
-              const ComparisonCard(week: week),
-
+              ComparisonCard(week: week),
 
               const SizedBox(height: 20),
 
               // 🔔 Next check-up
               const LongInfoBox(
-  icon: Icons.notifications,
-  borderColor: AppColors.borderPrimary,
-  iconColor: AppColors.brandPrimary,
-  text: const [
-    TextSpan(
-      text: 'Next Check-up\n',
-      style: TextStyle(
-        fontWeight: FontWeight.w600,
-        color: AppColors.textPrimary,
-      ),
-    ),
-    TextSpan(
-      text: 'Month Day, Year – Day',
-      style: TextStyle(
-        color: AppColors.textSecondary,
-      ),
-    ),
-  ],
-),
-
+                icon: Icons.notifications,
+                borderColor: AppColors.borderPrimary,
+                iconColor: AppColors.brandPrimary,
+                text: [
+                  TextSpan(
+                    text: 'Next Check-up\n',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  TextSpan(
+                    text: 'Month Day, Year – Day',
+                    style: TextStyle(color: AppColors.textSecondary),
+                  ),
+                ],
+              ),
 
               const SizedBox(height: 24),
 
-              // 🔘 Actions (USING DESIGN SYSTEM BUTTONS)
+              // 🔘 Actions
               MainButton(
                 label: 'More Info',
                 showIcons: true,
                 leadingIcon: Icons.info_outline,
                 onPressed: () {
-                  // TODO: navigate to more info
+                  // TODO
                 },
               ),
 
@@ -202,7 +204,7 @@ class MotherDashboard extends StatelessWidget {
       bottomNavigationBar: MainBottomNavigation(
         currentIndex: 0,
         onTap: (index) {
-          // TODO: handle navigation
+          // TODO
         },
       ),
     );
