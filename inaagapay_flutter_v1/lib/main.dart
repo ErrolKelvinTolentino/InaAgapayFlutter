@@ -13,7 +13,7 @@ import 'screens/complete_profile.dart';
 import 'screens/welcome_screen.dart';
 import 'screens/congrats_page.dart';
 import 'screens/due_date_setter.dart'; // gives access to DueDateMode
-
+import 'screens/mother_children_page.dart';
 
 
 void main() {
@@ -42,7 +42,7 @@ class MyApp extends StatelessWidget {
         '/verify-registration': (context) =>
           const AccountVerificationRegistration(),
         '/mother-dashboard': (context) => MotherDashboard(),
-
+        '/mother-children': (context) => MotherChildrenPage(),
         '/midwife-dashboard': (context) => const MidwifeDashboard(),
         '/admin-dashboard': (context) => const AdminDashboard(),
         '/forgot-password': (context) => const ForgotPasswordScreen(),

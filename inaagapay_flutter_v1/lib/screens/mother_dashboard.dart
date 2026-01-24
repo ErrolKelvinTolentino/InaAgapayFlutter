@@ -30,7 +30,7 @@ class MotherDashboard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // 🔧 TEMP HARD-CODED DATA (backend later)
-    const int week = 39;
+    const int week = 26;
     final String trimester = _getTrimester(week);
 
     // 🧠 IDEAL BABY DATA (size + weight)
@@ -203,9 +203,6 @@ class MotherDashboard extends StatelessWidget {
       // 🔻 Bottom Nav
       bottomNavigationBar: MainBottomNavigation(
         currentIndex: 0,
-        onTap: (index) {
-          // TODO
-        },
       ),
     );
   }
