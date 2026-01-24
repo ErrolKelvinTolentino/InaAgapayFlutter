@@ -42,10 +42,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
     if (!mounted) return;
 
-    Navigator.pushNamed(
-      context,
-      '/forgot-password-verify',
-    );
+    Navigator.pushNamed(context, '/forgot-password-verify');
   }
 
   @override
@@ -76,10 +73,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               const Text(
                 'Enter your email to reset your password',
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: AppColors.textSecondary,
-                ),
+                style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
               ),
 
               const SizedBox(height: 24),
@@ -101,7 +95,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   ),
                 ),
               ],
-
 
               const SizedBox(height: 28),
 

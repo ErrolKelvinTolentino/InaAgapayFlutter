@@ -67,17 +67,15 @@ class _AccountVerificationRegistrationState
         barrierDismissible: false,
         builder: (_) => DialogBox(
           title: 'Account Linked',
-          subtitle:
-              'You have existing data from a Barangay Health Center',
+          subtitle: 'You have existing data from a Barangay Health Center',
           buttonText: 'Continue',
           type: DialogType.success,
           onPressed: () {
             Navigator.pushNamedAndRemoveUntil(
-  context,
-  '/mother-dashboard',
-  (route) => false,
-);
-
+              context,
+              '/mother-dashboard',
+              (route) => false,
+            );
           },
         ),
       );
@@ -127,8 +125,7 @@ class _AccountVerificationRegistrationState
       backgroundColor: AppColors.bgPrimary,
       body: SafeArea(
         child: SingleChildScrollView(
-          keyboardDismissBehavior:
-              ScrollViewKeyboardDismissBehavior.onDrag,
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           padding: const EdgeInsets.symmetric(horizontal: 28),
           child: Column(
             children: [
@@ -151,10 +148,7 @@ class _AccountVerificationRegistrationState
               const Text(
                 'Enter the 6-digit code sent to your email',
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: AppColors.textSecondary,
-                ),
+                style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
               ),
 
               const SizedBox(height: 32),
@@ -191,10 +185,7 @@ class _AccountVerificationRegistrationState
               const SizedBox(height: 32),
 
               _secondsRemaining == 0
-                  ? ClickableText(
-                      text: 'Resend Code',
-                      onTap: _resendCode,
-                    )
+                  ? ClickableText(text: 'Resend Code', onTap: _resendCode)
                   : Text(
                       'Resend Code in $_formattedTime',
                       style: const TextStyle(

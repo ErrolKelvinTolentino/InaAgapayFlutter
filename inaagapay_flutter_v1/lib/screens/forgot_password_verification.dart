@@ -53,34 +53,33 @@ class _ForgotPasswordVerificationScreenState
   }
 
   void _verifyCode() {
-  if (_code != '123456') {
-    setState(() {
-      _hasError = true;
-    });
-    return;
+    if (_code != '123456') {
+      setState(() {
+        _hasError = true;
+      });
+      return;
+    }
+
+    final parentContext = context; // 👈 save parent context
+
+    showDialog(
+      context: parentContext,
+      barrierDismissible: false,
+      builder: (_) => DialogBox(
+        title: 'Account Verified!',
+        buttonText: 'Continue',
+        type: DialogType.success,
+        onPressed: () {
+          Navigator.of(parentContext, rootNavigator: true).pop();
+
+          Navigator.pushReplacementNamed(
+            parentContext,
+            '/change-forgot-password',
+          );
+        },
+      ),
+    );
   }
-
-  final parentContext = context; // 👈 save parent context
-
-  showDialog(
-    context: parentContext,
-    barrierDismissible: false,
-    builder: (_) => DialogBox(
-      title: 'Account Verified!',
-      buttonText: 'Continue',
-      type: DialogType.success,
-      onPressed: () {
-        Navigator.of(parentContext, rootNavigator: true).pop();
-
-        Navigator.pushReplacementNamed(
-          parentContext,
-          '/change-forgot-password',
-        );
-      },
-    ),
-  );
-}
-
 
   void _resendCode() {
     _startTimer();
@@ -115,10 +114,7 @@ class _ForgotPasswordVerificationScreenState
               const Text(
                 'Enter the 6-digit code sent to your email',
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: AppColors.textSecondary,
-                ),
+                style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
               ),
 
               const SizedBox(height: 28),
@@ -149,8 +145,7 @@ class _ForgotPasswordVerificationScreenState
               MainButton(
                 label: 'Verify',
                 showIcons: false,
-                onPressed:
-                    _code.length == 6 ? () => _verifyCode() : null,
+                onPressed: _code.length == 6 ? () => _verifyCode() : null,
               ),
 
               const SizedBox(height: 16),
@@ -170,10 +165,7 @@ class _ForgotPasswordVerificationScreenState
               const SizedBox(height: 16),
 
               _secondsRemaining == 0
-                  ? ClickableText(
-                      text: 'Resend Code',
-                      onTap: _resendCode,
-                    )
+                  ? ClickableText(text: 'Resend Code', onTap: _resendCode)
                   : Text(
                       'Resend Code in $_formattedTime',
                       style: const TextStyle(

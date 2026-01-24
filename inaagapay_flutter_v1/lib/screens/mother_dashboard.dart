@@ -20,7 +20,7 @@ class MotherDashboard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // 🔧 TEMP HARD-CODED DATA (backend later)
-    const int week = 8;
+    const int week = 3;
     const String trimester = 'First Trimester';
 
     return Scaffold(

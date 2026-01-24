@@ -30,13 +30,9 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 40),
 
               // 🔹 Logo
-              Image.asset(
-                'assets/images/logo.png',
-                height: 146,
-              ),
+              Image.asset('assets/images/logo.png', height: 146),
 
               const SizedBox(height: 20), // ⬅ tighter than before
-
               // 🔹 App name
               Image.asset(
                 'assets/images/inaagapay_name.png',
@@ -45,7 +41,6 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
 
               const SizedBox(height: 8), // ⬅ MUCH tighter
-
               // 🔹 Tagline
               const Text(
                 'Supporting you through every step',
@@ -58,8 +53,6 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
 
               const SizedBox(height: 56), // ⬅ breathing room before inputs
-
-
               // 📧 Email input
               AppInputField(
                 hintText: 'Email Address',
@@ -92,15 +85,11 @@ class _LoginScreenState extends State<LoginScreen> {
               Align(
                 alignment: Alignment.centerRight,
                 child: ClickableText(
-                text: 'Forgot Password?',
-                onTap: () {
-                  Navigator.pushNamed(
-                    context,
-                    '/forgot-password',
-                  );
-                },
-              ),
-
+                  text: 'Forgot Password?',
+                  onTap: () {
+                    Navigator.pushNamed(context, '/forgot-password');
+                  },
+                ),
               ),
 
               const SizedBox(height: 56),
@@ -110,10 +99,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 label: 'Sign in',
                 showIcons: false,
                 onPressed: () {
-                  Navigator.pushNamed(
-                    context,
-                    '/complete-profile',
-                  );
+                  Navigator.pushNamed(context, '/complete-profile');
                 },
               ),
 

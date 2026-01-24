@@ -16,8 +16,7 @@ class ChangeForgotPasswordScreen extends StatefulWidget {
       _ChangeForgotPasswordScreenState();
 }
 
-class _ChangeForgotPasswordScreenState
-    extends State<ChangeForgotPasswordScreen>
+class _ChangeForgotPasswordScreenState extends State<ChangeForgotPasswordScreen>
     with SingleTickerProviderStateMixin {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
@@ -40,17 +39,15 @@ class _ChangeForgotPasswordScreenState
       duration: const Duration(milliseconds: 400),
     );
 
-    _shakeAnimation = TweenSequence<double>([
-      TweenSequenceItem(tween: Tween(begin: 0, end: -8), weight: 1),
-      TweenSequenceItem(tween: Tween(begin: -8, end: 8), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: 8, end: -8), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: -8, end: 0), weight: 1),
-    ]).animate(
-      CurvedAnimation(
-        parent: _shakeController,
-        curve: Curves.easeInOut,
-      ),
-    );
+    _shakeAnimation =
+        TweenSequence<double>([
+          TweenSequenceItem(tween: Tween(begin: 0, end: -8), weight: 1),
+          TweenSequenceItem(tween: Tween(begin: -8, end: 8), weight: 2),
+          TweenSequenceItem(tween: Tween(begin: 8, end: -8), weight: 2),
+          TweenSequenceItem(tween: Tween(begin: -8, end: 0), weight: 1),
+        ]).animate(
+          CurvedAnimation(parent: _shakeController, curve: Curves.easeInOut),
+        );
   }
 
   @override
@@ -80,12 +77,10 @@ class _ChangeForgotPasswordScreenState
       _passwordController.text == _confirmPasswordController.text;
 
   bool get _passwordsDoNotMatch =>
-      _confirmPasswordController.text.isNotEmpty &&
-      !_passwordsMatch;
+      _confirmPasswordController.text.isNotEmpty && !_passwordsMatch;
 
   bool get _canSubmit =>
-      _calculateStrength(_passwordController.text) ==
-          PasswordStrength.strong &&
+      _calculateStrength(_passwordController.text) == PasswordStrength.strong &&
       _passwordsMatch;
 
   // ✅ FINAL submit handler
@@ -114,11 +109,7 @@ class _ChangeForgotPasswordScreenState
     if (!mounted) return;
 
     // ✅ Redirect to login
-    Navigator.pushNamedAndRemoveUntil(
-      context,
-      '/login',
-      (route) => false,
-    );
+    Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
   }
 
   @override
@@ -135,15 +126,9 @@ class _ChangeForgotPasswordScreenState
             children: [
               const SizedBox(height: 32),
 
-              Image.asset(
-                'assets/images/logo.png',
-                height: 110,
-              ),
+              Image.asset('assets/images/logo.png', height: 110),
               const SizedBox(height: 16),
-              Image.asset(
-                'assets/images/inaagapay_name.png',
-                width: 240,
-              ),
+              Image.asset('assets/images/inaagapay_name.png', width: 240),
 
               const SizedBox(height: 24),
 
@@ -176,9 +161,7 @@ class _ChangeForgotPasswordScreenState
                 padding: const EdgeInsets.only(right: 20),
                 child: Align(
                   alignment: Alignment.centerRight,
-                  child: PasswordStrengthIndicator(
-                    strength: strength,
-                  ),
+                  child: PasswordStrengthIndicator(strength: strength),
                 ),
               ),
 
@@ -212,63 +195,61 @@ class _ChangeForgotPasswordScreenState
                           : Icons.visibility,
                       onTrailingTap: () {
                         setState(() {
-                          _obscureConfirmPassword =
-                              !_obscureConfirmPassword;
+                          _obscureConfirmPassword = !_obscureConfirmPassword;
                         });
                       },
                     ),
 
                     const SizedBox(height: 8),
 
-Padding(
-  padding: const EdgeInsets.only(left: 20),
-  child: Builder(
-    builder: (_) {
-      if (_passwordsDoNotMatch) {
-        return Row(
-          children: const [
-            Icon(
-              Icons.cancel,
-              size: 16,
-              color: AppColors.error,
-            ),
-            SizedBox(width: 6),
-            Text(
-              'Passwords do not match',
-              style: TextStyle(
-                fontSize: 13,
-                color: AppColors.error,
-              ),
-            ),
-          ],
-        );
-      }
+                    Padding(
+                      padding: const EdgeInsets.only(left: 20),
+                      child: Builder(
+                        builder: (_) {
+                          if (_passwordsDoNotMatch) {
+                            return Row(
+                              children: const [
+                                Icon(
+                                  Icons.cancel,
+                                  size: 16,
+                                  color: AppColors.error,
+                                ),
+                                SizedBox(width: 6),
+                                Text(
+                                  'Passwords do not match',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: AppColors.error,
+                                  ),
+                                ),
+                              ],
+                            );
+                          }
 
-      if (_passwordsMatch) {
-        return Row(
-          children: const [
-            Icon(
-              Icons.check_circle,
-              size: 16,
-              color: AppColors.success,
-            ),
-            SizedBox(width: 6),
-            Text(
-              'Passwords match',
-              style: TextStyle(
-                fontSize: 13,
-                color: AppColors.success,
-              ),
-            ),
-          ],
-        );
-      }
+                          if (_passwordsMatch) {
+                            return Row(
+                              children: const [
+                                Icon(
+                                  Icons.check_circle,
+                                  size: 16,
+                                  color: AppColors.success,
+                                ),
+                                SizedBox(width: 6),
+                                Text(
+                                  'Passwords match',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: AppColors.success,
+                                  ),
+                                ),
+                              ],
+                            );
+                          }
 
-      return const SizedBox.shrink();
-    },
-  ),
-),
-
+                          return const SizedBox.shrink();
+                        },
+                      ),
+                    ),
                   ],
                 ),
               ),

@@ -22,10 +22,7 @@ class MidwifeDashboard extends StatelessWidget {
               SizedBox(height: 12),
               Text(
                 'Logged in as: Midwife',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: AppColors.textSecondary,
-                ),
+                style: TextStyle(fontSize: 16, color: AppColors.textSecondary),
               ),
             ],
           ),

@@ -16,8 +16,7 @@ class MotherRegistrationScreen extends StatefulWidget {
       _MotherRegistrationScreenState();
 }
 
-class _MotherRegistrationScreenState
-    extends State<MotherRegistrationScreen>
+class _MotherRegistrationScreenState extends State<MotherRegistrationScreen>
     with SingleTickerProviderStateMixin {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -50,17 +49,15 @@ class _MotherRegistrationScreenState
       duration: const Duration(milliseconds: 400),
     );
 
-    _shakeAnimation = TweenSequence<double>([
-      TweenSequenceItem(tween: Tween(begin: 0, end: -8), weight: 1),
-      TweenSequenceItem(tween: Tween(begin: -8, end: 8), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: 8, end: -8), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: -8, end: 0), weight: 1),
-    ]).animate(
-      CurvedAnimation(
-        parent: _shakeController,
-        curve: Curves.easeInOut,
-      ),
-    );
+    _shakeAnimation =
+        TweenSequence<double>([
+          TweenSequenceItem(tween: Tween(begin: 0, end: -8), weight: 1),
+          TweenSequenceItem(tween: Tween(begin: -8, end: 8), weight: 2),
+          TweenSequenceItem(tween: Tween(begin: 8, end: -8), weight: 2),
+          TweenSequenceItem(tween: Tween(begin: -8, end: 0), weight: 1),
+        ]).animate(
+          CurvedAnimation(parent: _shakeController, curve: Curves.easeInOut),
+        );
   }
 
   @override
@@ -96,14 +93,12 @@ class _MotherRegistrationScreenState
       _passwordController.text == _confirmPasswordController.text;
 
   bool get _passwordsDoNotMatch =>
-      _confirmPasswordController.text.isNotEmpty &&
-      !_passwordsMatch;
+      _confirmPasswordController.text.isNotEmpty && !_passwordsMatch;
 
   bool get _canSubmit =>
       _isEmailValid &&
       !_emailExists &&
-      _calculateStrength(_passwordController.text) ==
-          PasswordStrength.strong &&
+      _calculateStrength(_passwordController.text) == PasswordStrength.strong &&
       _passwordsMatch;
 
   // ✅ Submit handler
@@ -249,8 +244,7 @@ class _MotherRegistrationScreenState
                           : Icons.visibility,
                       onTrailingTap: () {
                         setState(() {
-                          _obscureConfirmPassword =
-                              !_obscureConfirmPassword;
+                          _obscureConfirmPassword = !_obscureConfirmPassword;
                         });
                       },
                     ),
@@ -325,8 +319,10 @@ class _MotherRegistrationScreenState
       children: [
         const Icon(Icons.cancel, size: 16, color: AppColors.error),
         const SizedBox(width: 6),
-        Text(text,
-            style: const TextStyle(fontSize: 13, color: AppColors.error)),
+        Text(
+          text,
+          style: const TextStyle(fontSize: 13, color: AppColors.error),
+        ),
       ],
     );
   }
@@ -334,12 +330,12 @@ class _MotherRegistrationScreenState
   Widget _successRow(String text) {
     return Row(
       children: [
-        const Icon(Icons.check_circle,
-            size: 16, color: AppColors.success),
+        const Icon(Icons.check_circle, size: 16, color: AppColors.success),
         const SizedBox(width: 6),
-        Text(text,
-            style:
-                const TextStyle(fontSize: 13, color: AppColors.success)),
+        Text(
+          text,
+          style: const TextStyle(fontSize: 13, color: AppColors.success),
+        ),
       ],
     );
   }
