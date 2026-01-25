@@ -12,27 +12,29 @@ class AddMotherStep4Medical extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        children: [
-          const Text('🩺 Medical History'),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Step 4 – Medical History',
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 16),
 
-          CheckboxListTile(value: false, onChanged: (_) {}, title: const Text('Anemia')),
-          CheckboxListTile(value: false, onChanged: (_) {}, title: const Text('Diabetes')),
-          CheckboxListTile(value: false, onChanged: (_) {}, title: const Text('Smoking')),
+        CheckboxListTile(title: const Text('Anemia'), value: false, onChanged: (_) {}),
+        CheckboxListTile(title: const Text('Diabetes'), value: false, onChanged: (_) {}),
+        CheckboxListTile(title: const Text('Smoking'), value: false, onChanged: (_) {}),
+        CheckboxListTile(title: const Text('Alcohol'), value: false, onChanged: (_) {}),
 
-          const Spacer(),
-
-          Row(
-            children: [
-              Expanded(child: OutlinedButton(onPressed: onBack, child: const Text('Back'))),
-              const SizedBox(width: 8),
-              Expanded(child: ElevatedButton(onPressed: onNext, child: const Text('Next'))),
-            ],
-          ),
-        ],
-      ),
+        const SizedBox(height: 24),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            OutlinedButton(onPressed: onBack, child: const Text('Back')),
+            ElevatedButton(onPressed: onNext, child: const Text('Next')),
+          ],
+        ),
+      ],
     );
   }
 }

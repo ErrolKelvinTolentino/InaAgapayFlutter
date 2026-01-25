@@ -12,31 +12,32 @@ class AddMotherStep3Husband extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        children: [
-          const Text('👨 Husband Information'),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Step 3 – Husband Information',
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 16),
 
-          TextField(decoration: const InputDecoration(labelText: 'First Name')),
-          TextField(decoration: const InputDecoration(labelText: 'Last Name')),
-          TextField(decoration: const InputDecoration(labelText: 'Middle Name')),
-          TextField(decoration: const InputDecoration(labelText: 'Extension Name')),
-          TextField(decoration: const InputDecoration(labelText: 'Birthdate')),
-          TextField(decoration: const InputDecoration(labelText: 'Phone Number')),
-          TextField(decoration: const InputDecoration(labelText: 'Email Address')),
+        TextField(decoration: const InputDecoration(labelText: 'First Name')),
+        TextField(decoration: const InputDecoration(labelText: 'Last Name')),
+        TextField(decoration: const InputDecoration(labelText: 'Middle Name')),
+        TextField(decoration: const InputDecoration(labelText: 'Extension Name')),
+        TextField(decoration: const InputDecoration(labelText: 'Birthdate')),
+        TextField(decoration: const InputDecoration(labelText: 'Phone Number')),
+        TextField(decoration: const InputDecoration(labelText: 'Email Address')),
 
-          const Spacer(),
-
-          Row(
-            children: [
-              Expanded(child: OutlinedButton(onPressed: onBack, child: const Text('Back'))),
-              const SizedBox(width: 8),
-              Expanded(child: ElevatedButton(onPressed: onNext, child: const Text('Next'))),
-            ],
-          ),
-        ],
-      ),
+        const SizedBox(height: 24),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            OutlinedButton(onPressed: onBack, child: const Text('Back')),
+            ElevatedButton(onPressed: onNext, child: const Text('Next')),
+          ],
+        ),
+      ],
     );
   }
 }

@@ -10,32 +10,31 @@ class AddMotherStep7Gestational extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        children: [
-          const Text('🧠 Gestational Information'),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Step 7 – Gestational Information',
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 16),
 
-          TextField(decoration: const InputDecoration(labelText: 'Last Menstrual Date')),
-          TextField(decoration: const InputDecoration(labelText: 'Expected Delivery Date')),
-          TextField(decoration: const InputDecoration(labelText: 'Age of Gestation')),
+        TextField(decoration: const InputDecoration(labelText: 'Last Menstrual Date')),
+        TextField(decoration: const InputDecoration(labelText: 'Expected Delivery Date')),
+        TextField(decoration: const InputDecoration(labelText: 'Age of Gestation')),
 
-          const Spacer(),
-
-          Row(
-            children: [
-              Expanded(child: OutlinedButton(onPressed: onBack, child: const Text('Back'))),
-              const SizedBox(width: 8),
-              Expanded(child: ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                },
-                child: const Text('Add Patient'),
-              )),
-            ],
-          ),
-        ],
-      ),
+        const SizedBox(height: 24),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            OutlinedButton(onPressed: onBack, child: const Text('Back')),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Add Patient'),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }

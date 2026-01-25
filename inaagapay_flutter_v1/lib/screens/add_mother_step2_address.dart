@@ -12,29 +12,30 @@ class AddMotherStep2Address extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        children: [
-          const Text('🏠 Address Information', style: TextStyle(fontSize: 18)),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Step 2 – Address Information',
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 16),
 
-          TextField(decoration: const InputDecoration(labelText: 'Province')),
-          TextField(decoration: const InputDecoration(labelText: 'City / Municipality')),
-          TextField(decoration: const InputDecoration(labelText: 'Barangay')),
-          TextField(decoration: const InputDecoration(labelText: 'Street')),
-          TextField(decoration: const InputDecoration(labelText: 'House Number')),
+        TextField(decoration: const InputDecoration(labelText: 'Province')),
+        TextField(decoration: const InputDecoration(labelText: 'City / Municipality')),
+        TextField(decoration: const InputDecoration(labelText: 'Barangay')),
+        TextField(decoration: const InputDecoration(labelText: 'Street')),
+        TextField(decoration: const InputDecoration(labelText: 'House Number')),
 
-          const Spacer(),
-
-          Row(
-            children: [
-              Expanded(child: OutlinedButton(onPressed: onBack, child: const Text('Back'))),
-              const SizedBox(width: 8),
-              Expanded(child: ElevatedButton(onPressed: onNext, child: const Text('Next'))),
-            ],
-          ),
-        ],
-      ),
+        const SizedBox(height: 24),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            OutlinedButton(onPressed: onBack, child: const Text('Back')),
+            ElevatedButton(onPressed: onNext, child: const Text('Next')),
+          ],
+        ),
+      ],
     );
   }
 }

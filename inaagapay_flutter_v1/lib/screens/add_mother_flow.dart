@@ -16,37 +16,39 @@ class AddMotherFlow extends StatefulWidget {
 }
 
 class _AddMotherFlowState extends State<AddMotherFlow> {
-  int currentStep = 0;
+  int step = 0;
 
   void next() {
-    if (currentStep < 6) {
-      setState(() => currentStep++);
+    if (step < 6) {
+      setState(() => step++);
     }
   }
 
   void back() {
-    if (currentStep > 0) {
-      setState(() => currentStep--);
+    if (step > 0) {
+      setState(() => step--);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final pages = [
+      AddMotherStep1Personal(onNext: next),
+      AddMotherStep2Address(onNext: next, onBack: back),
+      AddMotherStep3Husband(onNext: next, onBack: back),
+      AddMotherStep4Medical(onNext: next, onBack: back),
+      AddMotherStep5Allergies(onNext: next, onBack: back),
+      AddMotherStep6Pregnancy(onNext: next, onBack: back),
+      AddMotherStep7Gestational(onBack: back),
+    ];
+
     return Scaffold(
       appBar: AppBar(
-        title: Text('Add Mother – Step ${currentStep + 1} of 7'),
+        title: Text('Add Mother – Step ${step + 1} of 7'),
       ),
-      body: IndexedStack(
-        index: currentStep,
-        children: [
-          AddMotherStep1(onNext: next),
-          AddMotherStep2Address(onNext: next, onBack: back),
-          AddMotherStep3Husband(onNext: next, onBack: back),
-          AddMotherStep4Medical(onNext: next, onBack: back),
-          AddMotherStep5Allergies(onNext: next, onBack: back),
-          AddMotherStep6Pregnancy(onNext: next, onBack: back),
-          AddMotherStep7Gestational(onBack: back),
-        ],
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: pages[step],
       ),
     );
   }

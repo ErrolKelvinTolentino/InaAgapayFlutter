@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
+import 'add_growth_step1.dart';
+import 'add_immunization_page.dart';
 
 class ChildProfilePage extends StatelessWidget {
   final Map<String, dynamic> childData;
@@ -9,14 +11,17 @@ class ChildProfilePage extends StatelessWidget {
     required this.childData,
   });
 
-  // ---------- HELPERS ----------
+  // ---------- SAFE VALUE ----------
   String _v(String key) =>
       (childData[key] ?? '').toString().trim();
 
+  int get childId =>
+      int.tryParse(childData['child_id'].toString()) ?? 0;
+
   String get fullName {
-    final fn = _v('child_first_name');
-    final mi = _v('child_middle_name');
-    final ln = _v('child_last_name');
+    final fn = _v('first_name');
+    final mi = _v('middle_name');
+    final ln = _v('last_name');
 
     if (mi.isNotEmpty) {
       return '$fn ${mi[0]}. $ln';
@@ -37,7 +42,6 @@ class ChildProfilePage extends StatelessWidget {
     }
   }
 
-  // ---------- UI ----------
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -47,92 +51,75 @@ class ChildProfilePage extends StatelessWidget {
         backgroundColor: AppColors.bgPrimary,
         elevation: 0,
       ),
+
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            // 👶 HEADER
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-              ),
+            _card(
               child: Column(
                 children: [
                   const CircleAvatar(
-                    radius: 45,
+                    radius: 40,
                     backgroundColor: AppColors.brandPrimary,
-                    child: Icon(Icons.child_care, size: 40, color: Colors.white),
+                    child: Icon(Icons.child_care,
+                        color: Colors.white, size: 40),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 10),
                   Text(
                     fullName,
                     style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.brandPrimary,
-                    ),
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    ageText,
-                    style: const TextStyle(color: AppColors.textSecondary),
-                  ),
+                  Text(ageText),
                 ],
               ),
             ),
 
-            const SizedBox(height: 20),
+            _section('Birth Details', [
+              _row('Birth Date', _v('birthdate')),
+              _row('Birthplace', _v('birth_place')),
+            ]),
 
-            // 📅 BIRTH DETAILS
-            _section(
-              title: 'Birth Details',
-              children: [
-                _row('Birth Date', _v('birthdate')),
-                _row('Time of Birth', _v('birth_time')),
-                _row('Birthplace', _v('birth_place')),
-              ],
-            ),
-
-            // 📈 GROWTH
-            _section(
-              title: 'Latest Growth Records',
-              children: [
-                _row('Height', '${_v('height')} cm'),
-                _row('Weight', '${_v('weight')} kg'),
-                _row('BMI', _v('bmi')),
-              ],
-            ),
-
-            // 💉 IMMUNIZATION
-            _section(
-              title: 'Latest Immunization',
-              children: [
-                _row('Vaccine', _v('last_vaccine')),
-                _row('Date Taken', _v('last_vaccine_date')),
-              ],
-            ),
+            _section('Latest Growth', [
+              _row('Height', '${_v('height')} cm'),
+              _row('Weight', '${_v('weight')} kg'),
+              _row('BMI', _v('bmi')),
+            ]),
 
             const SizedBox(height: 20),
 
-            // 🔘 BUTTON
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.brandPrimary,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
+            // ➕ ADD GROWTH
+            _primaryBtn(
+              'Add Growth Record',
+              () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => AddGrowthStep1(
+                      childId: childId,
+                    ),
                   ),
-                ),
-                onPressed: () {},
-                child: const Text(
-                  'View Vaccination Details',
-                  style: TextStyle(color: Colors.white),
-                ),
-              ),
+                );
+              },
+            ),
+
+            const SizedBox(height: 12),
+
+            // 💉 ADD IMMUNIZATION
+            _primaryBtn(
+              'Add Immunization',
+              () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => AddImmunizationPage(
+                      childId: childId,
+                    ),
+                  ),
+                );
+              },
             ),
           ],
         ),
@@ -140,26 +127,17 @@ class ChildProfilePage extends StatelessWidget {
     );
   }
 
-  // ---------- REUSABLE ----------
-  Widget _section({required String title, required List<Widget> children}) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-      ),
+  // ---------- UI HELPERS ----------
+  Widget _section(String title, List<Widget> children) {
+    return _card(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              color: AppColors.brandPrimary,
-            ),
-          ),
-          const SizedBox(height: 12),
+          Text(title,
+              style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.brandPrimary)),
+          const SizedBox(height: 8),
           ...children,
         ],
       ),
@@ -169,16 +147,41 @@ class ChildProfilePage extends StatelessWidget {
   Widget _row(String label, String value) {
     if (value.isEmpty) value = '-';
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.only(bottom: 6),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label),
-          Text(
-            value,
-            style: const TextStyle(fontWeight: FontWeight.w600),
-          ),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.w600)),
         ],
+      ),
+    );
+  }
+
+  Widget _card({required Widget child}) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: child,
+    );
+  }
+
+  Widget _primaryBtn(String label, VoidCallback onTap) {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.brandPrimary,
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        ),
+        onPressed: onTap,
+        child: Text(label, style: const TextStyle(color: Colors.white)),
       ),
     );
   }

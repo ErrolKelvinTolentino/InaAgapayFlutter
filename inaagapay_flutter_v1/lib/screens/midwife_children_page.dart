@@ -2,17 +2,22 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
-import 'add_child_step1.dart';
+import '../theme/app_colors.dart';
+import '../services/auth_storage.dart';
 import 'child_profile_page.dart';
+import 'add_child_step1.dart';
 
 class MidwifeChildrenPage extends StatelessWidget {
   const MidwifeChildrenPage({super.key});
 
   Future<List<Map<String, dynamic>>> fetchChildren() async {
+    final token = await AuthStorage.getToken();
+
     final res = await http.get(
       Uri.parse(
         'https://inaagapay.alwaysdata.net/api/midwife/midwife_children.php',
       ),
+      headers: {'Authorization': 'Bearer $token'},
     );
 
     final decoded = jsonDecode(res.body);
@@ -22,60 +27,66 @@ class MidwifeChildrenPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.bgPrimary,
       appBar: AppBar(
         title: const Text('Children'),
+        backgroundColor: AppColors.bgPrimary,
+        elevation: 0,
       ),
 
       body: FutureBuilder<List<Map<String, dynamic>>>(
         future: fetchChildren(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
+        builder: (context, snap) {
+          if (snap.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          if (snapshot.hasError) {
-            return Center(child: Text(snapshot.error.toString()));
-          }
-
-          final children = snapshot.data ?? [];
+          final children = snap.data ?? [];
 
           if (children.isEmpty) {
             return const Center(child: Text('No children found'));
           }
 
           return ListView.builder(
+            padding: const EdgeInsets.all(16),
             itemCount: children.length,
-            itemBuilder: (context, i) {
+            itemBuilder: (_, i) {
               final c = children[i];
 
-              return ListTile(
-                leading: const Icon(Icons.child_care),
-                title: Text(
-                  '${c['first_name'] ?? ''} ${c['last_name'] ?? ''}',
+              return Card(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
                 ),
-                subtitle: Text(
-                  'Mother: ${c['mother_name'] ?? ''}',
-                ),
-                trailing: Text(c['sex'] ?? ''),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => ChildProfilePage(
-                        childData: c, // ✅ FIX IS HERE
+                child: ListTile(
+                  leading: const Icon(Icons.child_care,
+                      color: AppColors.brandPrimary),
+                  title: Text(
+                    '${c['first_name']} ${c['last_name']}',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  subtitle: Text('Mother: ${c['mother_name'] ?? '-'}'),
+                  trailing: const Icon(Icons.chevron_right),
+
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ChildProfilePage(
+                          childData: c,
+                        ),
                       ),
-                    ),
-                  );
-                },
+                    );
+                  },
+                ),
               );
             },
           );
         },
       ),
 
-      // ➕ ADD CHILD BUTTON (RESTORED & KEPT)
+      // ➕ ADD CHILD
       floatingActionButton: FloatingActionButton(
-        child: const Icon(Icons.add),
+        backgroundColor: AppColors.brandPrimary,
         onPressed: () {
           Navigator.push(
             context,
@@ -84,6 +95,7 @@ class MidwifeChildrenPage extends StatelessWidget {
             ),
           );
         },
+        child: const Icon(Icons.add),
       ),
     );
   }
