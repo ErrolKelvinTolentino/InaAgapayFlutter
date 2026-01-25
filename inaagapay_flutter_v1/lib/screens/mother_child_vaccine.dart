@@ -75,26 +75,25 @@ class MotherChildVaccinePage extends StatelessWidget {
               const SizedBox(height: 16),
 
               RecordsDisplayCard(
-                title: 'Overview',
-                headerIcon: Icons.info_outline,
-                subtitle: '5 out of 14 Vaccines Taken',
-                progress: 5,
-                items: [
-                  RecordItem(
-                    leadingIcon: Icons.verified,
-                    label: 'Protection Status',
-                    value: '',
-                    trailingWidget: const StatusIndicator(
-                      status: StatusIndicatorType.ongoing,
-                    ),
-                  ),
-                  RecordItem(
-                    leadingIcon: Icons.schedule,
-                    label: 'Next due',
-                    value: 'Week 6 vaccines',
-                  ),
-                ],
-              ),
+  title: 'Overview',
+  headerIcon: Icons.info_outline,
+  items: [
+    RecordItem(
+      leadingIcon: Icons.verified,
+      label: 'Protection Status',
+      value: '',
+      trailingWidget: const StatusIndicator(
+        status: StatusIndicatorType.ongoing,
+      ),
+    ),
+    RecordItem(
+      leadingIcon: Icons.schedule,
+      label: 'Next due',
+      value: 'Week 6 vaccines',
+    ),
+  ],
+),
+
 
               const SizedBox(height: 16),
 
