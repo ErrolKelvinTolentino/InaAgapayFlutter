@@ -1,7 +1,7 @@
 <?php
 session_start();
 // Redirect to login if not logged in or not admin
-if (!isset($_SESSION['logged_in']) || $_SESSION['account_type'] !== 'admin') {
+if (!isset($_SESSION['admin_id']) || $_SESSION['account_type'] !== 'admin') {
     header('Location: login.php');
     exit();
 }

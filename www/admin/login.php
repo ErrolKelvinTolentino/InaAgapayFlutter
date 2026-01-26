@@ -4,11 +4,19 @@ require_once __DIR__ . '/../api/db.php';
 
 $error = '';
 
-if (
-    isset($_SESSION['admin_id']) &&
-    ($_SESSION['account_type'] ?? '') === 'admin'
-) {
-    header('Location: /admin/dashboard.php');
+// Redirect if already logged in
+if (isset($_SESSION['account_id'])) {
+    switch ($_SESSION['account_type']) {
+        case 'admin':
+            header('Location: /admin/admin_landing.php');
+            break;
+        case 'mother':
+            header('Location: /mother/mother_landing.php');
+            break;
+        case 'midwife':
+            header('Location: /midwife/midwife_landing.php');
+            break;
+    }
     exit;
 }
 
@@ -17,8 +25,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $password = $_POST['password'] ?? '';
 
     $stmt = $conn->prepare("
-        SELECT account_id, password_hash, account_type, is_verified, status
-        FROM accounts WHERE email_address = ?
+        SELECT account_id, full_name, password_hash, account_type, is_verified, status
+        FROM accounts
+        WHERE email_address = ?
         LIMIT 1
     ");
     $stmt->bind_param('s', $email);
@@ -29,45 +38,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $u = $res->fetch_assoc();
 
         if (
-            $u['account_type'] === 'admin' &&
             $u['is_verified'] &&
             $u['status'] === 'active' &&
             password_verify($password, $u['password_hash'])
         ) {
             session_regenerate_id(true);
 
-            $upd = $conn->prepare("
-                UPDATE accounts SET last_login_at = NOW()
-                WHERE account_id = ?
-            ");
+            $_SESSION['account_id'] = $u['account_id'];
+            $_SESSION['account_type'] = $u['account_type'];
+            $_SESSION['user_name'] = $u['full_name'];
+
+            $upd = $conn->prepare("UPDATE accounts SET last_login_at = NOW() WHERE account_id = ?");
             $upd->bind_param('i', $u['account_id']);
             $upd->execute();
 
-            $_SESSION['admin_id'] = $u['account_id'];
-            $_SESSION['account_type'] = 'admin';
-
-            header('Location: /admin/dashboard.php');
+            switch ($u['account_type']) {
+                case 'admin':
+                    header('Location: /admin/admin_landing.php');
+                    break;
+                case 'mother':
+                    header('Location: /mother/mother_landing.php');
+                    break;
+                case 'midwife':
+                    header('Location: /midwife/midwife_landing.php');
+                    break;
+            }
             exit;
         }
     }
 
-    $error = 'Invalid credentials';
+    $error = 'Invalid email or password';
 }
 ?>
 
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
     <meta charset="UTF-8">
-    <title>Admin Login</title>
-    <link rel="stylesheet" href="/admin/styles/admin.css">
+    <title>Login | InaAgapay</title>
+    <link rel="stylesheet" href="/styles/login.css">
 </head>
 
 <body class="login-page">
 
     <form method="POST" class="login-card">
-        <h2>Admin Login</h2>
+        <h2>Login</h2>
 
         <?php if ($error): ?>
             <p class="error"><?= htmlspecialchars($error) ?></p>

@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/../api/db.php';
 session_start();
-if (!isset($_SESSION['account_id']) || $_SESSION['account_type'] !== 'admin') {
+if (!isset($_SESSION['admin_id']) || $_SESSION['account_type'] !== 'admin') {
     header('Location: login.php');
     exit;
 }
