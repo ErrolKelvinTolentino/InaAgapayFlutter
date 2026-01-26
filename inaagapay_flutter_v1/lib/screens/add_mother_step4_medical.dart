@@ -1,37 +1,48 @@
 import 'package:flutter/material.dart';
+import '../models/add_mother_form_data.dart';
 
-class AddMotherStep4Medical extends StatelessWidget {
+class AddMotherStep4Medical extends StatefulWidget {
+  final AddMotherFormData form;
   final VoidCallback onNext;
   final VoidCallback onBack;
 
   const AddMotherStep4Medical({
     super.key,
+    required this.form,
     required this.onNext,
     required this.onBack,
   });
 
   @override
+  State<AddMotherStep4Medical> createState() => _AddMotherStep4MedicalState();
+}
+
+class _AddMotherStep4MedicalState extends State<AddMotherStep4Medical> {
+  final conditions = ['Anemia', 'Diabetes', 'Smoking', 'Alcohol'];
+
+  @override
   Widget build(BuildContext context) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Step 4 – Medical History',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 16),
-
-        CheckboxListTile(title: const Text('Anemia'), value: false, onChanged: (_) {}),
-        CheckboxListTile(title: const Text('Diabetes'), value: false, onChanged: (_) {}),
-        CheckboxListTile(title: const Text('Smoking'), value: false, onChanged: (_) {}),
-        CheckboxListTile(title: const Text('Alcohol'), value: false, onChanged: (_) {}),
-
-        const SizedBox(height: 24),
+        ...conditions.map((c) {
+          final checked = widget.form.medicalConditions.contains(c);
+          return CheckboxListTile(
+            title: Text(c),
+            value: checked,
+            onChanged: (v) {
+              setState(() {
+                v == true
+                    ? widget.form.medicalConditions.add(c)
+                    : widget.form.medicalConditions.remove(c);
+              });
+            },
+          );
+        }),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            OutlinedButton(onPressed: onBack, child: const Text('Back')),
-            ElevatedButton(onPressed: onNext, child: const Text('Next')),
+            OutlinedButton(onPressed: widget.onBack, child: const Text('Back')),
+            ElevatedButton(onPressed: widget.onNext, child: const Text('Next')),
           ],
         ),
       ],

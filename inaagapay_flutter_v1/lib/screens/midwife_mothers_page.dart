@@ -139,17 +139,18 @@ class MidwifeMothersPage extends StatelessWidget {
 
       // ➕ ADD MOTHER BUTTON
       floatingActionButton: FloatingActionButton(
-        backgroundColor: AppColors.brandPrimary,
-        child: const Icon(Icons.add),
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => const AddMotherFlow(),
-            ),
-          );
-        },
+  heroTag: 'add-mother-fab', // ✅ UNIQUE
+  backgroundColor: AppColors.brandPrimary,
+  child: const Icon(Icons.add),
+  onPressed: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const AddMotherFlow(),
       ),
+    );
+  },
+),
     );
   }
 }

@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 
+import '../models/add_mother_form_data.dart';
+
 import 'add_mother_step1_personal.dart';
 import 'add_mother_step2_address.dart';
-import 'add_mother_step3_husband.dart';
+import 'add_mother_step3_emergency.dart';
 import 'add_mother_step4_medical.dart';
 import 'add_mother_step5_allergies.dart';
 import 'add_mother_step6_pregnancy.dart';
-import 'add_mother_step7_gestational.dart';
+import 'add_mother_step7_submit.dart';
 
 class AddMotherFlow extends StatefulWidget {
   const AddMotherFlow({super.key});
@@ -16,6 +18,7 @@ class AddMotherFlow extends StatefulWidget {
 }
 
 class _AddMotherFlowState extends State<AddMotherFlow> {
+  final AddMotherFormData form = AddMotherFormData();
   int step = 0;
 
   void next() {
@@ -32,14 +35,14 @@ class _AddMotherFlowState extends State<AddMotherFlow> {
 
   @override
   Widget build(BuildContext context) {
-    final pages = [
-      AddMotherStep1Personal(onNext: next),
-      AddMotherStep2Address(onNext: next, onBack: back),
-      AddMotherStep3Husband(onNext: next, onBack: back),
-      AddMotherStep4Medical(onNext: next, onBack: back),
-      AddMotherStep5Allergies(onNext: next, onBack: back),
-      AddMotherStep6Pregnancy(onNext: next, onBack: back),
-      AddMotherStep7Gestational(onBack: back),
+    final List<Widget> pages = [
+      AddMotherStep1Personal(form: form, onNext: next),
+      AddMotherStep2Address(form: form, onNext: next, onBack: back),
+      AddMotherStep3Emergency(form: form, onNext: next, onBack: back),
+      AddMotherStep4Medical(form: form, onNext: next, onBack: back),
+      AddMotherStep5Allergies(form: form, onNext: next, onBack: back),
+      AddMotherStep6Pregnancy(form: form, onNext: next, onBack: back),
+      AddMotherStep7Submit(form: form, onBack: back),
     ];
 
     return Scaffold(
