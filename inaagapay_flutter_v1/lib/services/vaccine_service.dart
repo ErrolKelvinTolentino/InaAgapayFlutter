@@ -2,20 +2,48 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/vaccine_model.dart';
 
-Future<List<VaccineModel>> fetchVaccines() async {
-  final res = await http.get(
-    Uri.parse(
-      'https://inaagapay.alwaysdata.net/api/midwife/get_vaccines.php',
-    ),
-  );
+class VaccineService {
+  static const String _baseUrl =
+      'https://inaagapay.alwaysdata.net/api/midwife';
 
-  if (res.statusCode != 200) {
-    throw Exception('HTTP ${res.statusCode}');
+  /// Fetch vaccines (already working – unchanged)
+  static Future<List<VaccineModel>> fetchVaccines() async {
+    final response = await http.get(
+      Uri.parse('$_baseUrl/get_vaccines.php'),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to load vaccines');
+    }
+
+    final List data = jsonDecode(response.body);
+    return data.map((e) => VaccineModel.fromJson(e)).toList();
   }
 
-  final List decoded = jsonDecode(res.body);
+  /// ✅ ADD IMMUNIZATION (NEW – FIX)
+  static Future<bool> addImmunization({
+    required int childId,
+    required int vaccineId,
+    required DateTime vaccinationDate,
+    String? remarks,
+  }) async {
+    final response = await http.post(
+      Uri.parse('$_baseUrl/add_immunization.php'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'child_id': childId,
+        'vaccine_id': vaccineId,
+        'vaccination_date':
+            vaccinationDate.toIso8601String().split('T')[0],
+        'remarks': remarks,
+      }),
+    );
 
-  return decoded
-      .map((e) => VaccineModel.fromJson(e))
-      .toList();
+    if (response.statusCode != 200) {
+      throw Exception('Server error ${response.statusCode}');
+    }
+
+    final decoded = jsonDecode(response.body);
+    return decoded['success'] == true;
+  }
 }

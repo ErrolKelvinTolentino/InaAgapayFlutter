@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 
 import '../theme/app_colors.dart';
 import '../services/auth_storage.dart';
+import 'add_checkup_page.dart';
 
 class MotherProfilePage extends StatelessWidget {
   final int motherId;
@@ -38,8 +39,6 @@ class MotherProfilePage extends StatelessWidget {
 
     return decoded['mother'];
   }
-
-  // ================= UI =================
 
   @override
   Widget build(BuildContext context) {
@@ -129,7 +128,6 @@ class MotherProfilePage extends StatelessWidget {
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // 👩 HEADER
                 Center(
@@ -157,13 +155,39 @@ class MotherProfilePage extends StatelessWidget {
 
                 const SizedBox(height: 20),
 
-                // 👩 PERSONAL
+                // ➕ ADD CHECKUP BUTTON
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.add),
+                  label: const Text('Add New Checkup'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.pink,
+                    minimumSize: const Size(double.infinity, 48),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  onPressed: () async {
+                    final added = await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            AddCheckupPage(motherId: motherId),
+                      ),
+                    );
+
+                    if (added == true) {
+                      (context as Element).reassemble();
+                    }
+                  },
+                ),
+
+                const SizedBox(height: 20),
+
                 section('Personal Information', [
                   field('Phone', m['phone_number']),
                   field('Email', m['email_address']),
                 ]),
 
-                // 🏠 ADDRESS
                 section('Address', [
                   field('House No.', m['house_number']),
                   field('Street', m['street']),
@@ -172,20 +196,18 @@ class MotherProfilePage extends StatelessWidget {
                   field('Province', m['province']),
                 ]),
 
-                // 🩺 MEDICAL
                 section('Medical Info', [
                   field('Height (cm)', m['height']),
                   field('Blood Type', m['blood_type']),
                 ]),
 
-                // 🤰 PREGNANCY
                 section('Pregnancy Summary', [
                   field('Risk Level', m['pregnancy_risk_level']),
                   field('Status', m['pregnancy_status']),
-                  field('Expected Delivery', m['expected_date_of_delivery']),
+                  field('Expected Delivery',
+                      m['expected_date_of_delivery']),
                 ]),
 
-                // 👶 CHILDREN
                 section('Children', [
                   field('Total Children', m['children_count']),
                 ]),

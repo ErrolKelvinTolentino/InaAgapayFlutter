@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../models/vaccine_model.dart';
 import '../services/vaccine_service.dart';
-import '../theme/app_colors.dart';
 
 class AddImmunizationPage extends StatefulWidget {
   final int childId;
@@ -16,114 +16,150 @@ class AddImmunizationPage extends StatefulWidget {
 }
 
 class _AddImmunizationPageState extends State<AddImmunizationPage> {
-  late Future<List<VaccineModel>> _vaccinesFuture;
+  List<VaccineModel> vaccines = [];
   VaccineModel? selectedVaccine;
-  DateTime? vaccinationDate;
+  DateTime? selectedDate;
+
+  final TextEditingController remarksController = TextEditingController();
+  bool isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    _vaccinesFuture = fetchVaccines();
+    _loadVaccines();
+  }
+
+  Future<void> _loadVaccines() async {
+    try {
+      final data = await VaccineService.fetchVaccines();
+      setState(() => vaccines = data);
+    } catch (e) {
+      _showSnack('Failed to load vaccines');
+    }
+  }
+
+  Future<void> _pickDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime.now(),
+    );
+
+    if (picked != null) {
+      setState(() => selectedDate = picked);
+    }
+  }
+
+  Future<void> _submit() async {
+    if (selectedVaccine == null || selectedDate == null) {
+      _showSnack('Please select vaccine and date');
+      return;
+    }
+
+    setState(() => isLoading = true);
+
+    try {
+      final success = await VaccineService.addImmunization(
+        childId: widget.childId,
+        vaccineId: selectedVaccine!.vaccineId,
+        vaccinationDate: selectedDate!,
+        remarks: remarksController.text,
+      );
+
+      if (success) {
+        _showSnack('Immunization added successfully');
+        Navigator.pop(context, true);
+      } else {
+        _showSnack('Failed to add immunization');
+      }
+    } catch (e) {
+      _showSnack('Error: $e');
+    } finally {
+      setState(() => isLoading = false);
+    }
+  }
+
+  void _showSnack(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(msg)),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Add Immunization')),
+      appBar: AppBar(
+        title: const Text('Add Immunization'),
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16),
-        child: FutureBuilder<List<VaccineModel>>(
-          future: _vaccinesFuture,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            }
+        child: Column(
+          children: [
+            // Vaccine Dropdown
+            DropdownButtonFormField<VaccineModel>(
+              value: selectedVaccine,
+              items: vaccines.map((v) {
+                return DropdownMenuItem(
+                  value: v,
+                  child: Text(
+                    '${v.vaccineName} (Dose ${v.doseNumber})',
+                  ),
+                );
+              }).toList(),
+              onChanged: (v) => setState(() => selectedVaccine = v),
+              decoration: const InputDecoration(
+                labelText: 'Select Vaccine',
+                border: OutlineInputBorder(),
+              ),
+            ),
 
-            if (snapshot.hasError) {
-              return Center(
+            const SizedBox(height: 16),
+
+            // Date Picker
+            InkWell(
+              onTap: _pickDate,
+              child: InputDecorator(
+                decoration: const InputDecoration(
+                  labelText: 'Vaccination Date',
+                  border: OutlineInputBorder(),
+                ),
                 child: Text(
-                  'Failed to load vaccines',
-                  style: TextStyle(color: Colors.red),
+                  selectedDate == null
+                      ? 'Select date'
+                      : DateFormat('yyyy-MM-dd')
+                          .format(selectedDate!),
                 ),
-              );
-            }
+              ),
+            ),
 
-            final vaccines = snapshot.data!;
+            const SizedBox(height: 16),
 
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // 🔽 Vaccine Dropdown
-                DropdownButtonFormField<VaccineModel>(
-                  value: selectedVaccine,
-                  items: vaccines
-                      .map(
-                        (v) => DropdownMenuItem(
-                          value: v,
-                          child: Text(v.displayLabel),
-                        ),
+            // Remarks
+            TextField(
+              controller: remarksController,
+              maxLines: 3,
+              decoration: const InputDecoration(
+                labelText: 'Remarks (optional)',
+                border: OutlineInputBorder(),
+              ),
+            ),
+
+            const Spacer(),
+
+            // Submit Button
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: isLoading ? null : _submit,
+                child: isLoading
+                    ? const CircularProgressIndicator(
+                        color: Colors.white,
                       )
-                      .toList(),
-                  onChanged: (v) {
-                    setState(() => selectedVaccine = v);
-                  },
-                  decoration: const InputDecoration(
-                    labelText: 'Vaccine',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-
-                const SizedBox(height: 16),
-
-                // 📅 Date Picker
-                ListTile(
-                  title: Text(
-                    vaccinationDate == null
-                        ? 'Select Vaccination Date'
-                        : vaccinationDate!
-                            .toLocal()
-                            .toString()
-                            .split(' ')[0],
-                  ),
-                  trailing: const Icon(Icons.calendar_today),
-                  onTap: () async {
-                    final d = await showDatePicker(
-                      context: context,
-                      firstDate: DateTime(2000),
-                      lastDate: DateTime.now(),
-                      initialDate: DateTime.now(),
-                    );
-                    if (d != null) {
-                      setState(() => vaccinationDate = d);
-                    }
-                  },
-                ),
-
-                const Spacer(),
-
-                // ✅ Save Button
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.brandPrimary,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                    ),
-                    onPressed: selectedVaccine == null ||
-                            vaccinationDate == null
-                        ? null
-                        : () {
-                            // SAVE TO immunization_record TABLE
-                            // child_id = widget.childId
-                            // vaccine_id = selectedVaccine!.vaccineId
-                            // vaccination_date = vaccinationDate
-                          },
-                    child: const Text('Save Immunization'),
-                  ),
-                ),
-              ],
-            );
-          },
+                    : const Text('Add Immunization'),
+              ),
+            ),
+          ],
         ),
       ),
     );
