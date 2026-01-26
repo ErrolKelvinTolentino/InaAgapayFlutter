@@ -18,26 +18,82 @@ class AddMotherStep5Allergies extends StatefulWidget {
       _AddMotherStep5AllergiesState();
 }
 
-class _AddMotherStep5AllergiesState
-    extends State<AddMotherStep5Allergies> {
-  final allergenCtrl = TextEditingController();
-  final dateCtrl = TextEditingController();
-  final treatmentCtrl = TextEditingController();
+class _AddMotherStep5AllergiesState extends State<AddMotherStep5Allergies> {
+  Future<void> _openAllergyModal() async {
+    final allergenCtrl = TextEditingController();
+    final dateCtrl = TextEditingController();
+    final treatmentCtrl = TextEditingController();
+    final remarksCtrl = TextEditingController();
+    String status = 'active';
 
-  void addAllergy() {
-    if (allergenCtrl.text.isEmpty) return;
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Add Allergy'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: allergenCtrl,
+                decoration: const InputDecoration(labelText: 'Allergen *'),
+              ),
+              TextField(
+                controller: dateCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Diagnosis Date (YYYY-MM-DD)',
+                ),
+              ),
+              DropdownButtonFormField<String>(
+                value: status,
+                items: const [
+                  DropdownMenuItem(value: 'active', child: Text('Active')),
+                  DropdownMenuItem(value: 'resolved', child: Text('Resolved')),
+                ],
+                onChanged: (v) => status = v ?? 'active',
+                decoration: const InputDecoration(labelText: 'Status'),
+              ),
+              TextField(
+                controller: treatmentCtrl,
+                decoration: const InputDecoration(labelText: 'Treatment'),
+              ),
+              TextField(
+                controller: remarksCtrl,
+                decoration: const InputDecoration(labelText: 'Remarks'),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: allergenCtrl.text.trim().isEmpty
+                ? null
+                : () => Navigator.pop(context, true),
+            child: const Text('Done'),
+          ),
+        ],
+      ),
+    );
 
-    widget.form.allergies.add({
-      'allergen': allergenCtrl.text,
-      'diagnosis_date': dateCtrl.text.isEmpty ? null : dateCtrl.text,
-      'treatment': treatmentCtrl.text,
-    });
-
-    allergenCtrl.clear();
-    dateCtrl.clear();
-    treatmentCtrl.clear();
-
-    setState(() {});
+    if (result == true) {
+      setState(() {
+        widget.form.allergies.add(
+          AllergyInput(
+            allergen: allergenCtrl.text.trim(),
+            diagnosisDate: dateCtrl.text.isEmpty
+                ? null
+                : DateTime.tryParse(dateCtrl.text),
+            status: status,
+            treatment: treatmentCtrl.text,
+            remarks: remarksCtrl.text,
+          ),
+        );
+      });
+    }
   }
 
   @override
@@ -50,31 +106,29 @@ class _AddMotherStep5AllergiesState
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 16),
-
-        TextField(
-          controller: allergenCtrl,
-          decoration: const InputDecoration(labelText: 'Allergen'),
-        ),
-        TextField(
-          controller: dateCtrl,
-          decoration: const InputDecoration(labelText: 'Diagnosis Date (YYYY-MM-DD)'),
-        ),
-        TextField(
-          controller: treatmentCtrl,
-          decoration: const InputDecoration(labelText: 'Treatment'),
-        ),
-
-        const SizedBox(height: 8),
-        ElevatedButton(
-          onPressed: addAllergy,
-          child: const Text('Add Allergy'),
+        ElevatedButton.icon(
+          onPressed: _openAllergyModal,
+          icon: const Icon(Icons.add),
+          label: const Text('Add Allergy'),
         ),
 
         const SizedBox(height: 16),
         ...widget.form.allergies.map(
           (a) => ListTile(
-            title: Text(a['allergen']),
-            subtitle: Text(a['treatment'] ?? ''),
+            title: Text(a.allergen),
+            subtitle: Text(
+              [
+                if (a.diagnosisDate != null)
+                  'Dx: ${a.diagnosisDate!.toIso8601String().split('T').first}',
+                'Status: ${a.status}',
+                if (a.treatment != null && a.treatment!.isNotEmpty)
+                  'Tx: ${a.treatment}',
+              ].join(' · '),
+            ),
+            trailing: IconButton(
+              icon: const Icon(Icons.delete_outline),
+              onPressed: () => setState(() => widget.form.allergies.remove(a)),
+            ),
           ),
         ),
 

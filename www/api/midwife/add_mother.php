@@ -46,21 +46,30 @@ try {
     $accountId = $conn->insert_id;
 
     // ===== MOTHER =====
-    $addr = $input['address'] ?? [];
+    $mother = $input['mother'] ?? ($input['address'] ?? []);
+    $assignedBhcId = $mother['assigned_bhc_id'] ?? null;
+    $birthdate = $mother['birthdate'] ?? null;
     $stmt = $conn->prepare("
         INSERT INTO mothers (
-            account_id, house_number, street,
-            barangay, city_municipality, province
-        ) VALUES (?, ?, ?, ?, ?, ?)
+            account_id, assigned_bhc_id, birthdate,
+            house_number, street,
+            barangay, city_municipality, province,
+            height, weight, blood_type
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ");
     $stmt->bind_param(
-        "isssss",
+        "iissssssdds",
         $accountId,
-        $addr['house_number'],
-        $addr['street'],
-        $addr['barangay'],
-        $addr['city_municipality'],
-        $addr['province']
+        $assignedBhcId,
+        $birthdate,
+        $mother['house_number'],
+        $mother['street'],
+        $mother['barangay'],
+        $mother['city_municipality'],
+        $mother['province'],
+        $mother['height_cm'],
+        $mother['weight_kg'],
+        $mother['blood_type']
     );
     $stmt->execute();
 
@@ -73,18 +82,25 @@ try {
             INSERT INTO emergency_contacts (
                 mother_id, first_name, middle_name,
                 last_name, extension_name,
-                phone_number, email_address
-            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                phone_number, email_address, affiliation,
+                house_number, street, barangay, city_municipality, province
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
         $stmt->bind_param(
-            "issssss",
+            "issssssssssss",
             $motherId,
             $ec['first_name'],
             $ec['middle_name'],
             $ec['last_name'],
             $ec['extension_name'],
             $ec['phone_number'],
-            $ec['email_address']
+            $ec['email_address'],
+            $ec['affiliation'],
+            $ec['house_number'],
+            $ec['street'],
+            $ec['barangay'],
+            $ec['city_municipality'],
+            $ec['province']
         );
         $stmt->execute();
     }
@@ -92,11 +108,19 @@ try {
     // ===== MEDICAL CONDITIONS =====
     if (!empty($input['medical_conditions'])) {
         $stmt = $conn->prepare("
-            INSERT INTO medical_conditions (mother_id, condition_name)
-            VALUES (?, ?)
+            INSERT INTO medical_conditions (
+                mother_id, condition_name, diagnosis_date, status, remarks
+            ) VALUES (?, ?, ?, ?, ?)
         ");
         foreach ($input['medical_conditions'] as $c) {
-            $stmt->bind_param("is", $motherId, $c);
+            $stmt->bind_param(
+                "issss",
+                $motherId,
+                $c['condition_name'],
+                $c['diagnosis_date'],
+                $c['status'],
+                $c['remarks']
+            );
             $stmt->execute();
         }
     }
@@ -105,22 +129,67 @@ try {
     if (!empty($input['allergies'])) {
         $stmt = $conn->prepare("
             INSERT INTO allergies (
-                mother_id, allergen, diagnosis_date, treatment
-            ) VALUES (?, ?, ?, ?)
+                mother_id, allergen, diagnosis_date, status, treatment, remarks
+            ) VALUES (?, ?, ?, ?, ?, ?)
         ");
         foreach ($input['allergies'] as $a) {
             $stmt->bind_param(
-                "isss",
+                "isssss",
                 $motherId,
                 $a['allergen'],
                 $a['diagnosis_date'],
-                $a['treatment']
+                $a['status'],
+                $a['treatment'],
+                $a['remarks']
             );
             $stmt->execute();
         }
     }
 
+    // ===== PREGNANCY HISTORY (ended pregnancies) =====
+    if (!empty($input['pregnancy_history'])) {
+        $pregStmt = $conn->prepare("
+            INSERT INTO pregnancies (
+                mother_id, pregnancy_risk_level, last_menstrual_period,
+                expected_date_of_delivery, status, outcome, outcome_date,
+                is_outcome_date_estimated, gestational_age_at_end
+            ) VALUES (?, 'low', NULL, NULL, 'ended', ?, ?, ?, ?)
+        ");
+        $delStmt = $conn->prepare("
+            INSERT INTO deliveries (
+                pregnancy_id, delivery_date, is_delivery_date_estimated,
+                place_of_delivery, delivery_method
+            ) VALUES (?, ?, ?, ?, ?)
+        ");
+
+        foreach ($input['pregnancy_history'] as $p) {
+            $pregStmt->bind_param(
+                "issid",
+                $motherId,
+                $p['outcome'],
+                $p['outcome_date'],
+                $p['is_outcome_date_estimated'],
+                $p['gestational_age_at_end']
+            );
+            $pregStmt->execute();
+            $historyPregnancyId = $conn->insert_id;
+
+            if (in_array($p['outcome'], ['live_birth', 'stillbirth'])) {
+                $delStmt->bind_param(
+                    "isiss",
+                    $historyPregnancyId,
+                    $p['outcome_date'],
+                    $p['is_outcome_date_estimated'],
+                    $p['place_of_delivery'],
+                    $p['delivery_method']
+                );
+                $delStmt->execute();
+            }
+        }
+    }
+
     // ===== PREGNANCY =====
+    $ongoingPregnancyId = null;
     if (!empty($input['pregnancy'])) {
         $p = $input['pregnancy'];
         $stmt = $conn->prepare("
@@ -139,13 +208,15 @@ try {
             $p['expected_date_of_delivery']
         );
         $stmt->execute();
+        $ongoingPregnancyId = $conn->insert_id;
     }
 
     $conn->commit();
 
     echo json_encode([
         'success' => true,
-        'mother_id' => $motherId
+        'mother_id' => $motherId,
+        'pregnancy_id' => $ongoingPregnancyId
     ]);
 
 } catch (Throwable $e) {
