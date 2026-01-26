@@ -18,8 +18,11 @@ try {
 
     // ===== ACCOUNT =====
     $acc = $input['account'] ?? [];
-    if (empty($acc['email_address'])) {
-        throw new Exception('Email is required');
+
+    // 🔥 FIX: allow missing email (auto-generate)
+    $email = $acc['email_address'] ?? null;
+    if (empty($email)) {
+        $email = 'mother_' . uniqid() . '@inaagapay.local';
     }
 
     $stmt = $conn->prepare("
@@ -31,7 +34,7 @@ try {
     ");
     $stmt->bind_param(
         "ssssss",
-        $acc['email_address'],
+        $email,
         $acc['first_name'],
         $acc['middle_name'],
         $acc['last_name'],
