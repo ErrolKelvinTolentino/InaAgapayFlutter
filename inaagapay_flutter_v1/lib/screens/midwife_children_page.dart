@@ -95,12 +95,14 @@ class MidwifeChildrenPage extends StatelessWidget {
 
                   trailing: const Icon(Icons.chevron_right),
 
+                  /// ✅ FIXED NAVIGATION
                   onTap: () {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (_) => ChildProfilePage(
-                          childData: c,
+                          childId:
+                              int.parse(c['child_id'].toString()),
                         ),
                       ),
                     );

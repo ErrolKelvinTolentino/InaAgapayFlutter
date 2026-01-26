@@ -14,7 +14,7 @@ if (!$childId) {
 }
 
 /**
- * CHILD BASIC INFO
+ * ================= CHILD BASIC INFO =================
  */
 $stmt = $conn->prepare("
     SELECT
@@ -43,7 +43,7 @@ if (!$child) {
 }
 
 /**
- * BIRTH DETAILS
+ * ================= BIRTH DETAILS =================
  */
 $stmt = $conn->prepare("
     SELECT
@@ -63,7 +63,7 @@ $stmt->execute();
 $birth = $stmt->get_result()->fetch_assoc();
 
 /**
- * LATEST GROWTH
+ * ================= LATEST GROWTH =================
  */
 $stmt = $conn->prepare("
     SELECT
@@ -80,11 +80,29 @@ $stmt->execute();
 $growth = $stmt->get_result()->fetch_assoc();
 
 /**
- * FINAL RESPONSE
+ * ================= LATEST IMMUNIZATION =================
+ */
+$stmt = $conn->prepare("
+    SELECT
+        v.vaccine_name,
+        ir.vaccination_date
+    FROM immunization_record ir
+    JOIN vaccines v ON v.vaccine_id = ir.vaccine_id
+    WHERE ir.child_id = ?
+    ORDER BY ir.vaccination_date DESC
+    LIMIT 1
+");
+$stmt->bind_param("i", $childId);
+$stmt->execute();
+$immunization = $stmt->get_result()->fetch_assoc();
+
+/**
+ * ================= FINAL RESPONSE =================
  */
 echo json_encode([
     'success' => true,
     'child' => $child,
     'birth' => $birth ?: [],
-    'growth' => $growth ?: []
+    'growth' => $growth ?: [],
+    'immunization' => $immunization ?: []
 ]);
