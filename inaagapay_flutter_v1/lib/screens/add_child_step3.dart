@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-class AddChildStep3 extends StatelessWidget {
-  const AddChildStep3({super.key});
+class AddChildStep3Child extends StatelessWidget {
+  const AddChildStep3Child({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -12,21 +12,31 @@ class AddChildStep3 extends StatelessWidget {
         child: ListView(
           children: [
             const Text(
-              'Birth Details',
+              'Child Information',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
 
-            TextFormField(decoration: const InputDecoration(labelText: 'Birthdate *')),
-            TextFormField(decoration: const InputDecoration(labelText: 'Birth Time *')),
-            const Text('Child Age: Auto-calculated'),
-
-            TextFormField(decoration: const InputDecoration(labelText: 'Birth Weight *')),
-            TextFormField(decoration: const InputDecoration(labelText: 'Birth Height *')),
-            TextFormField(decoration: const InputDecoration(labelText: 'City Place of Birth *')),
-            TextFormField(decoration: const InputDecoration(labelText: 'Institution Place of Birth *')),
-            TextFormField(decoration: const InputDecoration(labelText: 'Head Circumference *')),
-            TextFormField(decoration: const InputDecoration(labelText: 'Birth Complications *')),
+            TextFormField(
+                decoration:
+                    const InputDecoration(labelText: 'Child First Name')),
+            TextFormField(
+                decoration:
+                    const InputDecoration(labelText: 'Child Last Name')),
+            TextFormField(
+                decoration: const InputDecoration(
+                    labelText: 'Child Middle Name (Optional)')),
+            TextFormField(
+                decoration: const InputDecoration(
+                    labelText: 'Child Extension Name (Optional)')),
+            TextFormField(
+              decoration:
+                  const InputDecoration(labelText: 'Birthdate (MM/DD/YYYY)'),
+              readOnly: true,
+            ),
+            TextFormField(
+                decoration:
+                    const InputDecoration(labelText: 'Place of Birth')),
 
             const SizedBox(height: 20),
             Row(
@@ -41,7 +51,7 @@ class AddChildStep3 extends StatelessWidget {
                 Expanded(
                   child: ElevatedButton(
                     onPressed: () {
-                      // TODO: submit to API
+                      // TODO: Submit to API
                       Navigator.pop(context);
                     },
                     child: const Text('Add Child'),

@@ -1,60 +1,31 @@
 <?php
-session_start();
-header('Content-Type: application/json; charset=utf-8');
-error_reporting(0);
+header('Content-Type: application/json');
+require_once '../db.php';
 
-require_once __DIR__ . '/../db.php';
-
-
-$data = [];
-
-/* Not logged in */
-if (!isset($_SESSION['account_id'])) {
-    echo json_encode($data);
-    exit;
-}
-
-$account_id = $_SESSION['account_id'];
-
-/* Get midwife_id */
-$stmt = $conn->prepare(
-    "SELECT midwife_id FROM midwives WHERE account_id = ?"
-);
-$stmt->bind_param('i', $account_id);
-$stmt->execute();
-$res = $stmt->get_result();
-
-if ($res->num_rows === 0) {
-    echo json_encode($data);
-    exit;
-}
-
-$midwife_id = $res->fetch_assoc()['midwife_id'];
-
-/* Children related to mothers handled by this midwife */
 $sql = "
-SELECT DISTINCT
+SELECT
+    c.child_id,
     c.first_name,
     c.last_name,
-    am.first_name AS mother_first_name,
-    am.last_name AS mother_last_name
-FROM prenatal_checkups pc
-JOIN pregnancies p ON pc.pregnancy_id = p.pregnancy_id
-JOIN mothers m ON p.mother_id = m.mother_id
-JOIN accounts am ON m.account_id = am.account_id
-JOIN children c ON c.mother_id = m.mother_id
-WHERE pc.midwife_id = ?
-ORDER BY c.added_at DESC
+    c.sex,
+    bd.birthdate,
+    CONCAT(a.first_name, ' ', a.last_name) AS mother_name
+FROM children c
+JOIN mothers m ON c.mother_id = m.mother_id
+JOIN accounts a ON m.account_id = a.account_id
+LEFT JOIN birth_details bd ON bd.child_id = c.child_id
+ORDER BY bd.birthdate DESC
 ";
 
-$stmt = $conn->prepare($sql);
-$stmt->bind_param('i', $midwife_id);
-$stmt->execute();
-$result = $stmt->get_result();
+$result = $conn->query($sql);
+
+$children = [];
 
 while ($row = $result->fetch_assoc()) {
-    $data[] = $row;
+    $children[] = $row;
 }
 
-echo json_encode($data);
-exit;
+echo json_encode([
+    'success' => true,
+    'data' => $children
+]);

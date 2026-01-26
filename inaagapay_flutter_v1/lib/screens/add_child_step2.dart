@@ -13,18 +13,30 @@ class AddChildStep2 extends StatelessWidget {
         child: ListView(
           children: [
             const Text(
-              'Parent Address Info',
+              'Address Details',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
 
-            TextFormField(decoration: const InputDecoration(labelText: 'Province *')),
-            TextFormField(decoration: const InputDecoration(labelText: 'City / Municipality *')),
-            TextFormField(decoration: const InputDecoration(labelText: 'Barangay *')),
-            TextFormField(decoration: const InputDecoration(labelText: 'Street *')),
-            TextFormField(decoration: const InputDecoration(labelText: 'House Number *')),
+            TextFormField(
+              decoration: const InputDecoration(labelText: 'Province'),
+            ),
+            TextFormField(
+              decoration:
+                  const InputDecoration(labelText: 'City / Municipality'),
+            ),
+            TextFormField(
+              decoration: const InputDecoration(labelText: 'Barangay'),
+            ),
+            TextFormField(
+              decoration: const InputDecoration(labelText: 'Street Name'),
+            ),
+            TextFormField(
+              decoration: const InputDecoration(labelText: 'House Number'),
+            ),
 
             const SizedBox(height: 20),
+
             Row(
               children: [
                 Expanded(
@@ -40,7 +52,7 @@ class AddChildStep2 extends StatelessWidget {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => const AddChildStep3(),
+                          builder: (_) => AddChildStep3Child(), // ✅ NO const
                         ),
                       );
                     },

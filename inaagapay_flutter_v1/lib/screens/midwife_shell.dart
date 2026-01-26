@@ -19,10 +19,10 @@ class _MidwifeShellState extends State<MidwifeShell> {
   int _currentIndex = 0;
 
   final List<Widget> _pages = [
-    const MidwifeDashboard(),     // 0 - Dashboard
-    const MidwifeMothersPage(),   // 1 - Mothers ✅ FIXED
-    const MidwifeChildrenPage(),  // 2 - Children
-    const MidwifeSchedulesPage(), // 3 - Schedules
+    const MidwifeDashboard(),     // 0
+    const MidwifeMothersPage(),   // 1 ✅ NOW MATCHES
+    const MidwifeChildrenPage(),  // 2
+    const MidwifeSchedulesPage(), // 3
   ];
 
   @override
