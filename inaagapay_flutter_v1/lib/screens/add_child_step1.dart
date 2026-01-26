@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'add_child_step2.dart';
+import 'add_child_step3.dart';
 
 class AddChildStep1Parent extends StatefulWidget {
   const AddChildStep1Parent({super.key});
@@ -10,11 +11,31 @@ class AddChildStep1Parent extends StatefulWidget {
 
 class _AddChildStep1ParentState extends State<AddChildStep1Parent> {
   bool manualEntry = false;
+  Map<String, dynamic>? selectedMother;
 
-  final motherFirstName = TextEditingController();
-  final motherLastName = TextEditingController();
-  final motherMiddleName = TextEditingController();
-  final motherExtensionName = TextEditingController();
+  // ================= NON-REGISTERED MOTHER CONTROLLERS =================
+  final motherFirstNameCtrl = TextEditingController();
+  final motherLastNameCtrl = TextEditingController();
+  final motherMiddleNameCtrl = TextEditingController();
+  final motherExtensionCtrl = TextEditingController();
+  final motherPhoneCtrl = TextEditingController();
+
+  // ================= MOCK REGISTERED MOTHERS (API LATER) =================
+  final List<Map<String, dynamic>> mothers = [
+    {'mother_id': 1, 'name': 'Maria Santos'},
+    {'mother_id': 2, 'name': 'Ana Cruz'},
+    {'mother_id': 3, 'name': 'Juana Dela Cruz'},
+  ];
+
+  @override
+  void dispose() {
+    motherFirstNameCtrl.dispose();
+    motherLastNameCtrl.dispose();
+    motherMiddleNameCtrl.dispose();
+    motherExtensionCtrl.dispose();
+    motherPhoneCtrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -26,70 +47,120 @@ class _AddChildStep1ParentState extends State<AddChildStep1Parent> {
           children: [
             const Text(
               'Parent Information',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-
-            if (!manualEntry) ...[
-              TextFormField(
-                decoration: const InputDecoration(
-                  hintText: 'Search Mother',
-                  prefixIcon: Icon(Icons.search),
-                ),
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
               ),
-              const SizedBox(height: 16),
+            ),
+            const SizedBox(height: 16),
 
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const AddChildStep2(),
+            // ================= REGISTERED MOTHER =================
+            if (!manualEntry) ...[
+              Autocomplete<Map<String, dynamic>>(
+                displayStringForOption: (o) => o['name'],
+                optionsBuilder: (value) {
+                  if (value.text.isEmpty) return mothers;
+                  return mothers.where(
+                    (m) => m['name']
+                        .toLowerCase()
+                        .contains(value.text.toLowerCase()),
+                  );
+                },
+                onSelected: (mother) {
+                  setState(() => selectedMother = mother);
+                },
+                fieldViewBuilder:
+                    (context, controller, focusNode, _) {
+                  return TextField(
+                    controller: controller,
+                    focusNode: focusNode,
+                    decoration: const InputDecoration(
+                      hintText: 'Search Mother',
+                      prefixIcon: Icon(Icons.search),
                     ),
                   );
                 },
+              ),
+
+              const SizedBox(height: 20),
+
+              ElevatedButton(
+                onPressed: selectedMother == null
+                    ? null
+                    : () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => AddChildStep3Child(
+                              motherId: selectedMother!['mother_id'],
+                              isExistingMother: true,
+                            ),
+                          ),
+                        );
+                      },
                 child: const Text('Next'),
               ),
 
-              const SizedBox(height: 8),
-
               TextButton(
                 onPressed: () {
-                  setState(() => manualEntry = true);
+                  setState(() {
+                    manualEntry = true;
+                    selectedMother = null;
+                  });
                 },
                 child: const Text('Mother not registered'),
               ),
-            ] else ...[
+            ]
+
+            // ================= NON-REGISTERED MOTHER =================
+            else ...[
               TextFormField(
-                controller: motherFirstName,
+                controller: motherFirstNameCtrl,
                 decoration:
                     const InputDecoration(labelText: 'Mother First Name'),
               ),
               TextFormField(
-                controller: motherLastName,
+                controller: motherLastNameCtrl,
                 decoration:
                     const InputDecoration(labelText: 'Mother Last Name'),
               ),
               TextFormField(
-                controller: motherMiddleName,
+                controller: motherMiddleNameCtrl,
                 decoration: const InputDecoration(
                   labelText: 'Mother Middle Name (Optional)',
                 ),
               ),
               TextFormField(
-                controller: motherExtensionName,
+                controller: motherExtensionCtrl,
                 decoration: const InputDecoration(
                   labelText: 'Mother Extension Name (Optional)',
                 ),
               ),
-              const SizedBox(height: 16),
+              TextFormField(
+                controller: motherPhoneCtrl,
+                decoration:
+                    const InputDecoration(labelText: 'Phone Number'),
+              ),
+
+              const SizedBox(height: 20),
 
               ElevatedButton(
                 onPressed: () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => const AddChildStep2(),
+                      builder: (_) => AddChildStep2(
+                        motherFirstName:
+                            motherFirstNameCtrl.text.trim(),
+                        motherLastName:
+                            motherLastNameCtrl.text.trim(),
+                        motherMiddleName:
+                            motherMiddleNameCtrl.text.trim(),
+                        motherExtension:
+                            motherExtensionCtrl.text.trim(),
+                        motherPhone:
+                            motherPhoneCtrl.text.trim(),
+                      ),
                     ),
                   );
                 },
