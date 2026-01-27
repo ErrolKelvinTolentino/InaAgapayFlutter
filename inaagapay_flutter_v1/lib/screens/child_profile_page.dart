@@ -4,10 +4,12 @@ import 'package:http/http.dart' as http;
 
 import '../theme/app_colors.dart';
 import '../services/auth_storage.dart';
+
 import 'add_growth_step1.dart';
 import 'add_immunization_page.dart';
 import 'child_growth_list_page.dart';
 import 'child_immunization_list_page.dart';
+import 'child_growth_ai_page.dart';
 
 class ChildProfilePage extends StatefulWidget {
   final int childId;
@@ -74,7 +76,6 @@ class _ChildProfilePageState extends State<ChildProfilePage> {
     final Map<String, dynamic> birth =
         response!['birth'] is Map ? response!['birth'] : {};
 
-    // 🔥 FIX: normalize possible LIST → MAP
     final Map<String, dynamic> growth =
         response!['growth'] is Map ? response!['growth'] : {};
 
@@ -88,7 +89,6 @@ class _ChildProfilePageState extends State<ChildProfilePage> {
         backgroundColor: AppColors.bgPrimary,
         elevation: 0,
       ),
-
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -100,14 +100,19 @@ class _ChildProfilePageState extends State<ChildProfilePage> {
                   const CircleAvatar(
                     radius: 40,
                     backgroundColor: AppColors.brandPrimary,
-                    child: Icon(Icons.child_care,
-                        color: Colors.white, size: 40),
+                    child: Icon(
+                      Icons.child_care,
+                      color: Colors.white,
+                      size: 40,
+                    ),
                   ),
                   const SizedBox(height: 10),
                   Text(
                     '${v(child, 'first_name')} ${v(child, 'last_name')}',
                     style: const TextStyle(
-                        fontSize: 18, fontWeight: FontWeight.bold),
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   Text(
                     v(child, 'sex').isNotEmpty
@@ -132,17 +137,14 @@ class _ChildProfilePageState extends State<ChildProfilePage> {
               ),
             ]),
 
-            // ================= COMPLICATIONS =================
+            // ================= BIRTH COMPLICATIONS =================
             if (v(birth, 'birth_complications').isNotEmpty)
-              _section(
-                'Birth Complications',
-                [
-                  Text(
-                    v(birth, 'birth_complications'),
-                    style: const TextStyle(height: 1.4),
-                  ),
-                ],
-              ),
+              _section('Birth Complications', [
+                Text(
+                  v(birth, 'birth_complications'),
+                  style: const TextStyle(height: 1.4),
+                ),
+              ]),
 
             // ================= LATEST GROWTH =================
             _section('Latest Growth Record', [
@@ -168,10 +170,7 @@ class _ChildProfilePageState extends State<ChildProfilePage> {
             // ================= LATEST IMMUNIZATION =================
             _section('Latest Immunization', [
               _row('Vaccine', v(immunization, 'vaccine_name')),
-              _row(
-                'Date Given',
-                v(immunization, 'vaccination_date'),
-              ),
+              _row('Date Given', v(immunization, 'vaccination_date')),
               const SizedBox(height: 10),
               OutlinedButton(
                 onPressed: () {
@@ -218,6 +217,23 @@ class _ChildProfilePageState extends State<ChildProfilePage> {
                 );
               },
             ),
+
+            const SizedBox(height: 12),
+
+            // ================= AI GROWTH ANALYSIS =================
+            _primaryBtn(
+              'AI Growth Analysis',
+              () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ChildGrowthAIPage(
+                      childId: widget.childId,
+                    ),
+                  ),
+                );
+              },
+            ),
           ],
         ),
       ),
@@ -225,6 +241,7 @@ class _ChildProfilePageState extends State<ChildProfilePage> {
   }
 
   // ================= UI HELPERS =================
+
   Widget _section(String title, List<Widget> children) {
     return _card(
       child: Column(
@@ -246,6 +263,7 @@ class _ChildProfilePageState extends State<ChildProfilePage> {
 
   Widget _row(String label, String value) {
     if (value.isEmpty || value == 'null') value = '-';
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: Row(
@@ -285,7 +303,10 @@ class _ChildProfilePageState extends State<ChildProfilePage> {
           ),
         ),
         onPressed: onTap,
-        child: Text(label, style: const TextStyle(color: Colors.white)),
+        child: Text(
+          label,
+          style: const TextStyle(color: Colors.white),
+        ),
       ),
     );
   }
