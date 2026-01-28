@@ -30,8 +30,12 @@ class MainBottomNavigation extends StatelessWidget {
 
       // 🚧 Journal & Records (routes later)
       case 1:
+      break;
       case 3:
-        // Do nothing for now
+        Navigator.pushReplacementNamed(
+          context,
+          '/mother-records',
+        );
         break;
     }
   }
