@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../widgets/main_header.dart';
 import '../widgets/main_bottom_navigation.dart';
+import 'mother_prenatal_stack.dart';
 
 class MotherRecordsPage extends StatelessWidget {
   const MotherRecordsPage({super.key});
@@ -93,11 +94,18 @@ class MotherRecordsPage extends StatelessWidget {
 
             // 📁 RECORD LIST
             _RecordCategoryCard(
-              title: 'Prenatal Check-ups',
-              countText: '1 file',
-              icon: Icons.medical_services_rounded,
-              onTap: () {},
-            ),
+  title: 'Prenatal Check-ups',
+  countText: '1 file',
+  icon: Icons.medical_services_rounded,
+  onTap: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => MotherPrenatalStack(),
+      ),
+    );
+  },
+),
 
             const SizedBox(height: 12),
 
