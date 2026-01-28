@@ -1,2 +1,0 @@
-<?php
-define('OPENAI_API_KEY', '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');
