@@ -23,7 +23,7 @@ class MotherCheckupDetailsPage extends StatelessWidget {
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(64),
         child: SecondaryHeader(
-          title: 'Prenatal Check-up',
+          title: 'Check-up Details',
           onBack: onBack,
         ),
       ),
@@ -44,8 +44,8 @@ class MotherCheckupDetailsPage extends StatelessWidget {
 
             // 🗓 CHECK-UP DETAILS
             RecordsDisplayCard(
-              title: 'Check-up Details',
-              headerIcon: Icons.event_note_rounded,
+              title: 'Overview',
+              headerIcon: Icons.info_outline_rounded,
               items: [
                 RecordItem(
                   leadingIcon: Icons.calendar_today_rounded,
@@ -121,6 +121,20 @@ class MotherCheckupDetailsPage extends StatelessWidget {
                   leadingIcon: Icons.medication_liquid_rounded,
                   label: 'Calcium',
                   value: 'XX tablets',
+                ),
+              ],
+            ),
+
+             SizedBox(height: 14),
+
+            // 🧑‍⚕️ MIDWIFE REMARKS  ✅ ADDED
+            RecordsDisplayCard(
+              title: 'Midwife Remarks',
+              headerIcon: Icons.notes_rounded,
+              items: [
+                RecordItem(
+                  label: '',
+                  value: 'Midwife remarks here',
                 ),
               ],
             ),

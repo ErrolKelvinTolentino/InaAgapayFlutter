@@ -16,6 +16,9 @@ import 'screens/due_date_setter.dart'; // gives access to DueDateMode
 import 'screens/mother_children_page.dart';
 import 'screens/mother_child_stack.dart';
 import 'screens/mother_prenatal_stack.dart';
+import 'screens/mother_ultrasound_stack.dart';
+import 'screens/mother_lab_stack.dart';
+import 'screens/pregnancy_details.dart';
 import 'screens/mother_records.dart';
 
 
@@ -43,12 +46,15 @@ class MyApp extends StatelessWidget {
         '/login': (context) => const LoginScreen(),
         '/register': (context) => const MotherRegistrationScreen(),
         '/verify-registration': (context) =>
-          const AccountVerificationRegistration(),
+            const AccountVerificationRegistration(),
         '/mother-dashboard': (context) => MotherDashboard(),
         '/mother-children-stack': (context) => MotherChildStack(),
         '/mother-children': (context) => MotherChildrenPage(),
         '/mother-records': (context) => MotherRecordsPage(),
         '/mother-prenatal-stack': (context) => MotherPrenatalStack(),
+        '/mother-ultrasound-stack': (context) => MotherUltrasoundStack(),
+        '/mother-lab-stack': (context) => MotherLabStack(),
+        '/mother-pregnancy': (context) => PregnancyDetailsPage(),
         '/midwife-dashboard': (context) => const MidwifeDashboard(),
         '/admin-dashboard': (context) => const AdminDashboard(),
         '/forgot-password': (context) => const ForgotPasswordScreen(),
@@ -56,21 +62,17 @@ class MyApp extends StatelessWidget {
             const ForgotPasswordVerificationScreen(),
         '/change-forgot-password': (context) =>
             const ChangeForgotPasswordScreen(),
-        '/complete-profile': (context) =>
-            const CompleteProfileScreen(),
+        '/complete-profile': (context) => const CompleteProfileScreen(),
         '/welcome': (context) => const WelcomeScreen(),
       },
       onGenerateRoute: (settings) {
-    if (settings.name == '/congrats') {
-      final mode = settings.arguments as DueDateMode;
+        if (settings.name == '/congrats') {
+          final mode = settings.arguments as DueDateMode;
 
-      return MaterialPageRoute(
-        builder: (_) => CongratsPage(mode: mode),
-      );
-    }
-    return null;
+          return MaterialPageRoute(builder: (_) => CongratsPage(mode: mode));
+        }
+        return null;
       },
-
     );
   }
 }

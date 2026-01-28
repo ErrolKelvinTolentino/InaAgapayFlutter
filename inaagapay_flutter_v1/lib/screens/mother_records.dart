@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:inaagapay_flutter_v1/screens/pregnancy_details.dart';
 import '../theme/app_colors.dart';
 import '../widgets/main_header.dart';
 import '../widgets/main_bottom_navigation.dart';
 import 'mother_prenatal_stack.dart';
+import 'mother_ultrasound_stack.dart';
+import 'mother_lab_stack.dart';
+import 'pregnancy_details.dart';
 
 class MotherRecordsPage extends StatelessWidget {
   const MotherRecordsPage({super.key});
@@ -29,59 +33,59 @@ class MotherRecordsPage extends StatelessWidget {
           children: [
             // 🎀 HERO / SUMMARY
             Container(
-                height: 96,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                  image: const DecorationImage(
-                    image: AssetImage('assets/images/pinkbg.png'),
-                    fit: BoxFit.cover,
-                    opacity: 0.5,
-                  ),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 16,
-                  ),
-                  child: Row(
-                    children: [
-                      // 📝 Text
-                      Expanded(
-                        child: RichText(
-                          text: TextSpan(
-                            children: [
-                              const TextSpan(
-                                text: 'You have\n',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: AppColors.textPrimary,
-                                  height: 1.4,
-                                ),
-                              ),
-                              TextSpan(
-                                text: 'XX Stored Records!',
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.brandText,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-
-                      // 👶 Image
-                      Image.asset(
-                        'assets/images/records.png',
-                        height: 72,
-                        width: 72,
-                        fit: BoxFit.contain,
-                      ),
-                    ],
-                  ),
+              height: 96,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                image: const DecorationImage(
+                  image: AssetImage('assets/images/pinkbg.png'),
+                  fit: BoxFit.cover,
+                  opacity: 0.5,
                 ),
               ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 16,
+                ),
+                child: Row(
+                  children: [
+                    // 📝 Text
+                    Expanded(
+                      child: RichText(
+                        text: TextSpan(
+                          children: [
+                            const TextSpan(
+                              text: 'You have\n',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: AppColors.textPrimary,
+                                height: 1.4,
+                              ),
+                            ),
+                            TextSpan(
+                              text: 'XX Stored Records!',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.brandText,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    // 👶 Image
+                    Image.asset(
+                      'assets/images/records.png',
+                      height: 72,
+                      width: 72,
+                      fit: BoxFit.contain,
+                    ),
+                  ],
+                ),
+              ),
+            ),
 
             const SizedBox(height: 12),
 
@@ -94,18 +98,16 @@ class MotherRecordsPage extends StatelessWidget {
 
             // 📁 RECORD LIST
             _RecordCategoryCard(
-  title: 'Prenatal Check-ups',
-  countText: '1 file',
-  icon: Icons.medical_services_rounded,
-  onTap: () {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => MotherPrenatalStack(),
-      ),
-    );
-  },
-),
+              title: 'Prenatal Check-ups',
+              countText: '1 file',
+              icon: Icons.medical_services_rounded,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => MotherPrenatalStack()),
+                );
+              },
+            ),
 
             const SizedBox(height: 12),
 
@@ -113,7 +115,14 @@ class MotherRecordsPage extends StatelessWidget {
               title: 'Ultrasound Records',
               countText: '1 file',
               icon: Icons.monitor_heart_rounded,
-              onTap: () {},
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const MotherUltrasoundStack(),
+                  ),
+                );
+              },
             ),
 
             const SizedBox(height: 12),
@@ -122,7 +131,14 @@ class MotherRecordsPage extends StatelessWidget {
               title: 'Laboratory Test Results',
               countText: '1 file',
               icon: Icons.science_rounded,
-              onTap: () {},
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const MotherLabStack(),
+                  ),
+                );
+              },
             ),
 
             const SizedBox(height: 12),
@@ -131,7 +147,14 @@ class MotherRecordsPage extends StatelessWidget {
               title: 'Pregnancy History',
               countText: '1 file',
               icon: Icons.history_rounded,
-              onTap: () {},
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => PregnancyDetailsPage(),
+                  ),
+                );
+              },
             ),
           ],
         ),
@@ -204,10 +227,7 @@ class _RecordCategoryCardState extends State<_RecordCategoryCard> {
                     color: AppColors.brandPrimary.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(
-                    widget.icon,
-                    color: AppColors.brandPrimary,
-                  ),
+                  child: Icon(widget.icon, color: AppColors.brandPrimary),
                 ),
 
                 const SizedBox(width: 14),
