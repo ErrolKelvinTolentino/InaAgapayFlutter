@@ -28,7 +28,7 @@ class GrowthLine extends StatelessWidget {
             leftTitles: AxisTitles(
               sideTitles: SideTitles(
                 showTitles: true,
-                reservedSize: 32,
+                reservedSize: 48,
               ),
             ),
             bottomTitles: AxisTitles(
