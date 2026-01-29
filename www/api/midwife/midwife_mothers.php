@@ -10,11 +10,28 @@ SELECT
     a.last_name,
     a.extension_name,
     a.phone_number,
+    a.email_address,
+
     m.barangay,
     m.city_municipality,
     m.province,
+
+    -- pregnancy
     p.pregnancy_risk_level,
-    p.status AS pregnancy_status
+    p.status AS pregnancy_status,
+    p.expected_date_of_delivery,
+
+    -- next scheduled checkup
+    (
+        SELECT cs.scheduled_date
+        FROM checkup_schedule cs
+        WHERE cs.mother_id = m.mother_id
+          AND cs.status = 'scheduled'
+          AND cs.scheduled_date >= CURDATE()
+        ORDER BY cs.scheduled_date ASC
+        LIMIT 1
+    ) AS next_checkup_date
+
 FROM mothers m
 JOIN accounts a ON m.account_id = a.account_id
 LEFT JOIN pregnancies p 
