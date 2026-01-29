@@ -167,10 +167,19 @@ class _ChildProfilePageState extends State<ChildProfilePage> {
               ),
             ]),
 
-            // ================= LATEST IMMUNIZATION =================
+            // ================= LATEST IMMUNIZATION (FIX #3) =================
             _section('Latest Immunization', [
-              _row('Vaccine', v(immunization, 'vaccine_name')),
-              _row('Date Given', v(immunization, 'vaccination_date')),
+              if (immunization.isEmpty) ...[
+                const Text(
+                  'No immunization recorded yet',
+                  style: TextStyle(color: Colors.black54),
+                ),
+              ] else ...[
+                _row('Vaccine', v(immunization, 'vaccine_name')),
+                if (v(immunization, 'dose_number').isNotEmpty)
+                  _row('Dose', v(immunization, 'dose_number')),
+                _row('Date Given', v(immunization, 'vaccination_date')),
+              ],
               const SizedBox(height: 10),
               OutlinedButton(
                 onPressed: () {
@@ -205,16 +214,23 @@ class _ChildProfilePageState extends State<ChildProfilePage> {
 
             const SizedBox(height: 12),
 
+            // ================= ADD IMMUNIZATION (FIX #1) =================
             _primaryBtn(
               'Add Immunization',
-              () {
-                Navigator.push(
+              () async {
+                final result = await Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder: (_) =>
                         AddImmunizationPage(childId: widget.childId),
                   ),
                 );
+
+                // 🔥 refresh profile when immunization is added
+                if (result == true) {
+                  setState(() => loading = true);
+                  await fetchProfile();
+                }
               },
             ),
 

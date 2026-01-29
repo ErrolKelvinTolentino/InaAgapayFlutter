@@ -24,6 +24,7 @@ $stmt = $conn->prepare("
         c.last_name,
         c.extension_name,
         c.sex,
+        bd.birthdate,
         TIMESTAMPDIFF(YEAR, bd.birthdate, CURDATE()) AS age_years
     FROM children c
     LEFT JOIN birth_details bd ON bd.child_id = c.child_id
@@ -33,6 +34,7 @@ $stmt = $conn->prepare("
 $stmt->bind_param("i", $childId);
 $stmt->execute();
 $child = $stmt->get_result()->fetch_assoc();
+$stmt->close();
 
 if (!$child) {
     echo json_encode([
@@ -61,6 +63,7 @@ $stmt = $conn->prepare("
 $stmt->bind_param("i", $childId);
 $stmt->execute();
 $birth = $stmt->get_result()->fetch_assoc();
+$stmt->close();
 
 /**
  * ================= LATEST GROWTH =================
@@ -78,6 +81,7 @@ $stmt = $conn->prepare("
 $stmt->bind_param("i", $childId);
 $stmt->execute();
 $growth = $stmt->get_result()->fetch_assoc();
+$stmt->close();
 
 /**
  * ================= LATEST IMMUNIZATION =================
@@ -85,16 +89,18 @@ $growth = $stmt->get_result()->fetch_assoc();
 $stmt = $conn->prepare("
     SELECT
         v.vaccine_name,
+        v.dose_number,
         ir.vaccination_date
     FROM immunization_record ir
-    JOIN vaccines v ON v.vaccine_id = ir.vaccine_id
+    INNER JOIN vaccines v ON v.vaccine_id = ir.vaccine_id
     WHERE ir.child_id = ?
-    ORDER BY ir.vaccination_date DESC
+    ORDER BY ir.vaccination_date DESC, ir.immunization_record_id DESC
     LIMIT 1
 ");
 $stmt->bind_param("i", $childId);
 $stmt->execute();
 $immunization = $stmt->get_result()->fetch_assoc();
+$stmt->close();
 
 /**
  * ================= FINAL RESPONSE =================
@@ -106,3 +112,6 @@ echo json_encode([
     'growth' => $growth ?: [],
     'immunization' => $immunization ?: []
 ]);
+
+$conn->close();
+exit;
