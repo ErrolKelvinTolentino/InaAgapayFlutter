@@ -9,7 +9,10 @@ import '../services/auth_storage.dart';
 class ChildGrowthAIPage extends StatefulWidget {
   final int childId;
 
-  const ChildGrowthAIPage({super.key, required this.childId});
+  const ChildGrowthAIPage({
+    super.key,
+    required this.childId,
+  });
 
   @override
   State<ChildGrowthAIPage> createState() => _ChildGrowthAIPageState();
@@ -17,46 +20,118 @@ class ChildGrowthAIPage extends StatefulWidget {
 
 class _ChildGrowthAIPageState extends State<ChildGrowthAIPage> {
   bool loading = true;
-  List records = [];
-  Map<String, dynamic>? ai;
+
+  List allRecords = [];
+  List filteredRecords = [];
+
+  Map<String, dynamic>? aiParsed;
+  String disclaimer = '';
 
   @override
   void initState() {
     super.initState();
-    loadData();
+    _loadData();
   }
 
-  Future<void> loadData() async {
-    final token = await AuthStorage.getToken();
+  Future<void> _loadData() async {
+    try {
+      final token = await AuthStorage.getToken();
 
-    final res = await http.get(
-      Uri.parse(
-        'https://inaagapay.alwaysdata.net/api/midwife/child_growth_list.php?child_id=${widget.childId}',
-      ),
-      headers: {'Authorization': 'Bearer $token'},
-    );
-
-    final decoded = jsonDecode(res.body);
-    records = decoded['records'] ?? [];
-
-    if (records.isNotEmpty) {
-      final latest = records.first;
-
-      final aiRes = await http.post(
+      // ================= FETCH GROWTH RECORDS =================
+      final growthRes = await http.get(
         Uri.parse(
-          'https://inaagapay.alwaysdata.net/api/midwife/ai_growth_analysis.php',
+          'https://inaagapay.alwaysdata.net/api/midwife/child_growth_list.php?child_id=${widget.childId}',
         ),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({
-          'height': latest['child_height'],
-          'weight': latest['child_weight'],
-        }),
+        headers: {'Authorization': 'Bearer $token'},
       );
 
-      ai = jsonDecode(aiRes.body);
+      final decoded = jsonDecode(growthRes.body);
+      allRecords = decoded['records'] ?? [];
+
+      // ================= FILTER OUT BIRTH / NEONATAL DATA =================
+      filteredRecords = allRecords.where((r) {
+        final h = double.tryParse(r['child_height'].toString()) ?? 0;
+        final w = double.tryParse(r['child_weight'].toString()) ?? 0;
+
+        // Birth measurements are usually <= 55cm and <= 4kg
+        return h > 55 && w > 4;
+      }).toList();
+
+      // ================= SORT OLDEST → NEWEST =================
+      filteredRecords.sort(
+        (a, b) => DateTime.parse(a['created_at'])
+            .compareTo(DateTime.parse(b['created_at'])),
+      );
+
+      // ================= DEFAULT AI STATE =================
+      aiParsed = null;
+      disclaimer = '';
+
+      // ================= REQUIRE AT LEAST 2 CLEAN RECORDS =================
+      if (filteredRecords.length < 2) {
+        aiParsed = {
+          'status': 'More Data Needed',
+          'remarks':
+              'At least two post-infancy growth records are required for AI analysis.',
+          'recommendation':
+              'Please continue recording height and weight measurements.',
+        };
+      } else {
+        // ================= CALL GEMINI AI =================
+        final aiRes = await http.post(
+          Uri.parse(
+            'https://inaagapay.alwaysdata.net/api/midwife/ai_growth_analysis.php',
+          ),
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
+          },
+          body: jsonEncode({
+            'records': filteredRecords
+                .map((r) => {
+                      'height': r['child_height'],
+                      'weight': r['child_weight'],
+                    })
+                .toList(),
+          }),
+        );
+
+        final aiDecoded = jsonDecode(aiRes.body);
+
+        // 🔍 DEBUG LOG
+        print('AI FULL RESPONSE: $aiDecoded');
+
+        disclaimer = aiDecoded['disclaimer'] ?? '';
+
+        final aiText = aiDecoded['ai_response'];
+
+        if (aiText != null && aiText is String && aiText.isNotEmpty) {
+          try {
+            aiParsed = jsonDecode(aiText);
+          } catch (_) {
+            aiParsed = {
+              'status': 'AI Response Error',
+              'remarks':
+                  'The AI returned an unexpected response format.',
+              'recommendation': '',
+            };
+          }
+        } else {
+          aiParsed = {
+            'status': 'AI Unavailable',
+            'remarks':
+                'The AI service did not return a response.',
+            'recommendation': '',
+          };
+        }
+      }
+    } catch (e) {
+      aiParsed = {
+        'status': 'Error',
+        'remarks':
+            'An unexpected error occurred while loading the AI analysis.',
+        'recommendation': '',
+      };
     }
 
     setState(() => loading = false);
@@ -66,18 +141,24 @@ class _ChildGrowthAIPageState extends State<ChildGrowthAIPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
-      appBar: AppBar(title: const Text('AI Growth Analysis')),
+      appBar: AppBar(
+        title: const Text('AI Growth Analysis'),
+        backgroundColor: AppColors.bgPrimary,
+        elevation: 0,
+      ),
       body: loading
           ? const Center(child: CircularProgressIndicator())
-          : records.isEmpty
-              ? const Center(child: Text('No growth data available'))
+          : filteredRecords.isEmpty
+              ? const Center(
+                  child: Text('No post-infancy growth data available'),
+                )
               : SingleChildScrollView(
                   padding: const EdgeInsets.all(16),
                   child: Column(
                     children: [
                       _growthChart(),
                       const SizedBox(height: 16),
-                      _aiFeedback(),
+                      _aiResultCard(),
                     ],
                   ),
                 ),
@@ -89,17 +170,18 @@ class _ChildGrowthAIPageState extends State<ChildGrowthAIPage> {
     final heightSpots = <FlSpot>[];
     final weightSpots = <FlSpot>[];
 
-    for (int i = 0; i < records.length; i++) {
+    for (int i = 0; i < filteredRecords.length; i++) {
       heightSpots.add(
         FlSpot(
           i.toDouble(),
-          double.parse(records[i]['child_height'].toString()),
+          double.parse(filteredRecords[i]['child_height'].toString()),
         ),
       );
+
       weightSpots.add(
         FlSpot(
           i.toDouble(),
-          double.parse(records[i]['child_weight'].toString()),
+          double.parse(filteredRecords[i]['child_weight'].toString()),
         ),
       );
     }
@@ -109,7 +191,7 @@ class _ChildGrowthAIPageState extends State<ChildGrowthAIPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Growth Trend',
+            'Growth Trend Over Time',
             style: TextStyle(
               fontWeight: FontWeight.bold,
               color: AppColors.brandPrimary,
@@ -117,9 +199,12 @@ class _ChildGrowthAIPageState extends State<ChildGrowthAIPage> {
           ),
           const SizedBox(height: 12),
           SizedBox(
-            height: 220,
+            height: 230,
             child: LineChart(
               LineChartData(
+                gridData: FlGridData(show: false),
+                titlesData: FlTitlesData(show: false),
+                borderData: FlBorderData(show: false),
                 lineBarsData: [
                   LineChartBarData(
                     spots: heightSpots,
@@ -138,22 +223,23 @@ class _ChildGrowthAIPageState extends State<ChildGrowthAIPage> {
             ),
           ),
           const SizedBox(height: 6),
-          const Text('Blue: Height (cm) • Green: Weight (kg)'),
+          const Text(
+            'Blue: Height (cm) • Green: Weight (kg)',
+            style: TextStyle(fontSize: 12),
+          ),
         ],
       ),
     );
   }
 
-  // ================= AI FEEDBACK =================
-  Widget _aiFeedback() {
-    if (ai == null) return const SizedBox();
-
+  // ================= AI RESULT =================
+  Widget _aiResultCard() {
     return _card(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            ai!['status'] ?? '',
+            aiParsed?['status'] ?? '',
             style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
@@ -161,19 +247,28 @@ class _ChildGrowthAIPageState extends State<ChildGrowthAIPage> {
             ),
           ),
           const SizedBox(height: 8),
-          Text(ai!['remarks'] ?? ''),
+          Text(aiParsed?['remarks'] ?? ''),
           const SizedBox(height: 8),
           Text(
-            ai!['recommendation'] ?? '',
+            aiParsed?['recommendation'] ?? '',
             style: const TextStyle(fontStyle: FontStyle.italic),
           ),
+          if (disclaimer.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Text(
+              disclaimer,
+              style: const TextStyle(fontSize: 11, color: Colors.grey),
+            ),
+          ],
         ],
       ),
     );
   }
 
+  // ================= UI CARD =================
   Widget _card({required Widget child}) {
     return Container(
+      margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,

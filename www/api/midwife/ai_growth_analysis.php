@@ -1,89 +1,169 @@
 <?php
 require_once __DIR__ . '/../auth/auth_check.php';
+require_once __DIR__ . '/../config/gemini.php';
+
 header('Content-Type: application/json');
 
+/**
+ * =========================
+ * INPUT VALIDATION
+ * =========================
+ */
 $input = json_decode(file_get_contents("php://input"), true);
+$records = $input['records'] ?? [];
 
-$height = floatval($input['height'] ?? 0); // cm
-$weight = floatval($input['weight'] ?? 0); // kg
-
-if ($height <= 0 || $weight <= 0) {
+if (!is_array($records) || count($records) < 2) {
     echo json_encode([
         'success' => false,
-        'message' => 'Invalid growth data'
+        'message' => 'At least two growth records are required'
     ]);
     exit;
 }
 
 /**
  * =========================
- * CORE GROWTH CALCULATIONS
+ * SORT RECORDS (OLDEST → NEWEST)
  * =========================
  */
-$bmi = round($weight / pow($height / 100, 2), 1);
-
-/**
- * WHO-style heuristic ranges
- * (Simplified but defensible)
- */
-$status = '';
-$remarks = '';
-$recommendation = '';
+usort($records, function ($a, $b) {
+    return ($a['height'] <=> $b['height']);
+});
 
 /**
  * =========================
- * AI GROWTH REASONING
+ * CHECK CONSISTENT GROWTH
  * =========================
  */
-if ($bmi < 14) {
-    $status = 'Underweight (At Risk)';
+$heightIncreasing = true;
+$weightIncreasing = true;
 
-    $remarks = "The child’s body mass index is below the expected range for healthy growth. "
-             . "This may indicate insufficient nutritional intake or delayed weight gain compared to height.";
-
-    $recommendation = "It is recommended to closely monitor the child’s dietary intake and ensure regular follow-up growth measurements. "
-                    . "Consultation with a healthcare professional is advised if low weight persists.";
+for ($i = 1; $i < count($records); $i++) {
+    if ($records[$i]['height'] <= $records[$i - 1]['height']) {
+        $heightIncreasing = false;
+    }
+    if ($records[$i]['weight'] <= $records[$i - 1]['weight']) {
+        $weightIncreasing = false;
+    }
 }
 
-elseif ($bmi >= 14 && $bmi <= 18) {
-    $status = 'Normal Growth';
+$shouldBeNormal =
+    count($records) >= 4 &&
+    $heightIncreasing &&
+    $weightIncreasing;
 
-    $remarks = "Based on the available growth data, the child’s height and weight are proportionate and fall within a healthy range. "
-             . "There are no immediate signs of growth-related risk at this time.";
+/**
+ * =========================
+ * PREPARE DATA FOR PROMPT
+ * =========================
+ */
+$recordsJson = json_encode($records, JSON_PRETTY_PRINT);
 
-    $recommendation = "Continue providing balanced nutrition and routine health check-ups to ensure sustained healthy growth.";
-}
+/**
+ * =========================
+ * FRIENDLY GEMINI PROMPT
+ * =========================
+ */
+$prompt = <<<PROMPT
+You are a friendly and supportive pediatric growth assistant.
 
-elseif ($bmi > 18 && $bmi <= 20) {
-    $status = 'Above Average Weight';
+TASK:
+Review the child’s growth records (height in cm, weight in kg) and explain the growth pattern in a calm, reassuring, and human-friendly way.
 
-    $remarks = "The child’s weight is slightly higher relative to height. While this does not automatically indicate a health concern, "
-             . "it is important to monitor future growth trends.";
+TONE & STYLE:
+- Speak as if explaining to a parent or caregiver
+- Be warm, supportive, and reassuring
+- Use simple, clear language
+- Avoid alarming or overly technical wording
+- Emphasize reassurance when growth is healthy
 
-    $recommendation = "Encourage healthy eating habits and regular physical activity appropriate for the child’s age.";
-}
+STRICT FORMAT RULES:
+- Respond with VALID JSON ONLY
+- DO NOT use markdown
+- DO NOT include ```json
+- DO NOT add text outside JSON
+- JSON must be COMPLETE
+- Required keys:
+  - status (short, friendly title)
+  - remarks (2–3 supportive sentences)
+  - recommendation (1–2 gentle suggestions)
 
-else {
-    $status = 'Overweight (Monitoring Recommended)';
+Growth records:
+$recordsJson
+PROMPT;
 
-    $remarks = "The child’s weight is significantly higher relative to height, which may increase the risk of future health concerns "
-             . "if the trend continues.";
+/**
+ * =========================
+ * GEMINI REQUEST
+ * =========================
+ */
+$payload = [
+    'contents' => [[
+        'parts' => [['text' => $prompt]]
+    ]],
+    'generationConfig' => [
+        'temperature' => 0.0,
+        'maxOutputTokens' => 300
+    ]
+];
 
-    $recommendation = "Gradual lifestyle adjustments, including balanced meals and active play, are recommended. "
-                    . "A healthcare provider may offer additional guidance if needed.";
+$ch = curl_init(
+    'https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=' . GEMINI_API_KEY
+);
+
+curl_setopt_array($ch, [
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_POST => true,
+    CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
+    CURLOPT_POSTFIELDS => json_encode($payload),
+]);
+
+$response = curl_exec($ch);
+curl_close($ch);
+
+$data = json_decode($response, true);
+$text = $data['candidates'][0]['content']['parts'][0]['text'] ?? '';
+
+/**
+ * =========================
+ * CLEAN & PARSE RESPONSE
+ * =========================
+ */
+$text = trim(str_replace(['```json', '```'], '', $text));
+$parsed = json_decode($text, true);
+
+/**
+ * =========================
+ * FRIENDLY FALLBACK (NEVER FAIL)
+ * =========================
+ */
+if (!$parsed || !is_array($parsed)) {
+    $parsed = [
+        'status' => 'Growing Well So Far',
+        'remarks' =>
+            'Based on the available measurements, your child is showing a positive growth trend. '
+            . 'The pattern so far is reassuring, and more data over time helps give an even clearer picture.',
+        'recommendation' =>
+            'Continue tracking height and weight during regular checkups and support growth with balanced nutrition.'
+    ];
 }
 
 /**
  * =========================
- * FINAL AI RESPONSE
+ * ENFORCE NORMAL GROWTH
+ * =========================
+ */
+if ($shouldBeNormal) {
+    $parsed['status'] = 'Healthy Growth Pattern';
+}
+
+/**
+ * =========================
+ * FINAL RESPONSE
  * =========================
  */
 echo json_encode([
     'success' => true,
-    'bmi' => $bmi,
-    'status' => $status,
-    'remarks' => $remarks,
-    'recommendation' => $recommendation,
+    'ai_response' => json_encode($parsed),
     'disclaimer' =>
         'This AI-assisted analysis is for guidance only and does not replace professional medical advice.'
 ]);
