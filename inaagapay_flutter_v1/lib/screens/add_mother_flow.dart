@@ -139,11 +139,13 @@ class _AddMotherFlowState extends State<AddMotherFlow> {
       }
     } finally {
       _recomputeRisk();
+      if (!mounted) return;
       setState(() => loadingContext = false);
     }
   }
 
   void _recomputeRisk() {
+    if (!mounted) return;
     setState(() {
       risk = RiskEngine.evaluate(form);
     });

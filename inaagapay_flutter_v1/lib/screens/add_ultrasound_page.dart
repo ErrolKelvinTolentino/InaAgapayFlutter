@@ -1,7 +1,9 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../services/auth_storage.dart';
 import '../theme/app_colors.dart';
@@ -23,6 +25,8 @@ class _AddUltrasoundPageState extends State<AddUltrasoundPage> {
   bool _submitting = false;
   int _step = 0;
   static const int _totalSteps = 3;
+  final ImagePicker _picker = ImagePicker();
+  XFile? _imageFile;
 
   final _locationCtrl = TextEditingController();
   final _remarksCtrl = TextEditingController();
@@ -62,6 +66,7 @@ class _AddUltrasoundPageState extends State<AddUltrasoundPage> {
       _pregnancyId = decoded['pregnancy_id'];
     }
 
+    if (!mounted) return;
     setState(() => _loading = false);
   }
 
@@ -71,32 +76,43 @@ class _AddUltrasoundPageState extends State<AddUltrasoundPage> {
 
     final token = await AuthStorage.getToken();
 
-    final res = await http.post(
+    final request = http.MultipartRequest(
+      'POST',
       Uri.parse(
         'https://inaagapay.alwaysdata.net/api/midwife/add_ultrasound.php',
       ),
-      headers: {'Authorization': 'Bearer $token'},
-      body: {
-        'pregnancy_id': _pregnancyId.toString(),
-        'ultrasound_date': DateFormat('yyyy-MM-dd').format(_date!),
-        'ultrasound_location': _locationCtrl.text,
-        'remarks': _remarksCtrl.text,
-        'health_worker_name': _workerNameCtrl.text,
-        'health_worker_institution': _institutionCtrl.text,
-        'health_worker_profession': _professionCtrl.text,
-      },
     );
 
+    request.headers['Authorization'] = 'Bearer $token';
+    request.fields.addAll({
+      'pregnancy_id': _pregnancyId.toString(),
+      'ultrasound_date': DateFormat('yyyy-MM-dd').format(_date!),
+      'ultrasound_location': _locationCtrl.text,
+      'remarks': _remarksCtrl.text,
+      'health_worker_name': _workerNameCtrl.text,
+      'health_worker_institution': _institutionCtrl.text,
+      'health_worker_profession': _professionCtrl.text,
+    });
+
+    if (_imageFile != null) {
+      request.files.add(
+        await http.MultipartFile.fromPath('ultrasound_image', _imageFile!.path),
+      );
+    }
+
+    final streamed = await request.send();
+    final res = await http.Response.fromStream(streamed);
     final decoded = jsonDecode(res.body);
 
     if (!mounted) return;
     if (decoded['success'] == true) {
       Navigator.pop(context, true);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(decoded['message'] ?? 'Save failed')),
-      );
+      return;
     }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(decoded['message'] ?? 'Save failed')),
+    );
+    if (!mounted) return;
     setState(() => _submitting = false);
   }
 
@@ -139,6 +155,76 @@ class _AddUltrasoundPageState extends State<AddUltrasoundPage> {
     if (picked != null) {
       setState(() => _date = picked);
     }
+  }
+
+  Future<void> _pickImage() async {
+    final picked = await _picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 85,
+      maxWidth: 1600,
+    );
+    if (picked != null) {
+      setState(() => _imageFile = picked);
+    }
+  }
+
+  Widget _imagePicker() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Ultrasound Image (optional)',
+          style: TextStyle(fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 8),
+        InkWell(
+          onTap: _pickImage,
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.borderPrimary),
+            ),
+            child: _imageFile == null
+                ? Row(
+                    children: const [
+                      Icon(Icons.upload_file, color: AppColors.brandText),
+                      SizedBox(width: 10),
+                      Text('Tap to upload an image'),
+                    ],
+                  )
+                : Row(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.file(
+                          File(_imageFile!.path),
+                          width: 56,
+                          height: 56,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          _imageFile!.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => setState(() => _imageFile = null),
+                      ),
+                    ],
+                  ),
+          ),
+        ),
+      ],
+    );
   }
 
   Widget _controls({bool showSubmit = false}) {
@@ -202,6 +288,8 @@ class _AddUltrasoundPageState extends State<AddUltrasoundPage> {
             ),
             const SizedBox(height: 12),
             AppInputField(hintText: 'Location', controller: _locationCtrl),
+            const SizedBox(height: 12),
+            _imagePicker(),
             const SizedBox(height: 20),
             _controls(),
           ],

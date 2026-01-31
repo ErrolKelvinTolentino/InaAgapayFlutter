@@ -10,6 +10,7 @@ $remarks = $_POST['remarks'] ?? null;
 $workerName = $_POST['health_worker_name'] ?? null;
 $institution = $_POST['health_worker_institution'] ?? null;
 $profession = $_POST['health_worker_profession'] ?? null;
+$labTestImage = null;
 
 if (!$pregnancyId || !$type || !$date) {
     echo json_encode([
@@ -19,25 +20,66 @@ if (!$pregnancyId || !$type || !$date) {
     exit;
 }
 
+$uploadField = 'lab_test_image';
+if (isset($_FILES[$uploadField]) && $_FILES[$uploadField]['error'] !== UPLOAD_ERR_NO_FILE) {
+    if ($_FILES[$uploadField]['error'] !== UPLOAD_ERR_OK) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Image upload failed'
+        ]);
+        exit;
+    }
+
+    $ext = strtolower(pathinfo($_FILES[$uploadField]['name'] ?? '', PATHINFO_EXTENSION));
+    $allowed = ['jpg', 'jpeg', 'png', 'webp'];
+    if (!in_array($ext, $allowed)) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Invalid image type. Please upload JPG, PNG, or WebP.'
+        ]);
+        exit;
+    }
+
+    $uploadDir = __DIR__ . '/../../uploads/lab_tests';
+    if (!is_dir($uploadDir)) {
+        mkdir($uploadDir, 0775, true);
+    }
+
+    $filename = 'lab_test_' . $pregnancyId . '_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
+    $targetPath = $uploadDir . '/' . $filename;
+
+    if (!move_uploaded_file($_FILES[$uploadField]['tmp_name'], $targetPath)) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Failed to save image'
+        ]);
+        exit;
+    }
+
+    $labTestImage = 'uploads/lab_tests/' . $filename;
+}
+
 $stmt = $conn->prepare("
     INSERT INTO lab_tests (
         pregnancy_id,
         lab_test_type,
         lab_test_date,
         lab_test_location,
+        lab_test_image,
         remarks,
         health_worker_name,
         health_worker_institution,
         health_worker_profession
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 ");
 
 $stmt->bind_param(
-    "isssssss",
+    "issssssss",
     $pregnancyId,
     $type,
     $date,
     $location,
+    $labTestImage,
     $remarks,
     $workerName,
     $institution,

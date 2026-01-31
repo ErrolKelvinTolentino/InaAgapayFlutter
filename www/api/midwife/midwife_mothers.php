@@ -1,8 +1,30 @@
 <?php
 header('Content-Type: application/json');
-require_once '../db.php';
+require_once __DIR__ . '/../db.php';
+ob_start();
+require_once __DIR__ . '/../auth/auth_check.php';
+ob_end_clean();
 
-$sql = "
+function expect(bool $condition, string $message): void
+{
+    if (!$condition) {
+        throw new Exception($message);
+    }
+}
+
+try {
+    expect(isset($AUTH_USER['account_type']), 'Unauthorized');
+    expect($AUTH_USER['account_type'] === 'midwife', 'Only midwives can view mothers');
+
+    $ctx = $conn->prepare("SELECT assigned_bhc_id FROM midwives WHERE account_id = ? LIMIT 1");
+    $authAccountId = $AUTH_USER['account_id'];
+    $ctx->bind_param('i', $authAccountId);
+    $ctx->execute();
+    $ctxRes = $ctx->get_result()->fetch_assoc();
+    expect($ctxRes !== null, 'Midwife context not found');
+    $assignedBhcId = (int) $ctxRes['assigned_bhc_id'];
+
+    $stmt = $conn->prepare("\
 SELECT
     m.mother_id,
     a.first_name,
@@ -22,18 +44,26 @@ FROM mothers m
 JOIN accounts a ON m.account_id = a.account_id
 LEFT JOIN pregnancies p 
     ON p.mother_id = m.mother_id AND p.status = 'ongoing'
+WHERE m.assigned_bhc_id = ?
 ORDER BY a.last_name ASC
-";
+");
+    $stmt->bind_param('i', $assignedBhcId);
+    $stmt->execute();
+    $result = $stmt->get_result();
 
-$result = $conn->query($sql);
+    $mothers = [];
+    while ($row = $result->fetch_assoc()) {
+        $mothers[] = $row;
+    }
 
-$mothers = [];
-
-while ($row = $result->fetch_assoc()) {
-    $mothers[] = $row;
+    echo json_encode([
+        'success' => true,
+        'data' => $mothers
+    ]);
+} catch (Throwable $e) {
+    http_response_code(400);
+    echo json_encode([
+        'success' => false,
+        'message' => $e->getMessage(),
+    ]);
 }
-
-echo json_encode([
-    'success' => true,
-    'data' => $mothers
-]);

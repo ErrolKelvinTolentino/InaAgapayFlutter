@@ -134,6 +134,15 @@ class MotherProfilePage extends StatelessWidget {
 
           List<dynamic> listOrEmpty(dynamic v) => v is List ? v : [];
 
+          String? resolveImageUrl(dynamic v) {
+            if (v == null) return null;
+            final raw = v.toString().trim();
+            if (raw.isEmpty) return null;
+            if (raw.startsWith('http')) return raw;
+            final cleaned = raw.startsWith('/') ? raw.substring(1) : raw;
+            return 'https://inaagapay.alwaysdata.net/$cleaned';
+          }
+
           Widget infoCard(String title, List<Widget> children) {
             return Container(
               margin: const EdgeInsets.only(bottom: 12),
@@ -172,44 +181,201 @@ class MotherProfilePage extends StatelessWidget {
             );
           }
 
-          void showDetails(String title, List<MapEntry<String, String>> rows) {
-            showDialog<void>(
+          Widget _tagChip(String text) {
+            return Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppColors.bgSecondary,
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(color: AppColors.borderPrimary),
+              ),
+              child: Text(text, style: const TextStyle(fontSize: 12)),
+            );
+          }
+
+          Widget recordCard({
+            required IconData icon,
+            required String title,
+            String? subtitle,
+            List<String> tags = const [],
+            VoidCallback? onTap,
+          }) {
+            return Card(
+              margin: const EdgeInsets.only(bottom: 10),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: InkWell(
+                onTap: onTap,
+                borderRadius: BorderRadius.circular(14),
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: AppColors.bgSecondary,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(icon, color: AppColors.brandText),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              title,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            if (subtitle != null && subtitle.isNotEmpty) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                subtitle,
+                                style: const TextStyle(
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                            ],
+                            if (tags.isNotEmpty) ...[
+                              const SizedBox(height: 8),
+                              Wrap(
+                                spacing: 6,
+                                runSpacing: 6,
+                                children: tags.map(_tagChip).toList(),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.chevron_right),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }
+
+          Widget _detailRow(String label, String value) {
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    flex: 3,
+                    child: Text(
+                      label,
+                      style: const TextStyle(color: AppColors.textSecondary),
+                    ),
+                  ),
+                  Expanded(flex: 5, child: Text(value)),
+                ],
+              ),
+            );
+          }
+
+          void showRecordSheet({
+            required String title,
+            required List<MapEntry<String, String>> rows,
+            IconData icon = Icons.receipt_long,
+            String? subtitle,
+            String? imageUrl,
+          }) {
+            showModalBottomSheet<void>(
               context: context,
-              builder: (_) => AlertDialog(
-                title: Text(title),
-                content: SingleChildScrollView(
+              isScrollControlled: true,
+              backgroundColor: Colors.white,
+              shape: const RoundedRectangleBorder(
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              builder: (_) => SafeArea(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
                   child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: rows
-                        .map(
-                          (r) => Padding(
-                            padding: const EdgeInsets.only(bottom: 8),
-                            child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            width: 42,
+                            height: 42,
+                            decoration: BoxDecoration(
+                              color: AppColors.bgSecondary,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Icon(icon, color: AppColors.brandText),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Expanded(
-                                  flex: 3,
-                                  child: Text(
-                                    r.key,
+                                Text(
+                                  title,
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                if (subtitle != null && subtitle.isNotEmpty)
+                                  Text(
+                                    subtitle,
                                     style: const TextStyle(
                                       color: AppColors.textSecondary,
                                     ),
                                   ),
-                                ),
-                                Expanded(flex: 5, child: Text(r.value)),
                               ],
                             ),
                           ),
-                        )
-                        .toList(),
+                          IconButton(
+                            icon: const Icon(Icons.close),
+                            onPressed: () => Navigator.pop(context),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      if (imageUrl != null) ...[
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(14),
+                          child: AspectRatio(
+                            aspectRatio: 4 / 3,
+                            child: Image.network(
+                              imageUrl,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, _, __) => Container(
+                                color: AppColors.bgSecondary,
+                                child: const Center(
+                                  child: Text('Image not available'),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                      ],
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: AppColors.faintWhite,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: AppColors.borderPrimary),
+                        ),
+                        child: Column(
+                          children: rows
+                              .map((r) => _detailRow(r.key, r.value))
+                              .toList(),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Close'),
-                  ),
-                ],
               ),
             );
           }
@@ -486,17 +652,45 @@ class MotherProfilePage extends StatelessWidget {
                                       ...listOrEmpty(
                                         currentPreg['checkups'],
                                       ).map((c) {
-                                        return ListTile(
-                                          dense: true,
-                                          title: Text(
-                                            'Checkup • ${fmtDate(c['checkup_date']) ?? '—'}',
-                                          ),
-                                          subtitle: Text(
-                                            'BP: ${c['blood_pressure_systolic'] ?? '—'}/${c['blood_pressure_diastolic'] ?? '—'} • AOG: ${c['age_of_gestation'] ?? '—'}',
-                                          ),
-                                          onTap: () => showDetails(
-                                            'Checkup Details',
-                                            [
+                                        final date =
+                                            fmtDate(c['checkup_date']) ?? '—';
+                                        final bpSys = fmtValue(
+                                          c['blood_pressure_systolic'],
+                                        );
+                                        final bpDia = fmtValue(
+                                          c['blood_pressure_diastolic'],
+                                        );
+                                        final bp =
+                                            (bpSys == '—' && bpDia == '—')
+                                            ? null
+                                            : 'BP: $bpSys/$bpDia';
+                                        final aog = fmtValue(
+                                          c['age_of_gestation'],
+                                        );
+                                        final wt = fmtValue(
+                                          c['checkup_weight'],
+                                        );
+                                        final tags = <String>[];
+                                        if (bp != null) tags.add(bp);
+                                        if (aog != '—') tags.add('AOG: $aog');
+                                        if (wt != '—') tags.add('Wt: $wt kg');
+
+                                        final next = fmtDate(
+                                          c['next_schedule'],
+                                        );
+                                        return recordCard(
+                                          icon: Icons.medical_services,
+                                          title: 'Checkup • $date',
+                                          subtitle:
+                                              (next == null || next.isEmpty)
+                                              ? null
+                                              : 'Next: $next',
+                                          tags: tags,
+                                          onTap: () => showRecordSheet(
+                                            title: 'Checkup Details',
+                                            subtitle: date,
+                                            icon: Icons.medical_services,
+                                            rows: [
                                               MapEntry(
                                                 'Checkup Date',
                                                 fmtValue(
@@ -558,17 +752,35 @@ class MotherProfilePage extends StatelessWidget {
                                       ...listOrEmpty(
                                         currentPreg['ultrasounds'],
                                       ).map((u) {
-                                        return ListTile(
-                                          dense: true,
-                                          title: Text(
-                                            'Ultrasound • ${fmtDate(u['ultrasound_date']) ?? '—'}',
+                                        final date =
+                                            fmtDate(u['ultrasound_date']) ??
+                                            '—';
+                                        final imageUrl = resolveImageUrl(
+                                          u['ultrasound_image'],
+                                        );
+                                        final tags = <String>[];
+                                        final worker = fmtValue(
+                                          u['health_worker_name'],
+                                        );
+                                        if (worker != '—') {
+                                          tags.add(worker);
+                                        }
+                                        if (imageUrl != null) {
+                                          tags.add('Image');
+                                        }
+                                        return recordCard(
+                                          icon: Icons.monitor_heart,
+                                          title: 'Ultrasound • $date',
+                                          subtitle: fmtValue(
+                                            u['ultrasound_location'],
                                           ),
-                                          subtitle: Text(
-                                            u['ultrasound_location'] ?? '—',
-                                          ),
-                                          onTap: () => showDetails(
-                                            'Ultrasound Details',
-                                            [
+                                          tags: tags,
+                                          onTap: () => showRecordSheet(
+                                            title: 'Ultrasound Details',
+                                            subtitle: date,
+                                            icon: Icons.monitor_heart,
+                                            imageUrl: imageUrl,
+                                            rows: [
                                               MapEntry(
                                                 'Date',
                                                 fmtValue(
@@ -616,17 +828,35 @@ class MotherProfilePage extends StatelessWidget {
                                       ...listOrEmpty(
                                         currentPreg['lab_tests'],
                                       ).map((l) {
-                                        return ListTile(
-                                          dense: true,
-                                          title: Text(
-                                            '${l['lab_test_type'] ?? 'Lab Test'} • ${fmtDate(l['lab_test_date']) ?? '—'}',
+                                        final date =
+                                            fmtDate(l['lab_test_date']) ?? '—';
+                                        final imageUrl = resolveImageUrl(
+                                          l['lab_test_image'],
+                                        );
+                                        final tags = <String>[];
+                                        final worker = fmtValue(
+                                          l['health_worker_name'],
+                                        );
+                                        if (worker != '—') {
+                                          tags.add(worker);
+                                        }
+                                        if (imageUrl != null) {
+                                          tags.add('Image');
+                                        }
+                                        return recordCard(
+                                          icon: Icons.science,
+                                          title:
+                                              '${l['lab_test_type'] ?? 'Lab Test'} • $date',
+                                          subtitle: fmtValue(
+                                            l['lab_test_location'],
                                           ),
-                                          subtitle: Text(
-                                            l['lab_test_location'] ?? '—',
-                                          ),
-                                          onTap: () => showDetails(
-                                            'Lab Test Details',
-                                            [
+                                          tags: tags,
+                                          onTap: () => showRecordSheet(
+                                            title: 'Lab Test Details',
+                                            subtitle: date,
+                                            icon: Icons.science,
+                                            imageUrl: imageUrl,
+                                            rows: [
                                               MapEntry(
                                                 'Type',
                                                 fmtValue(l['lab_test_type']),
@@ -728,14 +958,46 @@ class MotherProfilePage extends StatelessWidget {
                                             : listOrEmpty(p['checkups']).map((
                                                 c,
                                               ) {
-                                                return ListTile(
-                                                  dense: true,
-                                                  title: Text(
-                                                    'Checkup • ${fmtDate(c['checkup_date']) ?? '—'}',
-                                                  ),
-                                                  onTap: () => showDetails(
-                                                    'Checkup Details',
-                                                    [
+                                                final date =
+                                                    fmtDate(
+                                                      c['checkup_date'],
+                                                    ) ??
+                                                    '—';
+                                                final bpSys = fmtValue(
+                                                  c['blood_pressure_systolic'],
+                                                );
+                                                final bpDia = fmtValue(
+                                                  c['blood_pressure_diastolic'],
+                                                );
+                                                final bp =
+                                                    (bpSys == '—' &&
+                                                        bpDia == '—')
+                                                    ? null
+                                                    : 'BP: $bpSys/$bpDia';
+                                                final aog = fmtValue(
+                                                  c['age_of_gestation'],
+                                                );
+                                                final wt = fmtValue(
+                                                  c['checkup_weight'],
+                                                );
+                                                final tags = <String>[];
+                                                if (bp != null) tags.add(bp);
+                                                if (aog != '—') {
+                                                  tags.add('AOG: $aog');
+                                                }
+                                                if (wt != '—')
+                                                  tags.add('Wt: $wt kg');
+
+                                                return recordCard(
+                                                  icon: Icons.medical_services,
+                                                  title: 'Checkup • $date',
+                                                  tags: tags,
+                                                  onTap: () => showRecordSheet(
+                                                    title: 'Checkup Details',
+                                                    subtitle: date,
+                                                    icon:
+                                                        Icons.medical_services,
+                                                    rows: [
                                                       MapEntry(
                                                         'Checkup Date',
                                                         fmtValue(
@@ -827,14 +1089,37 @@ class MotherProfilePage extends StatelessWidget {
                                             : listOrEmpty(
                                                 p['ultrasounds'],
                                               ).map((u) {
-                                                return ListTile(
-                                                  dense: true,
-                                                  title: Text(
-                                                    'Ultrasound • ${fmtDate(u['ultrasound_date']) ?? '—'}',
+                                                final date =
+                                                    fmtDate(
+                                                      u['ultrasound_date'],
+                                                    ) ??
+                                                    '—';
+                                                final imageUrl =
+                                                    resolveImageUrl(
+                                                      u['ultrasound_image'],
+                                                    );
+                                                final tags = <String>[];
+                                                final worker = fmtValue(
+                                                  u['health_worker_name'],
+                                                );
+                                                if (worker != '—')
+                                                  tags.add(worker);
+                                                if (imageUrl != null) {
+                                                  tags.add('Image');
+                                                }
+                                                return recordCard(
+                                                  icon: Icons.monitor_heart,
+                                                  title: 'Ultrasound • $date',
+                                                  subtitle: fmtValue(
+                                                    u['ultrasound_location'],
                                                   ),
-                                                  onTap: () => showDetails(
-                                                    'Ultrasound Details',
-                                                    [
+                                                  tags: tags,
+                                                  onTap: () => showRecordSheet(
+                                                    title: 'Ultrasound Details',
+                                                    subtitle: date,
+                                                    icon: Icons.monitor_heart,
+                                                    imageUrl: imageUrl,
+                                                    rows: [
                                                       MapEntry(
                                                         'Date',
                                                         fmtValue(
@@ -894,14 +1179,37 @@ class MotherProfilePage extends StatelessWidget {
                                             : listOrEmpty(p['lab_tests']).map((
                                                 l,
                                               ) {
-                                                return ListTile(
-                                                  dense: true,
-                                                  title: Text(
-                                                    '${l['lab_test_type'] ?? 'Lab Test'} • ${fmtDate(l['lab_test_date']) ?? '—'}',
+                                                final date =
+                                                    fmtDate(
+                                                      l['lab_test_date'],
+                                                    ) ??
+                                                    '—';
+                                                final imageUrl =
+                                                    resolveImageUrl(
+                                                      l['lab_test_image'],
+                                                    );
+                                                final tags = <String>[];
+                                                final worker = fmtValue(
+                                                  l['health_worker_name'],
+                                                );
+                                                if (worker != '—')
+                                                  tags.add(worker);
+                                                if (imageUrl != null)
+                                                  tags.add('Image');
+                                                return recordCard(
+                                                  icon: Icons.science,
+                                                  title:
+                                                      '${l['lab_test_type'] ?? 'Lab Test'} • $date',
+                                                  subtitle: fmtValue(
+                                                    l['lab_test_location'],
                                                   ),
-                                                  onTap: () => showDetails(
-                                                    'Lab Test Details',
-                                                    [
+                                                  tags: tags,
+                                                  onTap: () => showRecordSheet(
+                                                    title: 'Lab Test Details',
+                                                    subtitle: date,
+                                                    icon: Icons.science,
+                                                    imageUrl: imageUrl,
+                                                    rows: [
                                                       MapEntry(
                                                         'Type',
                                                         fmtValue(

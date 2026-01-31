@@ -34,6 +34,151 @@ function weeksBetween(?string $start, ?string $end): ?float
     return round($days / 7, 1);
 }
 
+function computeRisk(
+    array $profile,
+    array $conditions,
+    array $allergies,
+    array $history,
+    array $first,
+    ?string $lmp,
+    ?string $checkupDate
+): array {
+    $score = 0;
+    $add = function (int $points) use (&$score) {
+        $score += $points;
+    };
+
+    // Age
+    if (!empty($profile['birthdate'])) {
+        $b = new DateTime($profile['birthdate']);
+        $now = new DateTime();
+        $age = $now->diff($b)->y;
+        if ($age < 18) {
+            $add(2);
+        } elseif ($age >= 35) {
+            $add(2);
+        }
+    }
+
+    // BMI
+    if (!empty($profile['height']) && !empty($profile['weight']) && $profile['height'] > 0) {
+        $bmi = $profile['weight'] / pow($profile['height'] / 100, 2);
+        if ($bmi < 18.5) {
+            $add(2);
+        } elseif ($bmi >= 25 && $bmi < 30) {
+            $add(1);
+        } elseif ($bmi >= 30) {
+            $add(2);
+        }
+    }
+
+    // Medical conditions (active)
+    $activeCount = 0;
+    foreach ($conditions as $cond) {
+        if (($cond['status'] ?? 'active') !== 'active') {
+            continue;
+        }
+        $activeCount++;
+        $name = strtolower($cond['condition_name'] ?? '');
+        $points = 1;
+        if (strpos($name, 'anemia') !== false) {
+            $points = 2;
+        } elseif (strpos($name, 'diabetes') !== false) {
+            $points = 3;
+        } elseif (strpos($name, 'hypertension') !== false) {
+            $points = 3;
+        } elseif (strpos($name, 'asthma') !== false) {
+            $points = 1;
+        } elseif (strpos($name, 'smoking') !== false) {
+            $points = 2;
+        } elseif (strpos($name, 'alcohol') !== false) {
+            $points = 2;
+        } elseif (strpos($name, 'domestic') !== false || strpos($name, 'violence') !== false) {
+            $points = 3;
+        } elseif (strpos($name, 'other') !== false) {
+            $points = 1;
+        }
+        $add($points);
+    }
+    if ($activeCount >= 2) {
+        $add(1);
+    }
+
+    // Allergies
+    foreach ($allergies as $allergy) {
+        if (($allergy['status'] ?? 'active') === 'active') {
+            $add(1);
+            break;
+        }
+    }
+
+    // Pregnancy history
+    foreach ($history as $p) {
+        switch ($p['outcome'] ?? '') {
+            case 'miscarriage':
+                $add(2);
+                break;
+            case 'stillbirth':
+                $add(3);
+                break;
+            case 'ectopic':
+                $add(3);
+                break;
+            case 'abortion':
+                $add(1);
+                break;
+        }
+    }
+    $totalPregnancies = count($history) + 1;
+    if ($totalPregnancies >= 3) {
+        $add(1);
+    }
+
+    // Prenatal check factors
+    if (!empty($first)) {
+        $sys = (int) ($first['blood_pressure_systolic'] ?? 0);
+        $dia = (int) ($first['blood_pressure_diastolic'] ?? 0);
+        if ($sys >= 140 || $dia >= 90) {
+            $add(3);
+        }
+
+        $edema = $first['edema'] ?? 'none';
+        if ($edema === 'mild') {
+            $add(1);
+        } elseif ($edema === 'moderate') {
+            $add(2);
+        } elseif ($edema === 'severe') {
+            $add(3);
+        }
+
+        $fetalBeat = $first['fetal_heart_beat'] ?? null;
+        $beatAbnormal = ($first['abnormal_fetal_heart_beat'] ?? false) ||
+            ($fetalBeat !== null && ($fetalBeat < 110 || $fetalBeat > 160));
+        if ($beatAbnormal) {
+            $add(3);
+        }
+
+        $aog = $first['age_of_gestation'] ?? weeksBetween($lmp, $checkupDate);
+        $pos = strtolower($first['fetal_position'] ?? '');
+        $posAbnormal = ($first['abnormal_fetal_position'] ?? false) ||
+            ($pos !== '' && $pos !== 'cephalic' && $pos !== 'vertex' && $pos !== 'unknown');
+        if ($aog !== null && $aog >= 28 && $posAbnormal) {
+            $add(1);
+        }
+
+        if ($aog !== null && $aog > 20) {
+            $add(2);
+        }
+
+        if (!empty($first['missed_scheduled_checkups'])) {
+            $add(1);
+        }
+    }
+
+    $level = $score >= 6 ? 'high' : ($score >= 3 ? 'medium' : 'low');
+    return [$level, $score];
+}
+
 try {
     expect(isset($AUTH_USER['account_type']), 'Unauthorized');
     expect($AUTH_USER['account_type'] === 'midwife', 'Only midwives can add prenatal checkups');
@@ -159,6 +304,41 @@ try {
             $givenStmt->execute();
         }
     }
+
+    // Recompute pregnancy risk level based on latest checkup
+    $profileStmt = $conn->prepare("SELECT birthdate, height, weight FROM mothers WHERE mother_id = ? LIMIT 1");
+    $profileStmt->bind_param('i', $motherId);
+    $profileStmt->execute();
+    $profile = $profileStmt->get_result()->fetch_assoc() ?? [];
+
+    $condStmt = $conn->prepare("SELECT condition_name, status FROM medical_conditions WHERE mother_id = ?");
+    $condStmt->bind_param('i', $motherId);
+    $condStmt->execute();
+    $conditions = $condStmt->get_result()->fetch_all(MYSQLI_ASSOC);
+
+    $allStmt = $conn->prepare("SELECT status FROM allergies WHERE mother_id = ?");
+    $allStmt->bind_param('i', $motherId);
+    $allStmt->execute();
+    $allergies = $allStmt->get_result()->fetch_all(MYSQLI_ASSOC);
+
+    $histStmt = $conn->prepare("SELECT outcome FROM pregnancies WHERE mother_id = ? AND status = 'ended'");
+    $histStmt->bind_param('i', $motherId);
+    $histStmt->execute();
+    $history = $histStmt->get_result()->fetch_all(MYSQLI_ASSOC);
+
+    [$riskLevel] = computeRisk(
+        $profile,
+        $conditions,
+        $allergies,
+        $history,
+        $first,
+        $lmp,
+        $checkupDate
+    );
+
+    $riskStmt = $conn->prepare("UPDATE pregnancies SET pregnancy_risk_level = ? WHERE pregnancy_id = ?");
+    $riskStmt->bind_param('si', $riskLevel, $pregnancyId);
+    $riskStmt->execute();
 
     $conn->commit();
 
