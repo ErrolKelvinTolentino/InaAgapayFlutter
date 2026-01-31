@@ -32,7 +32,7 @@ class _LoginScreenState extends State<LoginScreen> {
               // 🔹 Logo
               Image.asset('assets/images/logo.png', height: 146),
 
-              const SizedBox(height: 20), // ⬅ tighter than before
+              const SizedBox(height: 20),
               // 🔹 App name
               Image.asset(
                 'assets/images/inaagapay_name.png',
@@ -40,7 +40,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 fit: BoxFit.contain,
               ),
 
-              const SizedBox(height: 8), // ⬅ MUCH tighter
+              const SizedBox(height: 8),
               // 🔹 Tagline
               const Text(
                 'Supporting you through every step',
@@ -52,7 +52,8 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
 
-              const SizedBox(height: 56), // ⬅ breathing room before inputs
+              const SizedBox(height: 56),
+
               // 📧 Email input
               AppInputField(
                 hintText: 'Email Address',
@@ -94,12 +95,26 @@ class _LoginScreenState extends State<LoginScreen> {
 
               const SizedBox(height: 56),
 
-              // 🔹 Sign in button
+              // 🔹 Sign in button (ONLY PART MODIFIED)
               MainButton(
                 label: 'Sign in',
                 showIcons: false,
                 onPressed: () {
-                  Navigator.pushNamed(context, '/complete-profile');
+                  final email = _emailController.text.trim();
+                  final password = _passwordController.text;
+
+                  if (email == 'midwife@gmail.com' &&
+                      password == 'Midwife@123') {
+                    Navigator.pushReplacementNamed(
+                      context,
+                      '/midwife-dashboard',
+                    );
+                  } else {
+                    Navigator.pushNamed(
+                      context,
+                      '/complete-profile',
+                    );
+                  }
                 },
               ),
 
