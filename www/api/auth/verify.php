@@ -1,13 +1,16 @@
 <?php
-require_once __DIR__ . '/../db.php';
-
 header('Content-Type: application/json');
 
+require_once __DIR__ . '/../db.php';
+
+
+// Read JSON input
 $input = json_decode(file_get_contents("php://input"), true);
 
 $email = $input['email'] ?? '';
 $code = $input['code'] ?? '';
 
+// 🔒 Basic validation
 if (empty($email) || empty($code)) {
     echo json_encode([
         'success' => false,
@@ -16,6 +19,7 @@ if (empty($email) || empty($code)) {
     exit;
 }
 
+// 🔍 Fetch verification data
 $stmt = $conn->prepare("
     SELECT verification_code, verification_expires, is_verified
     FROM accounts
@@ -36,7 +40,8 @@ if ($result->num_rows !== 1) {
 
 $account = $result->fetch_assoc();
 
-if ((int)$account['is_verified'] === 1) {
+// 🚫 Already verified
+if ((int) $account['is_verified'] === 1) {
     echo json_encode([
         'success' => false,
         'message' => 'Account already verified'
@@ -44,6 +49,7 @@ if ((int)$account['is_verified'] === 1) {
     exit;
 }
 
+// ❌ Code mismatch
 if ($account['verification_code'] !== $code) {
     echo json_encode([
         'success' => false,
@@ -52,6 +58,7 @@ if ($account['verification_code'] !== $code) {
     exit;
 }
 
+// ⏰ Code expired
 if (strtotime($account['verification_expires']) < time()) {
     echo json_encode([
         'success' => false,
@@ -60,6 +67,7 @@ if (strtotime($account['verification_expires']) < time()) {
     exit;
 }
 
+// ✅ Mark account as verified
 $update = $conn->prepare("
     UPDATE accounts
     SET is_verified = 1,
@@ -72,11 +80,12 @@ $update->bind_param("s", $email);
 if (!$update->execute()) {
     echo json_encode([
         'success' => false,
-        'message' => 'Verification failed'
+        'message' => 'Failed to verify account'
     ]);
     exit;
 }
 
+// 🎉 SUCCESS
 echo json_encode([
     'success' => true,
     'message' => 'Account successfully verified'

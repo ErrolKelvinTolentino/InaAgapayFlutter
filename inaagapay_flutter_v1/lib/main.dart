@@ -48,7 +48,6 @@ class MyApp extends StatelessWidget {
         '/verify-registration': (context) =>
             const AccountVerificationRegistration(),
         '/mother-dashboard': (context) => MotherDashboard(),
-        '/mother-children-stack': (context) => MotherChildStack(),
         '/mother-children': (context) => MotherChildrenPage(),
         '/mother-records': (context) => MotherRecordsPage(),
         '/mother-prenatal-stack': (context) => MotherPrenatalStack(),

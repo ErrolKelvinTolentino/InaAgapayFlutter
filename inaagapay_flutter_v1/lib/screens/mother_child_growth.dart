@@ -6,12 +6,21 @@ import '../widgets/hero_card.dart';
 import '../widgets/chart_card.dart';
 import '../widgets/ai_analytics_card.dart';
 
+import '../services/api_service.dart';
+import '../utils/session.dart';
+
 class MotherChildGrowthPage extends StatefulWidget {
   final VoidCallback onBack;
+  final int childId;
+  final String childName;
+  final String childAge;
 
   const MotherChildGrowthPage({
     super.key,
     required this.onBack,
+    required this.childId,
+    required this.childName,
+    required this.childAge,
   });
 
   @override
@@ -22,8 +31,11 @@ class MotherChildGrowthPage extends StatefulWidget {
 class _MotherChildGrowthPageState extends State<MotherChildGrowthPage> {
   int _currentIndex = 0;
 
-  void _switchTo(int index) {
-    setState(() => _currentIndex = index);
+  Future<Map<String, dynamic>> _fetchGrowth() async {
+    return await ApiService.get(
+      'mother/child_growth.php?child_id=${widget.childId}',
+      token: Session.token,
+    );
   }
 
   @override
@@ -31,7 +43,6 @@ class _MotherChildGrowthPageState extends State<MotherChildGrowthPage> {
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
 
-      // 🔝 HEADER
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(64),
         child: SecondaryHeader(
@@ -40,132 +51,124 @@ class _MotherChildGrowthPageState extends State<MotherChildGrowthPage> {
         ),
       ),
 
-      body: Column(
-        children: [
-          const SizedBox(height: 12),
+      body: FutureBuilder<Map<String, dynamic>>(
+        future: _fetchGrowth(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-          // 🟢 TABS
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+          final data = snapshot.data!;
+          if (!data['success']) {
+            return const Center(child: Text('Failed to load data'));
+          }
+
+          final height = data['height'];
+          final weight = data['weight'];
+
+          return Column(
             children: [
-              TabButton(
-                label: 'Height Chart',
-                isActive: _currentIndex == 0,
-                onTap: () => _switchTo(0),
+              const SizedBox(height: 12),
+
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  TabButton(
+                    label: 'Height Chart',
+                    isActive: _currentIndex == 0,
+                    onTap: () => setState(() => _currentIndex = 0),
+                  ),
+                  const SizedBox(width: 12),
+                  TabButton(
+                    label: 'Weight Chart',
+                    isActive: _currentIndex == 1,
+                    onTap: () => setState(() => _currentIndex = 1),
+                  ),
+                ],
               ),
-              const SizedBox(width: 12),
-              TabButton(
-                label: 'Weight Chart',
-                isActive: _currentIndex == 1,
-                onTap: () => _switchTo(1),
+
+              const SizedBox(height: 16),
+
+              Expanded(
+                child: IndexedStack(
+                  index: _currentIndex,
+                  children: [
+                    _chartContent(
+                      image: 'height.png',
+                      title: 'Height Chart',
+                      icon: Icons.height,
+                      values: List<double>.from(height['values']),
+                      unit: 'cm',
+                      start: height['start'],
+                      latest: height['latest'],
+                      insight:
+                          '${widget.childName} grew by ${height['gain']} cm!',
+                      ai: data['ai_insight'],
+                    ),
+                    _chartContent(
+                      image: 'weight.png',
+                      title: 'Weight Chart',
+                      icon: Icons.monitor_weight,
+                      values: List<double>.from(weight['values']),
+                      unit: 'kg',
+                      start: weight['start'],
+                      latest: weight['latest'],
+                      insight:
+                          '${widget.childName} gained ${weight['gain']} kg!',
+                      ai: data['ai_insight'],
+                    ),
+                  ],
+                ),
               ),
             ],
-          ),
-
-          const SizedBox(height: 16),
-
-          // 📊 CONTENT (HEIGHT / WEIGHT)
-          Expanded(
-            child: IndexedStack(
-              index: _currentIndex,
-              children: [
-                _heightContent(),
-                _weightContent(),
-              ],
-            ),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
 
-  // =========================
-  // 📏 HEIGHT CONTENT
-  // =========================
-  Widget _heightContent() {
+  Widget _chartContent({
+    required String image,
+    required String title,
+    required IconData icon,
+    required List<double> values,
+    required String unit,
+    required dynamic start,
+    required dynamic latest,
+    required String insight,
+    required String ai,
+  }) {
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
       child: Column(
         children: [
-          // 👶 HERO (HEIGHT)
           HeroCard(
-            image: const AssetImage('assets/images/height.png'),
-            title: 'First Name MI. Last Name',
-            subtitle: 'XX Years Old',
+            image: AssetImage('assets/images/$image'),
+            title: widget.childName,
+            subtitle: widget.childAge,
             showWeekBadge: false,
             showHeartRow: false,
           ),
 
           const SizedBox(height: 16),
 
-          // 📈 CHART
           ChartCard(
-            title: 'Height Chart',
-            headerIcon: Icons.height,
-            values: const [50, 50.8, 51.6, 51.6, 52.4, 53.2],
-            labels: const ['0w', '4w', '8w', '12w', '16w', '18w'],
-            unit: 'cm',
+            title: title,
+            headerIcon: icon,
+            values: values,
+            labels: List.generate(values.length, (i) => 'R${i + 1}'),
+            unit: unit,
             lineColor: AppColors.brandPrimary,
-            startingLabel: 'Starting Height',
-            startingValue: '-- cm',
-            latestLabel: 'Latest Record',
-            latestValue: '-- cm',
-            insightText: '[CHILD NAME] grew by __ cm!',
+            startingLabel: 'Starting',
+            startingValue: '$start $unit',
+            latestLabel: 'Latest',
+            latestValue: '$latest $unit',
+            insightText: insight,
           ),
 
           const SizedBox(height: 16),
 
-          // 🤖 AI ANALYSIS
-          const AiAnalyticsCard(
-            text:
-                'Your child’s height progress is very ideal for a 4-month-old child. Other AI-like words and phrase analytics here.',
-          ),
-        ],
-      ),
-    );
-  }
-
-  // =========================
-  // ⚖️ WEIGHT CONTENT
-  // =========================
-  Widget _weightContent() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-      child: Column(
-        children: [
-          // 👶 HERO (WEIGHT)
-          HeroCard(
-            image: const AssetImage('assets/images/weight.png'),
-            title: 'First Name MI. Last Name',
-            subtitle: 'XX Years Old',
-            showWeekBadge: false,
-            showHeartRow: false,
-          ),
-
-          const SizedBox(height: 16),
-
-          // 📊 CHART
-          ChartCard(
-            title: 'Weight Chart',
-            headerIcon: Icons.monitor_weight,
-            values: const [3.2, 3.8, 3.5, 3.8, 4.2, 4.1],
-            labels: const ['0w', '4w', '8w', '12w', '16w', '18w'],
-            unit: 'kg',
-            lineColor: AppColors.brandPrimary,
-            startingLabel: 'Starting Weight',
-            startingValue: '-- kg',
-            latestLabel: 'Latest Record',
-            latestValue: '-- kg',
-            insightText: '[CHILD NAME] gained __ kg in a month!',
-          ),
-
-          const SizedBox(height: 16),
-
-          // 🤖 AI ANALYSIS
-          const AiAnalyticsCard(
-            text:
-                'Your child’s weight progress is very ideal for a 4-month-old child. Other AI-like words and phrase analytics here.',
-          ),
+          AiAnalyticsCard(text: ai),
         ],
       ),
     );

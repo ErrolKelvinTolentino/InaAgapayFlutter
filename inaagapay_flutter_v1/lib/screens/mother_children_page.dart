@@ -9,6 +9,10 @@ import '../widgets/child_card.dart';
 import '../widgets/vaccine_schedule_status.dart';
 import '../screens/mother_child_stack.dart';
 
+import '../services/api_service.dart';
+import '../utils/session.dart';
+import '../models/child_model.dart';
+
 class MotherChildrenPage extends StatefulWidget {
   const MotherChildrenPage({super.key});
 
@@ -19,19 +23,46 @@ class MotherChildrenPage extends StatefulWidget {
 class _MotherChildrenPageState extends State<MotherChildrenPage> {
   final TextEditingController _searchController = TextEditingController();
 
-  // 🔧 TEMP MOCK DATA (backend later)
-  final int childCount = 2;
+  List<ChildModel> _children = [];
+  bool _loading = true;
 
-void _openChildProfile() {
+  @override
+  void initState() {
+    super.initState();
+    _fetchChildren();
+  }
+
+  Future<void> _fetchChildren() async {
+    final res = await ApiService.get(
+      'mother/children_list.php',
+      token: Session.token,
+    );
+
+    if (!res['success']) {
+      setState(() => _loading = false);
+      return;
+    }
+
+    setState(() {
+      _children = (res['children'] as List)
+          .map((e) => ChildModel.fromJson(e))
+          .toList();
+      _loading = false;
+    });
+  }
+
+ void _openChildProfile(ChildModel child) {
   Navigator.push(
     context,
     MaterialPageRoute(
-      builder: (_) => MotherChildStack(),
+      builder: (_) => MotherChildStack(
+        childId: child.id,
+        childName: child.fullName,
+        childAge: child.ageText,
+      ),
     ),
   );
 }
-
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -72,7 +103,6 @@ void _openChildProfile() {
                   ),
                   child: Row(
                     children: [
-                      // 📝 Text
                       Expanded(
                         child: RichText(
                           text: TextSpan(
@@ -86,7 +116,8 @@ void _openChildProfile() {
                                 ),
                               ),
                               TextSpan(
-                                text: '$childCount Beautiful Children!',
+                                text:
+                                    '${_children.length} Beautiful Children!',
                                 style: const TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w600,
@@ -98,7 +129,6 @@ void _openChildProfile() {
                         ),
                       ),
 
-                      // 👶 Image
                       Image.asset(
                         'assets/images/baby.png',
                         height: 72,
@@ -112,17 +142,13 @@ void _openChildProfile() {
 
               const SizedBox(height: 20),
 
-              // 🔍 Search
+              // 🔍 Search (UI unchanged – logic later)
               AppInputField(
                 hintText: 'Search Child',
                 controller: _searchController,
                 trailingIcon: Icons.search,
-                onTrailingTap: () {
-                  // TODO: search logic
-                },
-                onChanged: (value) {
-                  // TODO: live filter
-                },
+                onTrailingTap: () {},
+                onChanged: (value) {},
               ),
 
               const SizedBox(height: 8),
@@ -135,27 +161,32 @@ void _openChildProfile() {
               const SizedBox(height: 20),
 
               // 👶 CHILD LIST
-              Column(
-                children: [
-                  ChildCard(
-                    fullName: 'First Name MI. Surname',
-                    ageText: '0 years 5 months old',
-                    vaccineStatus: VaccineScheduleStatus.overdue,
-                    image: const AssetImage('assets/images/child.png'),
-                    onTap: _openChildProfile, // 👈 NAVIGATION
+              if (_loading)
+                const Center(child: CircularProgressIndicator())
+              else if (_children.isEmpty)
+                const Center(
+                  child: Text(
+                    'No children found',
+                    style: TextStyle(color: AppColors.textSecondary),
                   ),
-
-                  const SizedBox(height: 12),
-
-                  ChildCard(
-                    fullName: 'First Name MI. Surname',
-                    ageText: '0 years 5 months old',
-                    vaccineStatus: VaccineScheduleStatus.onSchedule,
-                    image: const AssetImage('assets/images/child.png'),
-                    onTap: _openChildProfile, // 👈 NAVIGATION
-                  ),
-                ],
-              ),
+                )
+              else
+                Column(
+                  children: _children.map((child) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: ChildCard(
+                        fullName: child.fullName,
+                        ageText: child.ageText,
+                        vaccineStatus:
+                            VaccineScheduleStatus.onSchedule, // dynamic later
+                        image:
+                            const AssetImage('assets/images/child.png'),
+                 onTap: () => _openChildProfile(child),
+                      ),
+                    );
+                  }).toList(),
+                ),
 
               const SizedBox(height: 24),
             ],
@@ -165,7 +196,7 @@ void _openChildProfile() {
 
       // 🔻 Bottom Nav
       bottomNavigationBar: const MainBottomNavigation(
-        currentIndex: 2, // Children tab
+        currentIndex: 2,
       ),
     );
   }

@@ -9,104 +9,123 @@ import '../widgets/records_display_card.dart';
 import '../widgets/status_indicator.dart';
 import '../models/vaccine_schedule.dart';
 
-class MotherChildVaccinePage extends StatelessWidget {
-  final VoidCallback onBack;
+import '../services/api_service.dart';
+import '../utils/session.dart';
 
-  const MotherChildVaccinePage({super.key, required this.onBack});
+class MotherChildVaccinePage extends StatefulWidget {
+  final VoidCallback onBack;
+  final int childId;
+  final String childName;
+  final String childAge;
+
+  const MotherChildVaccinePage({
+    super.key,
+    required this.onBack,
+    required this.childId,
+    required this.childName,
+    required this.childAge,
+  });
+
+  @override
+  State<MotherChildVaccinePage> createState() =>
+      _MotherChildVaccinePageState();
+}
+
+class _MotherChildVaccinePageState extends State<MotherChildVaccinePage> {
+  Future<Map<String, dynamic>> _fetchVaccines() async {
+    return await ApiService.get(
+      'mother/child_vaccines.php?child_id=${widget.childId}',
+      token: Session.token,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    // 🔧 TEMP MOCK DATA (backend later)
-    const int childAgeInWeeks = 8;
-    const String childName = 'First Name MI. Last Name';
-    const String childAge = 'XX Years Old';
-
-    final Map<String, VaccineStatus> vaccineStatuses = {
-      // ✅ DONE
-      'bcg': VaccineStatus.done,
-      'opv0': VaccineStatus.done,
-
-      // 🟡 SOME DONE, SOME PENDING
-      'opv1': VaccineStatus.done,
-      'penta1': VaccineStatus.done,
-      'pcv1': VaccineStatus.done,
-      'rota1': VaccineStatus.pending,
-
-      // 🔒 NOT YET REACHED
-      'opv2': VaccineStatus.locked,
-      'penta2': VaccineStatus.locked,
-      'pcv2': VaccineStatus.locked,
-      'rota2': VaccineStatus.locked,
-      'opv3': VaccineStatus.locked,
-      'penta3': VaccineStatus.locked,
-      'pcv3': VaccineStatus.locked,
-      'ipv': VaccineStatus.locked,
-    };
-
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
 
-      // 🔝 Header with back
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(72),
-        child: SecondaryHeader(title: 'Vaccination Details', onBack: onBack),
-      ),
-
-      // 🔽 Body
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              HeroCard(
-                image: const AssetImage('assets/images/baby.png'),
-                title: childName,
-                subtitle: childAge,
-                showWeekBadge: false,
-                showHeartRow: false,
-              ),
-
-              const SizedBox(height: 16),
-              const SmallDescription(
-                text: 'Track completed, pending, and upcoming vaccines',
-              ),
-
-              const SizedBox(height: 16),
-
-              RecordsDisplayCard(
-  title: 'Overview',
-  headerIcon: Icons.info_outline,
-  items: [
-    RecordItem(
-      leadingIcon: Icons.verified,
-      label: 'Protection Status',
-      value: '',
-      trailingWidget: const StatusIndicator(
-        status: StatusIndicatorType.ongoing,
-      ),
-    ),
-    RecordItem(
-      leadingIcon: Icons.schedule,
-      label: 'Next due',
-      value: 'Week 6 vaccines',
-    ),
-  ],
-),
-
-
-              const SizedBox(height: 16),
-
-              // 💉 VACCINE LIST (At Birth → 14 Weeks)
-              VaccineList(
-                statuses: vaccineStatuses,
-                childAgeInWeeks: childAgeInWeeks,
-              ),
-
-              const SizedBox(height: 20),
-            ],
-          ),
+        child: SecondaryHeader(
+          title: 'Vaccination Details',
+          onBack: widget.onBack,
         ),
+      ),
+
+      body: FutureBuilder<Map<String, dynamic>>(
+        future: _fetchVaccines(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final data = snapshot.data!;
+          if (!data['success']) {
+            return const Center(child: Text('Failed to load vaccines'));
+          }
+
+          final statuses = <String, VaccineStatus>{};
+          data['statuses'].forEach((key, value) {
+            statuses[key] = VaccineStatus.values
+                .firstWhere((e) => e.name == value);
+          });
+
+          return SafeArea(
+            child: SingleChildScrollView(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  HeroCard(
+                    image: const AssetImage('assets/images/baby.png'),
+                    title: widget.childName,
+                    subtitle: widget.childAge,
+                    showWeekBadge: false,
+                    showHeartRow: false,
+                  ),
+
+                  const SizedBox(height: 16),
+                  const SmallDescription(
+                    text:
+                        'Track completed, pending, and upcoming vaccines',
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  RecordsDisplayCard(
+                    title: 'Overview',
+                    headerIcon: Icons.info_outline,
+                    items: [
+                      RecordItem(
+                        leadingIcon: Icons.verified,
+                        label: 'Protection Status',
+                        value: '',
+                        trailingWidget: const StatusIndicator(
+                          status: StatusIndicatorType.ongoing,
+                        ),
+                      ),
+                      RecordItem(
+                        leadingIcon: Icons.schedule,
+                        label: 'Next due',
+                        value: data['next_due'] ?? '—',
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  VaccineList(
+                    statuses: statuses,
+                    childAgeInWeeks: data['child_age_weeks'],
+                  ),
+
+                  const SizedBox(height: 20),
+                ],
+              ),
+            ),
+          );
+        },
       ),
     );
   }

@@ -5,10 +5,10 @@ header('Content-Type: application/json');
 
 $data = json_decode(file_get_contents("php://input"), true);
 
-$email = $data['email'] ?? '';
+$email = trim($data['email'] ?? '');
 $password = $data['password'] ?? '';
 
-if (empty($email) || empty($password)) {
+if ($email === '' || $password === '') {
     echo json_encode([
         'success' => false,
         'message' => 'Email and password are required'
@@ -16,9 +16,16 @@ if (empty($email) || empty($password)) {
     exit;
 }
 
-// 1️⃣ Get account
+/**
+ * FETCH ACCOUNT
+ */
 $stmt = $conn->prepare("
-    SELECT account_id, password_hash, account_type, is_verified, status
+    SELECT 
+        account_id,
+        password_hash,
+        account_type,
+        is_verified,
+        status
     FROM accounts
     WHERE email_address = ?
     LIMIT 1
@@ -28,41 +35,67 @@ $stmt->execute();
 $result = $stmt->get_result();
 
 if ($result->num_rows !== 1) {
-    echo json_encode(['success' => false]);
+    echo json_encode([
+        'success' => false,
+        'message' => 'Invalid credentials'
+    ]);
     exit;
 }
 
 $user = $result->fetch_assoc();
 
+/**
+ * BASIC CHECKS
+ */
 if (!$user['is_verified']) {
-    echo json_encode(['success' => false, 'message' => 'Account not verified']);
+    echo json_encode([
+        'success' => false,
+        'message' => 'Account not verified'
+    ]);
     exit;
 }
 
 if ($user['status'] !== 'active') {
-    echo json_encode(['success' => false, 'message' => 'Account inactive']);
+    echo json_encode([
+        'success' => false,
+        'message' => 'Account inactive'
+    ]);
     exit;
 }
 
 if (!password_verify($password, $user['password_hash'])) {
-    echo json_encode(['success' => false]);
+    echo json_encode([
+        'success' => false,
+        'message' => 'Invalid credentials'
+    ]);
     exit;
 }
 
-// 2️⃣ Generate token
+/**
+ * TOKEN
+ */
 $token = bin2hex(random_bytes(32));
 
 $update = $conn->prepare("
     UPDATE accounts
-    SET last_login_token = ?, last_login_at = NOW()
+    SET last_login_token = ?,
+        last_login_at = NOW()
     WHERE account_id = ?
 ");
 $update->bind_param("si", $token, $user['account_id']);
 $update->execute();
 
-// 3️⃣ CHECK PROFILE COMPLETION (🔥 THIS IS THE FIX)
-$profileComplete = false;
+/**
+ * BASE USER RESPONSE (SAFE FOR ALL ROLES)
+ */
+$responseUser = [
+    'id'   => (int) $user['account_id'],
+    'role' => $user['account_type'],
+];
 
+/**
+ * MOTHER-ONLY: CHECK PROFILE COMPLETION
+ */
 if ($user['account_type'] === 'mother') {
     $stmt = $conn->prepare("
         SELECT mother_id
@@ -72,16 +105,17 @@ if ($user['account_type'] === 'mother') {
     ");
     $stmt->bind_param("i", $user['account_id']);
     $stmt->execute();
-    $profileComplete = $stmt->get_result()->num_rows === 1;
+    $mother = $stmt->get_result()->fetch_assoc();
+
+    $responseUser['profile_complete'] = $mother ? true : false;
 }
 
-// 4️⃣ RESPONSE
+/**
+ * FINAL RESPONSE
+ */
 echo json_encode([
     'success' => true,
-    'token' => $token,
-    'user' => [
-        'id' => $user['account_id'],
-        'role' => $user['account_type'],
-        'profile_complete' => $profileComplete
-    ]
+    'message' => 'Login successful',
+    'token'   => $token,
+    'user'    => $responseUser
 ]);
