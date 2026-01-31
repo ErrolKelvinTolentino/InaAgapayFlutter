@@ -3,6 +3,8 @@ import '../theme/app_colors.dart';
 import '../widgets/app_input_field.dart';
 import '../widgets/main_button.dart';
 import '../widgets/clickable_text.dart';
+import '../services/api_service.dart';
+import '../utils/session.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -16,6 +18,50 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _passwordController = TextEditingController();
 
   bool _obscurePassword = true;
+  bool _loading = false;
+  bool _error = false;
+
+  Future<void> _handleLogin() async {
+    if (_loading) return;
+
+    setState(() {
+      _loading = true;
+      _error = false;
+    });
+
+    final res = await ApiService.post(
+      'auth/login.php',
+      {
+        'email': _emailController.text.trim(),
+        'password': _passwordController.text,
+      },
+    );
+
+    setState(() => _loading = false);
+
+    if (!res['success']) {
+      setState(() => _error = true);
+      return;
+    }
+
+    // ✅ Save token
+    Session.token = res['token'];
+
+    final bool profileComplete =
+        res['user']['profile_complete'] == true;
+
+    if (!mounted) return;
+
+    if (profileComplete) {
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        '/mother-dashboard',
+        (route) => false,
+      );
+    } else {
+      Navigator.pushNamed(context, '/complete-profile');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -29,19 +75,16 @@ class _LoginScreenState extends State<LoginScreen> {
             children: [
               const SizedBox(height: 40),
 
-              // 🔹 Logo
               Image.asset('assets/images/logo.png', height: 146),
 
-              const SizedBox(height: 20), // ⬅ tighter than before
-              // 🔹 App name
+              const SizedBox(height: 20),
               Image.asset(
                 'assets/images/inaagapay_name.png',
                 width: 282,
                 fit: BoxFit.contain,
               ),
 
-              const SizedBox(height: 8), // ⬅ MUCH tighter
-              // 🔹 Tagline
+              const SizedBox(height: 8),
               const Text(
                 'Supporting you through every step',
                 textAlign: TextAlign.center,
@@ -52,8 +95,8 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
 
-              const SizedBox(height: 56), // ⬅ breathing room before inputs
-              // 📧 Email input
+              const SizedBox(height: 56),
+
               AppInputField(
                 hintText: 'Email Address',
                 controller: _emailController,
@@ -63,7 +106,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
               const SizedBox(height: 20),
 
-              // 🔒 Password input
               AppInputField(
                 hintText: 'Password',
                 controller: _passwordController,
@@ -79,9 +121,19 @@ class _LoginScreenState extends State<LoginScreen> {
                 },
               ),
 
+              if (_error) ...[
+                const SizedBox(height: 12),
+                const Text(
+                  'Invalid email or password',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: AppColors.error,
+                  ),
+                ),
+              ],
+
               const SizedBox(height: 20),
 
-              // 🔹 Forgot password
               Align(
                 alignment: Alignment.centerRight,
                 child: ClickableText(
@@ -94,18 +146,14 @@ class _LoginScreenState extends State<LoginScreen> {
 
               const SizedBox(height: 56),
 
-              // 🔹 Sign in button
               MainButton(
-                label: 'Sign in',
+                label: _loading ? 'Signing in...' : 'Sign in',
                 showIcons: false,
-                onPressed: () {
-                  Navigator.pushNamed(context, '/complete-profile');
-                },
+                onPressed: _loading ? null : _handleLogin,
               ),
 
               const SizedBox(height: 32),
 
-              // 🔹 Register link
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [

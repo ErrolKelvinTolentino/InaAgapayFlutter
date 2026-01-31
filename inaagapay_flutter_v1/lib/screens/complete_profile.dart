@@ -5,6 +5,8 @@ import '../widgets/app_input_field.dart';
 import '../widgets/main_button.dart';
 import '../widgets/progressive_step_indicator.dart';
 import '../widgets/page_title.dart';
+import '../services/api_service.dart';
+import '../utils/session.dart';
 import 'welcome_screen.dart';
 
 class CompleteProfileScreen extends StatefulWidget {
@@ -60,6 +62,44 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
     setState(() => _currentStep = step);
   }
 
+  void _handlePrimaryAction() {
+    if (_currentStep < 2) {
+      _nextStep();
+      return;
+    }
+
+    _saveProfileAndContinue();
+  }
+
+  // ✅ ONLY SAVES PROFILE (NO PREGNANCY HERE)
+  Future<void> _saveProfileAndContinue() async {
+    final res = await ApiService.post(
+      'mother/complete_profile.php',
+      {
+        'first_name': _firstName.text,
+        'middle_name': _middleName.text,
+        'last_name': _lastName.text,
+        'extension_name': _extensionName.text,
+        'birth_date': _birthDate.text,
+        'contact_number': _contactNumber.text,
+        'province': _province.text,
+        'city': _city.text,
+        'barangay': _barangay.text,
+        'street': _street.text,
+        'house_no': _houseNo.text,
+      },
+      token: Session.token,
+    );
+
+    if (!res['success']) return;
+    if (!mounted) return;
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => const WelcomeScreen()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -83,14 +123,21 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
 
             const SizedBox(height: 16),
 
-            ProgressiveStepIndicator(currentStep: _currentStep, totalSteps: 3),
+            ProgressiveStepIndicator(
+              currentStep: _currentStep,
+              totalSteps: 3,
+            ),
 
             const SizedBox(height: 24),
 
             Expanded(
               child: IndexedStack(
                 index: _currentStep,
-                children: [_personalInfoStep(), _addressStep(), _reviewStep()],
+                children: [
+                  _personalInfoStep(),
+                  _addressStep(),
+                  _reviewStep(),
+                ],
               ),
             ),
 
@@ -105,27 +152,6 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
           ],
         ),
       ),
-    );
-  }
-
-  void _handlePrimaryAction() {
-    if (_currentStep < 2) {
-      _nextStep();
-      return;
-    }
-
-    // STEP 3: SAVE PROFILE
-    _saveProfileAndContinue();
-  }
-
-  void _saveProfileAndContinue() {
-    // TODO: add validation here if needed
-
-    // TODO: persist data (local / firebase / api)
-
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (_) => const WelcomeScreen()),
     );
   }
 
@@ -173,10 +199,16 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
           ),
           const SizedBox(height: 12),
 
-          AppInputField(hintText: 'Middle Name', controller: _middleName),
+          AppInputField(
+            hintText: 'Middle Name',
+            controller: _middleName,
+          ),
           const SizedBox(height: 12),
 
-          AppInputField(hintText: 'Extension Name', controller: _extensionName),
+          AppInputField(
+            hintText: 'Extension Name',
+            controller: _extensionName,
+          ),
           const SizedBox(height: 12),
 
           AppInputField(
@@ -184,7 +216,6 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
             controller: _birthDate,
             isRequired: true,
             leadingIcon: Icons.calendar_today,
-            readOnly: false,
             onTap: () async {
               final pickedDate = await showDatePicker(
                 context: context,
@@ -247,66 +278,41 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Column(
         children: [
-          _reviewField(
-            label: 'First Name',
-            controller: _firstName,
-            onEdit: () => _jumpToStep(0),
-          ),
+          _reviewField('First Name', _firstName, () => _jumpToStep(0)),
+          const SizedBox(height: 12),
+
+          _reviewField('Middle Name', _middleName, () => _jumpToStep(0)),
+          const SizedBox(height: 12),
+
+          _reviewField('Last Name', _lastName, () => _jumpToStep(0)),
+          const SizedBox(height: 12),
+
+          _reviewField('Birthdate', _birthDate, () => _jumpToStep(0)),
           const SizedBox(height: 12),
 
           _reviewField(
-            label: 'Middle Name',
-            controller: _middleName,
-            onEdit: () => _jumpToStep(0),
+            '+63 Contact Number',
+            _contactNumber,
+            () => _jumpToStep(0),
           ),
           const SizedBox(height: 12),
 
-          _reviewField(
-            label: 'Last Name',
-            controller: _lastName,
-            onEdit: () => _jumpToStep(0),
-          ),
-          const SizedBox(height: 12),
-
-          _reviewField(
-            label: 'Birthdate',
-            controller: _birthDate,
-            leadingIcon: Icons.calendar_today,
-            onEdit: () => _jumpToStep(0),
-          ),
-          const SizedBox(height: 12),
-
-          _reviewField(
-            label: '+63 Contact Number',
-            controller: _contactNumber,
-            leadingIcon: Icons.phone,
-            onEdit: () => _jumpToStep(0),
-          ),
-          const SizedBox(height: 12),
-
-          _reviewField(
-            label: 'Address',
-            controller: _addressSummary,
-            onEdit: () => _jumpToStep(1),
-          ),
+          _reviewField('Address', _addressSummary, () => _jumpToStep(1)),
           const SizedBox(height: 32),
         ],
       ),
     );
   }
 
-  // ===== REVIEW FIELD =====
-  Widget _reviewField({
-    required String label,
-    required TextEditingController controller,
-    required VoidCallback onEdit,
-    IconData? leadingIcon,
-  }) {
+  Widget _reviewField(
+    String label,
+    TextEditingController controller,
+    VoidCallback onEdit,
+  ) {
     return AppInputField(
       hintText: label,
       controller: controller,
       readOnly: true,
-      leadingIcon: leadingIcon,
       trailingIcon: Icons.edit,
       onTrailingTap: onEdit,
     );

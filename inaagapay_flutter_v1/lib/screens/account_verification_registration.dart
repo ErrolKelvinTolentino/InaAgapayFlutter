@@ -7,6 +7,7 @@ import '../widgets/validation_message.dart';
 import '../widgets/clickable_text.dart';
 import '../widgets/dialog_box.dart';
 import '../widgets/page_title.dart';
+import '../services/api_service.dart';
 
 class AccountVerificationRegistration extends StatefulWidget {
   const AccountVerificationRegistration({super.key});
@@ -25,11 +26,20 @@ class _AccountVerificationRegistrationState
 
   String _code = '';
   bool _hasError = false;
+  bool _loading = false;
+
+  late final String _email;
 
   @override
   void initState() {
     super.initState();
     _startTimer();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _email = ModalRoute.of(context)!.settings.arguments as String;
   }
 
   void _startTimer() {
@@ -51,38 +61,31 @@ class _AccountVerificationRegistrationState
     return '$minutes:$seconds';
   }
 
-  void _verifyCode() {
-    // ❌ Invalid code
-    if (_code != '123456' && _code != '654321') {
-      setState(() {
-        _hasError = true;
-      });
+  // ✅ WIRED TO auth/verify.php
+  Future<void> _verifyCode() async {
+    if (_loading) return;
+
+    setState(() {
+      _loading = true;
+      _hasError = false;
+    });
+
+    final res = await ApiService.post(
+      'auth/verify.php',
+      {
+        'email': _email,
+        'code': _code,
+      },
+    );
+
+    setState(() => _loading = false);
+
+    if (!res['success']) {
+      setState(() => _hasError = true);
       return;
     }
 
-    // 🧪 Existing account linked
-    if (_code == '654321') {
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (_) => DialogBox(
-          title: 'Account Linked',
-          subtitle: 'You have existing data from a Barangay Health Center',
-          buttonText: 'Continue',
-          type: DialogType.success,
-          onPressed: () {
-            Navigator.pushNamedAndRemoveUntil(
-              context,
-              '/mother-dashboard',
-              (route) => false,
-            );
-          },
-        ),
-      );
-      return;
-    }
-
-    // ✅ New account verified
+    // ✅ SUCCESS DIALOG
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -117,6 +120,10 @@ class _AccountVerificationRegistrationState
         },
       ),
     );
+
+    // NOTE:
+    // You already generate OTP in register.php.
+    // If later you want resend support, we add another endpoint.
   }
 
   @override
@@ -168,7 +175,7 @@ class _AccountVerificationRegistrationState
                 const Padding(
                   padding: EdgeInsets.only(left: 20),
                   child: ValidationMessage(
-                    message: 'Incorrect code. Please try again.',
+                    message: 'Incorrect or expired code. Please try again.',
                     type: ValidationType.error,
                   ),
                 ),
@@ -177,15 +184,19 @@ class _AccountVerificationRegistrationState
               const SizedBox(height: 32),
 
               MainButton(
-                label: 'Verify',
+                label: _loading ? 'Verifying...' : 'Verify',
                 showIcons: false,
-                onPressed: _code.length == 6 ? _verifyCode : null,
+                onPressed:
+                    _code.length == 6 && !_loading ? _verifyCode : null,
               ),
 
               const SizedBox(height: 32),
 
               _secondsRemaining == 0
-                  ? ClickableText(text: 'Resend Code', onTap: _resendCode)
+                  ? ClickableText(
+                      text: 'Resend Code',
+                      onTap: _resendCode,
+                    )
                   : Text(
                       'Resend Code in $_formattedTime',
                       style: const TextStyle(

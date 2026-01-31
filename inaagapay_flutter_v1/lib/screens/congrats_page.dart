@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../widgets/headline.dart';
 import '../widgets/main_button.dart';
-import '../widgets/small_description.dart';
 import '../widgets/info_row.dart';
 import '../screens/due_date_setter.dart';
 

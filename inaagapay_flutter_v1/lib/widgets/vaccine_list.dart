@@ -47,10 +47,6 @@ class _VaccineGroupCard extends StatelessWidget {
       (v) => statuses[v.key] == VaccineStatus.done,
     );
 
-    final bool someDone = group.vaccines.any(
-      (v) => statuses[v.key] == VaccineStatus.done,
-    );
-
     Color headerColor;
     IconData headerIcon;
 

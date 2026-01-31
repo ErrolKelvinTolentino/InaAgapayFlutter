@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:inaagapay_flutter_v1/screens/pregnancy_details.dart';
 import '../theme/app_colors.dart';
 import '../widgets/main_header.dart';
 import '../widgets/main_bottom_navigation.dart';

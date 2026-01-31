@@ -6,7 +6,8 @@ import '../widgets/main_button.dart';
 import '../widgets/calculation_dropdown.dart';
 import '../widgets/aog_input.dart';
 import '../models/due_date_basis.dart';
-import 'congrats_page.dart';
+import '../services/api_service.dart';
+import '../utils/session.dart';
 
 enum DueDateMode { pregnant, supporting }
 
@@ -31,19 +32,11 @@ class _DueDateSetterScreenState extends State<DueDateSetterScreen> {
 
     final pickedDate = await showDatePicker(
       context: context,
-
-      // sensible default
-      initialDate: _basis == DueDateBasis.edd
-          ? now.add(const Duration(days: 1))
-          : now,
-
-      // ✅ LMP → past allowed
-      // ❌ EDD → past NOT allowed
+      initialDate:
+          _basis == DueDateBasis.edd ? now.add(const Duration(days: 1)) : now,
       firstDate: _basis == DueDateBasis.edd ? now : DateTime(1900),
-
-      // ✅ LMP → up to today
-      // ✅ EDD → future allowed
-      lastDate: _basis == DueDateBasis.edd ? DateTime(now.year + 2) : now,
+      lastDate:
+          _basis == DueDateBasis.edd ? DateTime(now.year + 2) : now,
     );
 
     if (pickedDate != null) {
@@ -54,12 +47,46 @@ class _DueDateSetterScreenState extends State<DueDateSetterScreen> {
     }
   }
 
+  // ✅ NEW: SAVE PREGNANCY (LOGIC ONLY)
+  Future<void> _savePregnancy() async {
+    final Map<String, dynamic> payload = {};
+
+    if (_basis == DueDateBasis.lmp && _dateController.text.isNotEmpty) {
+      payload['last_menstrual_period'] = _dateController.text;
+    }
+
+    if (_basis == DueDateBasis.edd && _dateController.text.isNotEmpty) {
+      payload['expected_date_of_delivery'] = _dateController.text;
+    }
+
+    if (_basis == DueDateBasis.aog &&
+        _weeksController.text.isNotEmpty) {
+      payload['age_of_gestation'] =
+          int.tryParse(_weeksController.text) ?? 0;
+    }
+
+    final res = await ApiService.post(
+      'mother/set_pregnancy.php',
+      payload,
+      token: Session.token,
+    );
+
+    if (!res['success']) return;
+    if (!mounted) return;
+
+    Navigator.pushNamed(
+      context,
+      '/congrats',
+      arguments: widget.mode,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isPregnant = widget.mode == DueDateMode.pregnant;
 
     return Scaffold(
-      resizeToAvoidBottomInset: false, // ✅ IMPORTANT
+      resizeToAvoidBottomInset: false,
       backgroundColor: AppColors.bgPrimary,
       body: SafeArea(
         child: Padding(
@@ -114,7 +141,8 @@ class _DueDateSetterScreenState extends State<DueDateSetterScreen> {
               const SizedBox(height: 24),
 
               // ✅ CALENDAR INPUT (LMP & EDD)
-              if (_basis == DueDateBasis.lmp || _basis == DueDateBasis.edd)
+              if (_basis == DueDateBasis.lmp ||
+                  _basis == DueDateBasis.edd)
                 AppInputField(
                   hintText: _basis == DueDateBasis.lmp
                       ? 'First day of last menstrual period'
@@ -124,9 +152,9 @@ class _DueDateSetterScreenState extends State<DueDateSetterScreen> {
                   leadingIcon: Icons.calendar_today,
                   onTap: _pickDateForBasis,
                 ),
+
               if (_basis != DueDateBasis.aog) ...[
                 const SizedBox(height: 12),
-
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
@@ -134,7 +162,6 @@ class _DueDateSetterScreenState extends State<DueDateSetterScreen> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       const Icon(
                         Icons.info_outline,
@@ -144,7 +171,7 @@ class _DueDateSetterScreenState extends State<DueDateSetterScreen> {
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          widget.mode == DueDateMode.pregnant
+                          isPregnant
                               ? 'Not sure of the exact date?\nYour closest estimate works too!'
                               : 'Not sure of the exact date?\nTheir closest estimate works too!',
                           style: const TextStyle(
@@ -168,18 +195,12 @@ class _DueDateSetterScreenState extends State<DueDateSetterScreen> {
 
               const Spacer(),
 
+              // ✅ SAME BUTTON, NOW WIRED
               MainButton(
                 label: isPregnant
                     ? 'Calculate My Due Date'
                     : 'Calculate Their Due Date',
-                onPressed: () {
-                  Navigator.pushNamed(
-                    context,
-                    '/congrats',
-                    arguments:
-                        widget.mode, // DueDateMode.pregnant or supporting
-                  );
-                },
+                onPressed: _savePregnancy,
               ),
             ],
           ),
