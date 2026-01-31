@@ -4,21 +4,14 @@ require_once __DIR__ . '/../auth/auth_check.php';
 
 header('Content-Type: application/json');
 
-// 🔐 ROLE CHECK
 if ($AUTH_USER['account_type'] !== 'mother') {
-    echo json_encode(['success' => false, 'message' => 'Unauthorized']);
+    echo json_encode(['success' => false]);
     exit;
 }
 
-$childId = $_GET['child_id'] ?? null;
-if (!$childId) {
-    echo json_encode(['success' => false, 'message' => 'Child ID required']);
-    exit;
-}
-
+$childId = (int) ($_GET['child_id'] ?? 0);
 $accountId = $AUTH_USER['account_id'];
 
-// 🔍 VERIFY CHILD OWNERSHIP
 $verify = $conn->prepare("
     SELECT c.child_id, bd.birthdate
     FROM children c
@@ -31,16 +24,45 @@ $verify->execute();
 $child = $verify->get_result()->fetch_assoc();
 
 if (!$child) {
-    echo json_encode(['success' => false, 'message' => 'Child not found']);
+    echo json_encode(['success' => false]);
     exit;
 }
 
-// 🧮 AGE IN WEEKS
+if (!$child['birthdate']) {
+    echo json_encode([
+        'success' => true,
+        'child_age_weeks' => 0,
+        'statuses' => [],
+        'next_due' => null
+    ]);
+    exit;
+}
+
 $birthDate = new DateTime($child['birthdate']);
 $now = new DateTime();
-$childAgeWeeks = floor($birthDate->diff($now)->days / 7);
+$childAgeWeeks = (int) floor($birthDate->diff($now)->days / 7);
 
-// 💉 FETCH VACCINES
+/**
+ * 🔑 UI VACCINE KEY MAP
+ * This MUST match VaccineList keys
+ */
+$keyMap = [
+    'BCG_1'     => 'bcg',
+    'OPV_0'     => 'opv0',
+    'OPV_1'     => 'opv1',
+    'OPV_2'     => 'opv2',
+    'OPV_3'     => 'opv3',
+    'PENTA_1'   => 'penta1',
+    'PENTA_2'   => 'penta2',
+    'PENTA_3'   => 'penta3',
+    'PCV_1'     => 'pcv1',
+    'PCV_2'     => 'pcv2',
+    'PCV_3'     => 'pcv3',
+    'ROTA_1'    => 'rota1',
+    'ROTA_2'    => 'rota2',
+    'IPV_1'     => 'ipv',
+];
+
 $vaccineStmt = $conn->query("
     SELECT vaccine_id, vaccine_name, dose_number, recommended_age_months
     FROM vaccines
@@ -63,18 +85,24 @@ $statuses = [];
 $nextDue = null;
 
 while ($v = $vaccineStmt->fetch_assoc()) {
-    $requiredWeeks = $v['recommended_age_months'] * 4.345;
-    $key = strtolower($v['vaccine_name']) . $v['dose_number'];
+    $lookupKey = strtoupper($v['vaccine_name']) . '_' . $v['dose_number'];
+
+    if (!isset($keyMap[$lookupKey])) {
+        continue; // skip vaccines not shown in UI
+    }
+
+    $uiKey = $keyMap[$lookupKey];
+    $requiredWeeks = (int) round($v['recommended_age_months'] * 4.345);
 
     if (in_array($v['vaccine_id'], $taken)) {
-        $statuses[$key] = 'done';
+        $statuses[$uiKey] = 'done';
     } elseif ($childAgeWeeks >= $requiredWeeks) {
-        $statuses[$key] = 'pending';
+        $statuses[$uiKey] = 'pending';
         if (!$nextDue) {
-            $nextDue = $v['vaccine_name'];
+            $nextDue = $v['vaccine_name'] . ' Dose ' . $v['dose_number'];
         }
     } else {
-        $statuses[$key] = 'locked';
+        $statuses[$uiKey] = 'locked';
     }
 }
 

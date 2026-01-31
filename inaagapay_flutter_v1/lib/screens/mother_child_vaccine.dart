@@ -39,6 +39,19 @@ class _MotherChildVaccinePageState extends State<MotherChildVaccinePage> {
     );
   }
 
+  // ✅ SAFE ENUM PARSER (CRITICAL FIX)
+  VaccineStatus _parseStatus(String? value) {
+    switch (value) {
+      case 'done':
+        return VaccineStatus.done;
+      case 'pending':
+        return VaccineStatus.pending;
+      case 'locked':
+      default:
+        return VaccineStatus.locked;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -55,19 +68,24 @@ class _MotherChildVaccinePageState extends State<MotherChildVaccinePage> {
       body: FutureBuilder<Map<String, dynamic>>(
         future: _fetchVaccines(),
         builder: (context, snapshot) {
-          if (!snapshot.hasData) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          final data = snapshot.data!;
-          if (!data['success']) {
-            return const Center(child: Text('Failed to load vaccines'));
+          if (!snapshot.hasData || snapshot.data!['success'] != true) {
+            return const Center(
+              child: Text(
+                'Failed to load vaccination data',
+                style: TextStyle(color: AppColors.textSecondary),
+              ),
+            );
           }
 
-          final statuses = <String, VaccineStatus>{};
-          data['statuses'].forEach((key, value) {
-            statuses[key] = VaccineStatus.values
-                .firstWhere((e) => e.name == value);
+          final data = snapshot.data!;
+          final Map<String, VaccineStatus> statuses = {};
+
+          (data['statuses'] as Map<String, dynamic>).forEach((key, value) {
+            statuses[key] = _parseStatus(value);
           });
 
           return SafeArea(
@@ -117,7 +135,7 @@ class _MotherChildVaccinePageState extends State<MotherChildVaccinePage> {
 
                   VaccineList(
                     statuses: statuses,
-                    childAgeInWeeks: data['child_age_weeks'],
+                    childAgeInWeeks: data['child_age_weeks'] ?? 0,
                   ),
 
                   const SizedBox(height: 20),

@@ -38,6 +38,10 @@ class _MotherChildGrowthPageState extends State<MotherChildGrowthPage> {
     );
   }
 
+  List<double> _toDoubleList(List<dynamic> raw) {
+    return raw.map((e) => (e as num).toDouble()).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -65,6 +69,9 @@ class _MotherChildGrowthPageState extends State<MotherChildGrowthPage> {
 
           final height = data['height'];
           final weight = data['weight'];
+
+          final heightValues = _toDoubleList(height['values']);
+          final weightValues = _toDoubleList(weight['values']);
 
           return Column(
             children: [
@@ -97,25 +104,25 @@ class _MotherChildGrowthPageState extends State<MotherChildGrowthPage> {
                       image: 'height.png',
                       title: 'Height Chart',
                       icon: Icons.height,
-                      values: List<double>.from(height['values']),
+                      values: heightValues,
                       unit: 'cm',
                       start: height['start'],
                       latest: height['latest'],
                       insight:
                           '${widget.childName} grew by ${height['gain']} cm!',
-                      ai: data['ai_insight'],
+                      ai: data['ai']['height'],
                     ),
                     _chartContent(
                       image: 'weight.png',
                       title: 'Weight Chart',
                       icon: Icons.monitor_weight,
-                      values: List<double>.from(weight['values']),
+                      values: weightValues,
                       unit: 'kg',
                       start: weight['start'],
                       latest: weight['latest'],
                       insight:
                           '${widget.childName} gained ${weight['gain']} kg!',
-                      ai: data['ai_insight'],
+                      ai: data['ai']['weight'],
                     ),
                   ],
                 ),
@@ -156,13 +163,14 @@ class _MotherChildGrowthPageState extends State<MotherChildGrowthPage> {
             title: title,
             headerIcon: icon,
             values: values,
-            labels: List.generate(values.length, (i) => 'R${i + 1}'),
+            labels:
+                List.generate(values.length, (i) => 'R${i + 1}'),
             unit: unit,
             lineColor: AppColors.brandPrimary,
             startingLabel: 'Starting',
-            startingValue: '$start $unit',
+            startingValue: start != null ? '$start $unit' : '--',
             latestLabel: 'Latest',
-            latestValue: '$latest $unit',
+            latestValue: latest != null ? '$latest $unit' : '--',
             insightText: insight,
           ),
 
