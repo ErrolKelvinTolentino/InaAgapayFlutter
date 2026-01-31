@@ -35,6 +35,7 @@ class _MidwifeMothersPageState extends State<MidwifeMothersPage> {
 
   void _load() {
     _future = fetchMothers();
+    if (!mounted) return;
     setState(() {});
   }
 
@@ -231,7 +232,9 @@ class _MidwifeMothersPageState extends State<MidwifeMothersPage> {
               builder: (_) => MotherProfilePage(motherId: motherId),
             ),
           );
-          _load();
+          if (mounted) {
+            _load();
+          }
         },
       ),
     );

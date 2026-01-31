@@ -29,7 +29,9 @@ $stmt = $conn->prepare("
         mo.city_municipality,
         mo.province,
         mo.height,
+        mo.weight,
         mo.blood_type,
+        mo.birthdate,
 
         p.pregnancy_id,
         p.pregnancy_risk_level,
@@ -61,7 +63,76 @@ if ($result->num_rows === 0) {
     exit;
 }
 
+$mother = $result->fetch_assoc();
+
+// Medical conditions
+$medStmt = $conn->prepare("SELECT condition_name, diagnosis_date, status, remarks, created_at FROM medical_conditions WHERE mother_id = ? ORDER BY created_at DESC");
+$medStmt->bind_param('i', $motherId);
+$medStmt->execute();
+$medRes = $medStmt->get_result();
+$medicalConditions = $medRes->fetch_all(MYSQLI_ASSOC);
+
+// Allergies
+$allStmt = $conn->prepare("SELECT allergen, diagnosis_date, status, treatment, remarks, created_at FROM allergies WHERE mother_id = ? ORDER BY created_at DESC");
+$allStmt->bind_param('i', $motherId);
+$allStmt->execute();
+$allRes = $allStmt->get_result();
+$allergies = $allRes->fetch_all(MYSQLI_ASSOC);
+
+// Pregnancies (current + past)
+$pregStmt = $conn->prepare("SELECT * FROM pregnancies WHERE mother_id = ? ORDER BY created_at DESC");
+$pregStmt->bind_param('i', $motherId);
+$pregStmt->execute();
+$pregRes = $pregStmt->get_result();
+
+$currentPregnancy = null;
+$pastPregnancies = [];
+
+while ($p = $pregRes->fetch_assoc()) {
+    $pid = (int) $p['pregnancy_id'];
+
+    // Prenatal checkups
+    $chkStmt = $conn->prepare("SELECT * FROM prenatal_checkups WHERE pregnancy_id = ? ORDER BY checkup_date DESC");
+    $chkStmt->bind_param('i', $pid);
+    $chkStmt->execute();
+    $checkups = $chkStmt->get_result()->fetch_all(MYSQLI_ASSOC);
+
+    // Ultrasounds
+    $usStmt = $conn->prepare("SELECT * FROM ultrasounds WHERE pregnancy_id = ? ORDER BY ultrasound_date DESC");
+    $usStmt->bind_param('i', $pid);
+    $usStmt->execute();
+    $ultrasounds = $usStmt->get_result()->fetch_all(MYSQLI_ASSOC);
+
+    // Lab tests
+    $labStmt = $conn->prepare("SELECT * FROM lab_tests WHERE pregnancy_id = ? ORDER BY lab_test_date DESC");
+    $labStmt->bind_param('i', $pid);
+    $labStmt->execute();
+    $labTests = $labStmt->get_result()->fetch_all(MYSQLI_ASSOC);
+
+    // Delivery (if any)
+    $deliveryStmt = $conn->prepare("SELECT * FROM deliveries WHERE pregnancy_id = ? LIMIT 1");
+    $deliveryStmt->bind_param('i', $pid);
+    $deliveryStmt->execute();
+    $delivery = $deliveryStmt->get_result()->fetch_assoc();
+
+    $p['checkups'] = $checkups;
+    $p['ultrasounds'] = $ultrasounds;
+    $p['lab_tests'] = $labTests;
+    $p['delivery'] = $delivery;
+
+    if ($p['status'] === 'ongoing' && $currentPregnancy === null) {
+        $currentPregnancy = $p;
+    } else {
+        $pastPregnancies[] = $p;
+    }
+}
+
+$mother['medical_conditions'] = $medicalConditions;
+$mother['allergies'] = $allergies;
+$mother['current_pregnancy'] = $currentPregnancy;
+$mother['past_pregnancies'] = $pastPregnancies;
+
 echo json_encode([
     'success' => true,
-    'mother' => $result->fetch_assoc()
+    'mother' => $mother
 ]);

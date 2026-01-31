@@ -187,7 +187,8 @@ try {
 
     // Midwife context
     $ctx = $conn->prepare("SELECT m.midwife_id, m.assigned_bhc_id, b.bhc_name FROM midwives m JOIN bhc b ON b.bhc_id = m.assigned_bhc_id WHERE m.account_id = ? LIMIT 1");
-    $ctx->bind_param('i', $AUTH_USER['account_id']);
+    $authAccountId = $AUTH_USER['account_id'];
+    $ctx->bind_param('i', $authAccountId);
     $ctx->execute();
     $ctxRes = $ctx->get_result()->fetch_assoc();
     expect($ctxRes !== null, 'Midwife context not found');
@@ -209,14 +210,19 @@ try {
 
     // Account
     $acct = $conn->prepare("INSERT INTO accounts (email_address, account_type, first_name, middle_name, last_name, extension_name, phone_number, is_verified) VALUES (?, 'mother', ?, ?, ?, ?, ?, 1)");
+    $accFirst = $acc['first_name'] ?? null;
+    $accMiddle = $acc['middle_name'] ?? null;
+    $accLast = $acc['last_name'] ?? null;
+    $accExt = $acc['extension_name'] ?? null;
+    $accPhone = $acc['phone_number'] ?? null;
     $acct->bind_param(
         'ssssss',
         $email,
-        $acc['first_name'],
-        $acc['middle_name'],
-        $acc['last_name'],
-        $acc['extension_name'],
-        $acc['phone_number']
+        $accFirst,
+        $accMiddle,
+        $accLast,
+        $accExt,
+        $accPhone
     );
     $acct->execute();
     $accountId = $conn->insert_id;
@@ -259,21 +265,33 @@ try {
             if (empty($ec['first_name']) || empty($ec['last_name']) || empty($ec['phone_number'])) {
                 continue;
             }
+            $ecFirst = $ec['first_name'] ?? null;
+            $ecMiddle = $ec['middle_name'] ?? null;
+            $ecLast = $ec['last_name'] ?? null;
+            $ecExt = $ec['extension_name'] ?? null;
+            $ecPhone = $ec['phone_number'] ?? null;
+            $ecEmail = $ec['email_address'] ?? null;
+            $ecAff = $ec['affiliation'] ?? null;
+            $ecHouse = $ec['house_number'] ?? null;
+            $ecStreet = $ec['street'] ?? null;
+            $ecBarangay = $ec['barangay'] ?? null;
+            $ecCity = $ec['city_municipality'] ?? null;
+            $ecProvince = $ec['province'] ?? null;
             $ecStmt->bind_param(
                 'issssssssssss',
                 $motherId,
-                $ec['first_name'],
-                $ec['middle_name'],
-                $ec['last_name'],
-                $ec['extension_name'],
-                $ec['phone_number'],
-                $ec['email_address'],
-                $ec['affiliation'],
-                $ec['house_number'],
-                $ec['street'],
-                $ec['barangay'],
-                $ec['city_municipality'],
-                $ec['province']
+                $ecFirst,
+                $ecMiddle,
+                $ecLast,
+                $ecExt,
+                $ecPhone,
+                $ecEmail,
+                $ecAff,
+                $ecHouse,
+                $ecStreet,
+                $ecBarangay,
+                $ecCity,
+                $ecProvince
             );
             $ecStmt->execute();
         }
@@ -282,15 +300,23 @@ try {
     // Medical conditions
     if (!empty($input['medical_conditions'])) {
         $medStmt = $conn->prepare("INSERT INTO medical_conditions (mother_id, condition_name, diagnosis_date, status, remarks) VALUES (?, ?, ?, ?, ?)");
+        $condName = null;
+        $diagDate = null;
+        $condStatus = null;
+        $condRemarks = null;
+        $medStmt->bind_param(
+            'issss',
+            $motherId,
+            $condName,
+            $diagDate,
+            $condStatus,
+            $condRemarks
+        );
         foreach ($input['medical_conditions'] as $m) {
-            $medStmt->bind_param(
-                'issss',
-                $motherId,
-                $m['condition_name'],
-                fmtDate($m['diagnosis_date'] ?? null),
-                $m['status'] ?? 'active',
-                $m['remarks'] ?? null
-            );
+            $condName = $m['condition_name'] ?? null;
+            $diagDate = fmtDate($m['diagnosis_date'] ?? null);
+            $condStatus = $m['status'] ?? 'active';
+            $condRemarks = $m['remarks'] ?? null;
             $medStmt->execute();
         }
     }
@@ -298,16 +324,26 @@ try {
     // Allergies
     if (!empty($input['allergies'])) {
         $allergyStmt = $conn->prepare("INSERT INTO allergies (mother_id, allergen, diagnosis_date, status, treatment, remarks) VALUES (?, ?, ?, ?, ?, ?)");
+        $allergen = null;
+        $diagDate = null;
+        $allergyStatus = null;
+        $treatment = null;
+        $remarks = null;
+        $allergyStmt->bind_param(
+            'isssss',
+            $motherId,
+            $allergen,
+            $diagDate,
+            $allergyStatus,
+            $treatment,
+            $remarks
+        );
         foreach ($input['allergies'] as $a) {
-            $allergyStmt->bind_param(
-                'isssss',
-                $motherId,
-                $a['allergen'],
-                fmtDate($a['diagnosis_date'] ?? null),
-                $a['status'] ?? 'active',
-                $a['treatment'] ?? null,
-                $a['remarks'] ?? null
-            );
+            $allergen = $a['allergen'] ?? null;
+            $diagDate = fmtDate($a['diagnosis_date'] ?? null);
+            $allergyStatus = $a['status'] ?? 'active';
+            $treatment = $a['treatment'] ?? null;
+            $remarks = $a['remarks'] ?? null;
             $allergyStmt->execute();
         }
     }
@@ -397,7 +433,7 @@ try {
 
         $prenatalStmt = $conn->prepare("INSERT INTO prenatal_checkups (pregnancy_id, midwife_id, age_of_gestation, checkup_weight, blood_pressure_systolic, blood_pressure_diastolic, fetal_position, fetal_heart_beat, fetal_heart_tone, td_vaccine_dose, edema, remarks, checkup_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
         $prenatalStmt->bind_param(
-            'iiddiisissssss',
+            'iiddiisisssss',
             $pregnancyId,
             $midwifeId,
             $ageOfGestation,
@@ -449,7 +485,7 @@ try {
                     continue;
                 $givenName = $g['given_medication_name'];
                 $givenQty = $g['quantity'];
-                $givenDate = fmtDate($g['date_given'] ?? null);
+                $givenDate = fmtDate($g['date_given'] ?? date('Y-m-d'));
                 $givenStmt->bind_param(
                     'isis',
                     $motherId,

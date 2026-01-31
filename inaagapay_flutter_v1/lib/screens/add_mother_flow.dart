@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -43,7 +44,6 @@ class _AddMotherFlowState extends State<AddMotherFlow> {
 
   final TextEditingController _height = TextEditingController();
   final TextEditingController _weight = TextEditingController();
-  final TextEditingController _bloodType = TextEditingController();
 
   final TextEditingController _birthDateCtrl = TextEditingController();
 
@@ -55,6 +55,10 @@ class _AddMotherFlowState extends State<AddMotherFlow> {
   GestationMethod _gestationMethod = GestationMethod.lmp;
   String? _emailError;
   String? _phoneError;
+  Timer? _emailCheckTimer;
+  String? _lastEmailChecked;
+  bool _emailChecking = false;
+  bool _emailExists = false;
 
   int step = 0;
   static const int totalSteps = 9; // mother-only steps
@@ -89,12 +93,12 @@ class _AddMotherFlowState extends State<AddMotherFlow> {
     _province.dispose();
     _height.dispose();
     _weight.dispose();
-    _bloodType.dispose();
     _birthDateCtrl.dispose();
     _gestationLmp.dispose();
     _gestationEdd.dispose();
     _aogWeeks.dispose();
     _aogDays.dispose();
+    _emailCheckTimer?.cancel();
     super.dispose();
   }
 
@@ -192,11 +196,66 @@ class _AddMotherFlowState extends State<AddMotherFlow> {
     final value = v.trim();
     form.email = value.isEmpty ? null : value;
     if (value.isEmpty) {
+      _emailCheckTimer?.cancel();
+      _lastEmailChecked = null;
+      _emailChecking = false;
+      _emailExists = false;
       setState(() => _emailError = null);
       return;
     }
     final isValid = RegExp(r"^[^\s@]+@[^\s@]+\.[^\s@]+").hasMatch(value);
     setState(() => _emailError = isValid ? null : 'Enter a valid email');
+    if (!isValid) {
+      _emailCheckTimer?.cancel();
+      _lastEmailChecked = null;
+      _emailChecking = false;
+      _emailExists = false;
+      return;
+    }
+
+    _emailCheckTimer?.cancel();
+    _emailChecking = true;
+    _emailExists = false;
+    _emailCheckTimer = Timer(const Duration(milliseconds: 500), () {
+      _checkEmailExists(value);
+    });
+  }
+
+  Future<void> _checkEmailExists(String email) async {
+    try {
+      _lastEmailChecked = email;
+      final token = await AuthStorage.getToken();
+      if (token == null) return;
+
+      final encodedEmail = Uri.encodeComponent(email);
+      final res = await http.get(
+        Uri.parse(
+          'https://inaagapay.alwaysdata.net/api/midwife/check_email.php?email=$encodedEmail',
+        ),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Accept': 'application/json',
+        },
+      );
+
+      final decoded = jsonDecode(res.body);
+      if (_lastEmailChecked != email) return;
+
+      if (decoded['success'] == true) {
+        final available = decoded['available'] == true;
+        setState(() {
+          _emailChecking = false;
+          _emailExists = !available;
+          _emailError = available ? null : 'Email already exists';
+        });
+      }
+    } catch (_) {
+      if (_lastEmailChecked != email) return;
+      setState(() {
+        _emailChecking = false;
+        _emailError = 'Unable to verify email';
+      });
+    }
   }
 
   void _onPhoneChanged(String v) {
@@ -237,8 +296,14 @@ class _AddMotherFlowState extends State<AddMotherFlow> {
         } else if (_phoneError != null) {
           issues.add('Phone Number (invalid)');
         }
-        if (_email.text.trim().isNotEmpty && _emailError != null) {
-          issues.add('Email (invalid)');
+        if (_email.text.trim().isNotEmpty) {
+          if (_emailChecking) {
+            issues.add('Email (checking)');
+          } else if (_emailExists) {
+            issues.add('Email (already exists)');
+          } else if (_emailError != null) {
+            issues.add('Email (invalid)');
+          }
         }
         if (issues.isNotEmpty) {
           message = 'Please fix: ${issues.join(', ')}.';
@@ -549,6 +614,27 @@ class _AddMotherFlowState extends State<AddMotherFlow> {
           onChanged: _onEmailChanged,
           errorText: _emailError,
         ),
+        if (_emailChecking)
+          Padding(
+            padding: const EdgeInsets.only(left: 16, top: 8),
+            child: Row(
+              children: const [
+                SizedBox(
+                  width: 14,
+                  height: 14,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+                SizedBox(width: 8),
+                Text(
+                  'Checking email...',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
         const SizedBox(height: 20),
         _scaffoldControls(),
       ],
@@ -897,7 +983,9 @@ class _AddMotherFlowState extends State<AddMotherFlow> {
             final p = entry.value;
             return Card(
               child: ListTile(
-                title: Text('${p.outcome} on ${dateFmt.format(p.outcomeDate)}'),
+                title: Text(
+                  '${_outcomeLabel(p.outcome)} on ${dateFmt.format(p.outcomeDate)}',
+                ),
                 subtitle: Text(
                   [
                     p.placeOfDelivery,
@@ -926,6 +1014,23 @@ class _AddMotherFlowState extends State<AddMotherFlow> {
         _scaffoldControls(),
       ],
     );
+  }
+
+  String _outcomeLabel(String outcome) {
+    switch (outcome) {
+      case 'live_birth':
+        return 'Live Birth';
+      case 'stillbirth':
+        return 'Stillbirth';
+      case 'miscarriage':
+        return 'Miscarriage';
+      case 'abortion':
+        return 'Abortion';
+      case 'ectopic':
+        return 'Ectopic';
+      default:
+        return outcome;
+    }
   }
 
   Widget _gestationalInfo() {
@@ -1339,7 +1444,7 @@ class _AddMotherFlowState extends State<AddMotherFlow> {
           return AlertDialog(
             title: Row(
               children: [
-                const Text('Add Medical Condition'),
+                const Text('Medical Condition'),
                 const Spacer(),
                 IconButton(
                   icon: const Icon(Icons.close),
@@ -1551,8 +1656,12 @@ class _AddMotherFlowState extends State<AddMotherFlow> {
           return AlertDialog(
             title: Row(
               children: [
-                const Text('Add Past Pregnancy'),
-                const Spacer(),
+                const Expanded(
+                  child: Text(
+                    'Add Past Pregnancy',
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
                 IconButton(
                   icon: const Icon(Icons.close),
                   onPressed: () => Navigator.pop(context, false),
@@ -1635,23 +1744,36 @@ class _AddMotherFlowState extends State<AddMotherFlow> {
                     ),
                     DropdownButtonFormField<String>(
                       value: deliveryMethod,
+                      isExpanded: true,
                       decoration: const InputDecoration(
                         labelText: 'Delivery method *',
                       ),
                       items: const [
                         DropdownMenuItem(
                           value: 'Normal Spontaneous Vaginal Delivery',
-                          child: Text('Normal Spontaneous Vaginal Delivery'),
+                          child: Text(
+                            'Normal Spontaneous Vaginal Delivery',
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                         DropdownMenuItem(
                           value: 'Cesarean Section',
-                          child: Text('Cesarean Section'),
+                          child: Text(
+                            'Cesarean Section',
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                         DropdownMenuItem(
                           value: 'Assisted Vaginal Delivery',
-                          child: Text('Assisted Vaginal Delivery'),
+                          child: Text(
+                            'Assisted Vaginal Delivery',
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
-                        DropdownMenuItem(value: 'Other', child: Text('Other')),
+                        DropdownMenuItem(
+                          value: 'Other',
+                          child: Text('Other', overflow: TextOverflow.ellipsis),
+                        ),
                       ],
                       onChanged: (v) => setModalState(() {
                         deliveryMethod = v;

@@ -47,7 +47,8 @@ try {
 
     // midwife context
     $ctx = $conn->prepare("SELECT m.midwife_id, m.assigned_bhc_id FROM midwives m WHERE m.account_id = ? LIMIT 1");
-    $ctx->bind_param('i', $AUTH_USER['account_id']);
+    $authAccountId = $AUTH_USER['account_id'];
+    $ctx->bind_param('i', $authAccountId);
     $ctx->execute();
     $ctxRes = $ctx->get_result()->fetch_assoc();
     expect($ctxRes !== null, 'Midwife context not found');
@@ -84,7 +85,7 @@ try {
 
     $prenatalStmt = $conn->prepare("INSERT INTO prenatal_checkups (pregnancy_id, midwife_id, age_of_gestation, checkup_weight, blood_pressure_systolic, blood_pressure_diastolic, fetal_position, fetal_heart_beat, fetal_heart_tone, td_vaccine_dose, edema, remarks, checkup_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
     $prenatalStmt->bind_param(
-        'iiddiisissssss',
+        'iiddiisisssss',
         $pregnancyId,
         $midwifeId,
         $ageOfGestation,
@@ -105,6 +106,22 @@ try {
     // medication plans
     if (!empty($first['mother_medications'])) {
         $medPlanStmt = $conn->prepare("INSERT INTO mother_medications (mother_id, mother_medication_name, frequency, quantity, start_date, end_date, status) VALUES (?, ?, ?, ?, ?, ?, ?)");
+        $medName = null;
+        $medFreq = null;
+        $medQty = null;
+        $medStart = null;
+        $medEnd = null;
+        $medStatus = null;
+        $medPlanStmt->bind_param(
+            'ississs',
+            $motherId,
+            $medName,
+            $medFreq,
+            $medQty,
+            $medStart,
+            $medEnd,
+            $medStatus
+        );
         foreach ($first['mother_medications'] as $m) {
             if (empty($m['mother_medication_name'])) {
                 continue;
@@ -115,17 +132,6 @@ try {
             $medStart = fmtDate($m['start_date'] ?? null);
             $medEnd = fmtDate($m['end_date'] ?? null);
             $medStatus = $m['status'] ?? 'active';
-
-            $medPlanStmt->bind_param(
-                'ississs',
-                $motherId,
-                $medName,
-                $medFreq,
-                $medQty,
-                $medStart,
-                $medEnd,
-                $medStatus
-            );
             $medPlanStmt->execute();
         }
     }
@@ -133,21 +139,23 @@ try {
     // given medications
     if (!empty($first['given_medications'])) {
         $givenStmt = $conn->prepare("INSERT INTO given_medications (mother_id, given_medication_name, quantity, date_given) VALUES (?, ?, ?, ?)");
+        $givenName = null;
+        $givenQty = null;
+        $givenDate = null;
+        $givenStmt->bind_param(
+            'isis',
+            $motherId,
+            $givenName,
+            $givenQty,
+            $givenDate
+        );
         foreach ($first['given_medications'] as $g) {
             if (empty($g['given_medication_name']) || empty($g['quantity'])) {
                 continue;
             }
             $givenName = $g['given_medication_name'];
             $givenQty = $g['quantity'];
-            $givenDate = fmtDate($g['date_given'] ?? null);
-
-            $givenStmt->bind_param(
-                'isis',
-                $motherId,
-                $givenName,
-                $givenQty,
-                $givenDate
-            );
+            $givenDate = fmtDate($g['date_given'] ?? date('Y-m-d'));
             $givenStmt->execute();
         }
     }

@@ -64,8 +64,7 @@ class _AppInputFieldState extends State<AppInputField> {
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
       child: Focus(
-        onFocusChange: (focused) =>
-            setState(() => _isFocused = focused),
+        onFocusChange: (focused) => setState(() => _isFocused = focused),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -75,10 +74,7 @@ class _AppInputFieldState extends State<AppInputField> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(28),
-                border: Border.all(
-                  color: borderColor(),
-                  width: 1.5,
-                ),
+                border: Border.all(color: borderColor(), width: 1.5),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.06),
@@ -92,13 +88,10 @@ class _AppInputFieldState extends State<AppInputField> {
                   if (widget.leadingIcon != null)
                     Icon(
                       widget.leadingIcon,
-                      color: hasError
-                          ? AppColors.error
-                          : AppColors.brandAccent,
+                      color: hasError ? AppColors.error : AppColors.brandAccent,
                     ),
 
-                  if (widget.leadingIcon != null)
-                    const SizedBox(width: 12),
+                  if (widget.leadingIcon != null) const SizedBox(width: 12),
 
                   Expanded(
                     child: TextField(
@@ -108,8 +101,7 @@ class _AppInputFieldState extends State<AppInputField> {
                       readOnly: widget.readOnly,
 
                       // 🔒 Prevent taps when read-only
-                      onTap:
-                          widget.readOnly ? null : widget.onTap,
+                      onTap: widget.onTap,
 
                       // 🔑 Needed for validation
                       onChanged: widget.onChanged,
@@ -121,35 +113,33 @@ class _AppInputFieldState extends State<AppInputField> {
                         fontSize: 16,
                       ),
                       decoration: InputDecoration(
-  border: InputBorder.none,
-  floatingLabelBehavior: widget.controller.text.isNotEmpty
-      ? FloatingLabelBehavior.always
-      : FloatingLabelBehavior.auto,
-  label: RichText(
-    text: TextSpan(
-      text: widget.hintText,
-      style: TextStyle(
-        color: hasError
-            ? AppColors.error.withOpacity(0.7)
-            : AppColors.textSecondary,
-        fontSize: 14,
-      ),
-      children: widget.isRequired
-          ? const [
-              TextSpan(
-                text: ' *',
-                style: TextStyle(
-                  color: AppColors.error,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ]
-          : [],
-    ),
-  ),
-),
-
-
+                        border: InputBorder.none,
+                        floatingLabelBehavior: widget.controller.text.isNotEmpty
+                            ? FloatingLabelBehavior.always
+                            : FloatingLabelBehavior.auto,
+                        label: RichText(
+                          text: TextSpan(
+                            text: widget.hintText,
+                            style: TextStyle(
+                              color: hasError
+                                  ? AppColors.error.withOpacity(0.7)
+                                  : AppColors.textSecondary,
+                              fontSize: 14,
+                            ),
+                            children: widget.isRequired
+                                ? const [
+                                    TextSpan(
+                                      text: ' *',
+                                      style: TextStyle(
+                                        color: AppColors.error,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ]
+                                : [],
+                          ),
+                        ),
+                      ),
                     ),
                   ),
 
@@ -169,14 +159,10 @@ class _AppInputFieldState extends State<AppInputField> {
 
             if (hasError)
               Padding(
-                padding:
-                    const EdgeInsets.only(left: 16, top: 6),
+                padding: const EdgeInsets.only(left: 16, top: 6),
                 child: Text(
                   widget.errorText!,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: AppColors.error,
-                  ),
+                  style: const TextStyle(fontSize: 12, color: AppColors.error),
                 ),
               ),
           ],
