@@ -22,15 +22,18 @@ class MidwifeBottomNavigation extends StatelessWidget {
         break;
 
       case 1:
-        
+        // TODO: Patients page
         break;
 
       case 2:
-        
+        Navigator.pushReplacementNamed(
+          context,
+          '/midwife-children',
+        );
         break;
 
       case 3:
-        
+        // TODO: Schedules page
         break;
     }
   }

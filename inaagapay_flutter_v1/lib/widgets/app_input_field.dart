@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // ✅ REQUIRED
 import '../theme/app_colors.dart';
 
 class AppInputField extends StatefulWidget {
@@ -22,6 +23,9 @@ class AppInputField extends StatefulWidget {
   final TextInputType keyboardType;
   final bool readOnly;
 
+  /// ✅ NEW (OPTIONAL, NON-BREAKING)
+  final List<TextInputFormatter>? inputFormatters;
+
   /// Error
   final String? errorText;
 
@@ -38,6 +42,7 @@ class AppInputField extends StatefulWidget {
     this.obscureText = false,
     this.keyboardType = TextInputType.text,
     this.readOnly = false,
+    this.inputFormatters, // ✅ added
     this.errorText,
   });
 
@@ -107,6 +112,9 @@ class _AppInputFieldState extends State<AppInputField> {
                       keyboardType: widget.keyboardType,
                       readOnly: widget.readOnly,
 
+                      // ✅ NEW (SAFE)
+                      inputFormatters: widget.inputFormatters,
+
                       // 🔒 Prevent taps when read-only
                       onTap:
                           widget.readOnly ? null : widget.onTap,
@@ -121,35 +129,34 @@ class _AppInputFieldState extends State<AppInputField> {
                         fontSize: 16,
                       ),
                       decoration: InputDecoration(
-  border: InputBorder.none,
-  floatingLabelBehavior: widget.controller.text.isNotEmpty
-      ? FloatingLabelBehavior.always
-      : FloatingLabelBehavior.auto,
-  label: RichText(
-    text: TextSpan(
-      text: widget.hintText,
-      style: TextStyle(
-        color: hasError
-            ? AppColors.error.withOpacity(0.7)
-            : AppColors.textSecondary,
-        fontSize: 14,
-      ),
-      children: widget.isRequired
-          ? const [
-              TextSpan(
-                text: ' *',
-                style: TextStyle(
-                  color: AppColors.error,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ]
-          : [],
-    ),
-  ),
-),
-
-
+                        border: InputBorder.none,
+                        floatingLabelBehavior:
+                            widget.controller.text.isNotEmpty
+                                ? FloatingLabelBehavior.always
+                                : FloatingLabelBehavior.auto,
+                        label: RichText(
+                          text: TextSpan(
+                            text: widget.hintText,
+                            style: TextStyle(
+                              color: hasError
+                                  ? AppColors.error.withOpacity(0.7)
+                                  : AppColors.textSecondary,
+                              fontSize: 14,
+                            ),
+                            children: widget.isRequired
+                                ? const [
+                                    TextSpan(
+                                      text: ' *',
+                                      style: TextStyle(
+                                        color: AppColors.error,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ]
+                                : [],
+                          ),
+                        ),
+                      ),
                     ),
                   ),
 

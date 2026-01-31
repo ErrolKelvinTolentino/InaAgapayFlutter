@@ -5,6 +5,12 @@ import 'screens/mother_registration.dart';
 import 'screens/account_verification_registration.dart';
 import 'screens/mother_dashboard.dart';
 import 'screens/midwife_dashboard.dart';
+import 'screens/midwife_children_page.dart';
+import 'screens/midwife_child_overview.dart';
+import 'screens/midwife_child_growth.dart';
+import 'screens/midwife_child_vaccine.dart';
+import 'screens/midwife_add_child_growth.dart';
+import 'screens/midwife_add_immunization.dart';
 import 'screens/admin_dashboard.dart';
 import 'screens/forgot_password.dart';
 import 'screens/forgot_password_verification.dart';
@@ -56,6 +62,12 @@ class MyApp extends StatelessWidget {
         '/mother-lab-stack': (context) => MotherLabStack(),
         '/mother-pregnancy': (context) => PregnancyDetailsPage(),
         '/midwife-dashboard': (context) => const MidwifeDashboard(),
+        '/midwife-children': (context) => const MidwifeChildrenPage(),
+        '/midwife-child-overview': (context) => const MidwifeChildOverviewPage(),
+        '/midwife-child-growth': (context) => const MidwifeChildGrowthPage(),
+        '/midwife-child-vaccine': (context) => const MidwifeChildVaccinePage(),
+        '/midwife-add-child-growth': (context) => const MidwifeAddChildGrowthPage(),
+        '/midwife-add-immunization': (context) => const MidwifeAddImmunizationPage(),
         '/admin-dashboard': (context) => const AdminDashboard(),
         '/forgot-password': (context) => const ForgotPasswordScreen(),
         '/forgot-password-verify': (context) =>
