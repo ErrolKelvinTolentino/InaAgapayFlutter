@@ -8,13 +8,7 @@ $error = '';
 if (isset($_SESSION['account_id'])) {
     switch ($_SESSION['account_type']) {
         case 'admin':
-            header('Location: /admin/admin_landing.php');
-            break;
-        case 'mother':
-            header('Location: /mother/mother_landing.php');
-            break;
-        case 'midwife':
-            header('Location: /midwife/midwife_landing.php');
+            header('Location: /admin/dashboard.php');
             break;
     }
     exit;
@@ -25,9 +19,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $password = $_POST['password'] ?? '';
 
     $stmt = $conn->prepare("
-        SELECT account_id, full_name, password_hash, account_type, is_verified, status
+        SELECT account_id, first_name, middle_name, last_name, extension_name, password_hash, account_type, is_verified, status
         FROM accounts
-        WHERE email_address = ?
+        WHERE email_address = ? AND account_type = 'admin'
         LIMIT 1
     ");
     $stmt->bind_param('s', $email);
@@ -44,25 +38,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ) {
             session_regenerate_id(true);
 
+            $fullName = trim(($u['first_name'] ?? '') . ' ' . ($u['middle_name'] ?? '') . ' ' . ($u['last_name'] ?? ''));
+            if (!empty($u['extension_name'])) {
+                $fullName .= ' ' . $u['extension_name'];
+            }
+
             $_SESSION['account_id'] = $u['account_id'];
             $_SESSION['account_type'] = $u['account_type'];
-            $_SESSION['user_name'] = $u['full_name'];
+            $_SESSION['user_name'] = $fullName ?: 'User';
 
             $upd = $conn->prepare("UPDATE accounts SET last_login_at = NOW() WHERE account_id = ?");
             $upd->bind_param('i', $u['account_id']);
             $upd->execute();
 
-            switch ($u['account_type']) {
-                case 'admin':
-                    header('Location: /admin/admin_landing.php');
-                    break;
-                case 'mother':
-                    header('Location: /mother/mother_landing.php');
-                    break;
-                case 'midwife':
-                    header('Location: /midwife/midwife_landing.php');
-                    break;
-            }
+            header('Location: /admin/dashboard.php');
             exit;
         }
     }
@@ -76,25 +65,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 <head>
     <meta charset="UTF-8">
-    <title>Login | InaAgapay</title>
-    <link rel="stylesheet" href="/styles/login.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login | InaAgapay</title>
+    <link rel="stylesheet" href="/admin/styles/login.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 
-<body class="login-page">
-
-    <form method="POST" class="login-card">
-        <h2>Login</h2>
+<body>
+    <form method="POST" class="login-card" autocomplete="off">
+        <h2>Admin Portal</h2>
+        <p class="subtext">Sign in with your admin credentials.</p>
 
         <?php if ($error): ?>
             <p class="error"><?= htmlspecialchars($error) ?></p>
         <?php endif; ?>
 
-        <input type="email" name="email" placeholder="Email" required>
-        <input type="password" name="password" placeholder="Password" required>
+        <label for="email">Admin Email</label>
+        <input type="email" id="email" name="email" placeholder="admin@inaagapay.ph" required>
 
-        <button type="submit">Login</button>
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" placeholder="••••••••" required>
+
+        <button type="submit">Sign In</button>
+        <p class="footer-hint">For authorized admins only. Contact system support if you need access.</p>
     </form>
-
 </body>
 
 </html>

@@ -1,31 +1,50 @@
 <?php
 session_start();
 // Redirect to login if not logged in or not admin
-if (!isset($_SESSION['admin_id']) || $_SESSION['account_type'] !== 'admin') {
+if (!isset($_SESSION['account_id']) || ($_SESSION['account_type'] ?? '') !== 'admin') {
     header('Location: login.php');
     exit();
 }
-include 'header_navbar.php';
 require_once __DIR__ . '/../api/db.php';
 
-// Fetch quick statistics
+// Fetch quick statistics using MySQLi
 $stats = [];
 
-// Total mothers
-$stmt = $conn->query("SELECT COUNT(*) FROM accounts WHERE account_type = 'mother' AND status = 'active'");
-$stats['mothers'] = $stmt->fetchColumn();
+function fetch_single_count($conn, $sql)
+{
+    $res = $conn->query($sql);
+    if ($res && ($row = $res->fetch_row())) {
+        return (int) $row[0];
+    }
+    return 0;
+}
 
-// Total midwives
-$stmt = $conn->query("SELECT COUNT(*) FROM accounts WHERE account_type = 'midwife' AND status = 'active'");
-$stats['midwives'] = $stmt->fetchColumn();
+$stats['mothers'] = fetch_single_count($conn, "SELECT COUNT(*) FROM accounts WHERE account_type = 'mother' AND status = 'active'");
+$stats['midwives'] = fetch_single_count($conn, "SELECT COUNT(*) FROM accounts WHERE account_type = 'midwife' AND status = 'active'");
+$stats['pregnancies'] = fetch_single_count($conn, "SELECT COUNT(*) FROM pregnancies");
+$stats['children'] = fetch_single_count($conn, "SELECT COUNT(*) FROM children");
 
-// Total pregnancies
-$stmt = $conn->query("SELECT COUNT(*) FROM pregnancies");
-$stats['pregnancies'] = $stmt->fetchColumn();
+// Risk distribution for pregnancies
+$riskData = [];
+if ($res = $conn->query("SELECT pregnancy_risk_level, COUNT(*) AS c FROM pregnancies GROUP BY pregnancy_risk_level")) {
+    while ($row = $res->fetch_assoc()) {
+        $riskData[$row['pregnancy_risk_level'] ?? 'unknown'] = (int) $row['c'];
+    }
+}
 
-// Total children
-$stmt = $conn->query("SELECT COUNT(*) FROM children");
-$stats['children'] = $stmt->fetchColumn();
+// Midwives per BHC
+$bhcMidwives = [];
+$bhcRes = $conn->query("SELECT b.bhc_name, COUNT(m.midwife_id) AS c FROM bhc b LEFT JOIN midwives m ON b.bhc_id = m.assigned_bhc_id GROUP BY b.bhc_id ORDER BY b.bhc_name");
+while ($row = $bhcRes->fetch_assoc()) {
+    $bhcMidwives[] = $row;
+}
+
+// Pregnancies created per month (last 6 months)
+$monthly = [];
+$monthlyRes = $conn->query("SELECT DATE_FORMAT(created_at, '%Y-%m') AS ym, COUNT(*) AS c FROM pregnancies WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH) GROUP BY ym ORDER BY ym");
+while ($row = $monthlyRes->fetch_assoc()) {
+    $monthly[] = $row;
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -36,6 +55,9 @@ $stats['children'] = $stmt->fetchColumn();
     <title>Admin Dashboard - InaAgapay</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../styles/header_navbar.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
         rel="stylesheet">
     <style>
@@ -49,12 +71,20 @@ $stats['children'] = $stmt->fetchColumn();
             --info-color: #dcedc1;
             --warning-color: #ffd3b6;
             --danger-color: #ffaaa5;
+            --border: #f0c6d8;
         }
 
         body {
             font-family: 'Poppins', sans-serif;
-            background-color: var(--light-bg);
+            background: radial-gradient(circle at 20% 20%, #ffeef6, #ffffff 35%),
+                radial-gradient(circle at 80% 0%, #fff5fb, #ffffff 40%);
             color: #4a2a36;
+        }
+
+        main.main-content {
+            min-height: calc(100vh - var(--nav-height));
+            padding: 24px;
+            padding-top: calc(var(--nav-height) + 16px);
         }
 
         .welcome-banner {
@@ -284,71 +314,97 @@ $stats['children'] = $stmt->fetchColumn();
 </head>
 
 <body>
-    <div class="container py-4">
-        <div class="welcome-banner">
-            <div class="row align-items-center">
-                <div class="col-md-8">
-                    <h1 class="welcome-title">
-                        <i class="fas fa-user-shield"></i>
-                        Welcome, <?php echo htmlspecialchars($_SESSION['user_name']); ?>!
-                    </h1>
-                    <p class="text-white mb-0" style="opacity: 0.9; text-shadow: 1px 1px 2px rgba(0,0,0,0.2);">Manage
-                        and monitor the InaAgapay system efficiently.</p>
+    <?php include __DIR__ . '/header_navbar.php'; ?>
+    <main class="main-content" id="mainContent">
+        <div class="container py-4">
+            <div class="welcome-banner">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h1 class="welcome-title">
+                            <i class="fas fa-user-shield"></i>
+                            Welcome, <?php echo htmlspecialchars($_SESSION['user_name']); ?>!
+                        </h1>
+                        <p class="text-white mb-0" style="opacity: 0.9; text-shadow: 1px 1px 2px rgba(0,0,0,0.2);">
+                            Manage
+                            and monitor the InaAgapay system efficiently.</p>
 
-                    <div class="admin-stats">
-                        <div class="stat-badge">
-                            <i class="fas fa-female"></i>
-                            <span><?php echo number_format($stats['mothers']); ?> Mothers</span>
-                        </div>
-                        <div class="stat-badge">
-                            <i class="fas fa-user-nurse"></i>
-                            <span><?php echo number_format($stats['midwives']); ?> Midwives</span>
-                        </div>
-                        <div class="stat-badge">
-                            <i class="fas fa-baby-carriage"></i>
-                            <span><?php echo number_format($stats['pregnancies']); ?> Pregnancies</span>
-                        </div>
-                        <div class="stat-badge">
-                            <i class="fas fa-baby"></i>
-                            <span><?php echo number_format($stats['children']); ?> Children</span>
+                        <div class="admin-stats">
+                            <div class="stat-badge">
+                                <i class="fas fa-female"></i>
+                                <span><?php echo number_format($stats['mothers']); ?> Mothers</span>
+                            </div>
+                            <div class="stat-badge">
+                                <i class="fas fa-user-nurse"></i>
+                                <span><?php echo number_format($stats['midwives']); ?> Midwives</span>
+                            </div>
+                            <div class="stat-badge">
+                                <i class="fas fa-baby-carriage"></i>
+                                <span><?php echo number_format($stats['pregnancies']); ?> Pregnancies</span>
+                            </div>
+                            <div class="stat-badge">
+                                <i class="fas fa-baby"></i>
+                                <span><?php echo number_format($stats['children']); ?> Children</span>
+                            </div>
                         </div>
                     </div>
+                    <div class="col-md-4 text-center">
+                        <img src="https://cdn-icons-png.flaticon.com/512/1802/1802977.png" alt="Admin Dashboard"
+                            class="img-fluid floating" style="max-height: 180px;">
+                    </div>
                 </div>
-                <div class="col-md-4 text-center">
-                    <img src="https://cdn-icons-png.flaticon.com/512/1802/1802977.png" alt="Admin Dashboard"
-                        class="img-fluid floating" style="max-height: 180px;">
+            </div>
+
+            <h3 class="section-title">Quick Actions</h3>
+
+            <div class="action-cards">
+                <a href="admin_account_management.php" class="action-card">
+                    <i class="fas fa-users-cog"></i>
+                    <h3>Account Management</h3>
+                    <p>Manage user accounts, roles, and permissions</p>
+                </a>
+
+                <a href="admin_account_creation.php" class="action-card">
+                    <i class="fas fa-user-plus"></i>
+                    <h3>Create Account</h3>
+                    <p>Add new midwife or administrator accounts</p>
+                </a>
+
+                <a href="admin_audit_trail.php" class="action-card">
+                    <i class="fas fa-history"></i>
+                    <h3>Audit Trail</h3>
+                    <p>View system activity logs and user actions</p>
+                </a>
+
+                <a href="admin_backup.php" class="action-card">
+                    <i class="fas fa-database"></i>
+                    <h3>Database Backup</h3>
+                    <p>Manage system backups and restoration</p>
+                </a>
+            </div>
+
+            <h3 class="section-title mt-4">Insights</h3>
+            <div class="row g-4">
+                <div class="col-lg-6">
+                    <div class="card p-3 h-100">
+                        <h5 class="mb-3">Pregnancy Risk Distribution</h5>
+                        <canvas id="riskChart"></canvas>
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="card p-3 h-100">
+                        <h5 class="mb-3">Midwives per BHC</h5>
+                        <canvas id="bhcChart"></canvas>
+                    </div>
+                </div>
+                <div class="col-12">
+                    <div class="card p-3 h-100">
+                        <h5 class="mb-3">New Pregnancies (Last 6 Months)</h5>
+                        <canvas id="monthlyChart"></canvas>
+                    </div>
                 </div>
             </div>
         </div>
-
-        <h3 class="section-title">Quick Actions</h3>
-
-        <div class="action-cards">
-            <a href="admin_account_management.php" class="action-card">
-                <i class="fas fa-users-cog"></i>
-                <h3>Account Management</h3>
-                <p>Manage user accounts, roles, and permissions</p>
-            </a>
-
-            <a href="admin_account_creation.php" class="action-card">
-                <i class="fas fa-user-plus"></i>
-                <h3>Create Account</h3>
-                <p>Add new midwife or administrator accounts</p>
-            </a>
-
-            <a href="admin_audit_trail.php" class="action-card">
-                <i class="fas fa-history"></i>
-                <h3>Audit Trail</h3>
-                <p>View system activity logs and user actions</p>
-            </a>
-
-            <a href="admin_backup.php" class="action-card">
-                <i class="fas fa-database"></i>
-                <h3>Database Backup</h3>
-                <p>Manage system backups and restoration</p>
-            </a>
-        </div>
-    </div>
+    </main>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
@@ -361,6 +417,31 @@ $stats['children'] = $stmt->fetchColumn();
                     badge.style.transform = 'translateY(0)';
                 }, index * 150);
             });
+        });
+
+        // Charts data from PHP
+        const riskLabels = <?= json_encode(array_keys($riskData)) ?>;
+        const riskValues = <?= json_encode(array_values($riskData)) ?>;
+        new Chart(document.getElementById('riskChart'), {
+            type: 'doughnut',
+            data: { labels: riskLabels, datasets: [{ data: riskValues, backgroundColor: ['#66bb6a', '#ffa726', '#ef5350', '#b0bec5'] }] },
+            options: { plugins: { legend: { position: 'bottom' } } }
+        });
+
+        const bhcLabels = <?= json_encode(array_column($bhcMidwives, 'bhc_name')) ?>;
+        const bhcValues = <?= json_encode(array_map('intval', array_column($bhcMidwives, 'c'))) ?>;
+        new Chart(document.getElementById('bhcChart'), {
+            type: 'bar',
+            data: { labels: bhcLabels, datasets: [{ label: 'Midwives', data: bhcValues, backgroundColor: '#ec407a' }] },
+            options: { scales: { y: { beginAtZero: true } } }
+        });
+
+        const monthlyLabels = <?= json_encode(array_column($monthly, 'ym')) ?>;
+        const monthlyValues = <?= json_encode(array_map('intval', array_column($monthly, 'c'))) ?>;
+        new Chart(document.getElementById('monthlyChart'), {
+            type: 'line',
+            data: { labels: monthlyLabels, datasets: [{ label: 'Pregnancies', data: monthlyValues, fill: false, borderColor: '#29b6f6', tension: 0.2 }] },
+            options: { scales: { y: { beginAtZero: true } } }
         });
     </script>
 </body>

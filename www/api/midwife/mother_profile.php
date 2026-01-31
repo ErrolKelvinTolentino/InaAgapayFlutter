@@ -31,9 +31,11 @@ $stmt = $conn->prepare("
         mo.height,
         mo.blood_type,
 
+        p.pregnancy_id,
         p.pregnancy_risk_level,
         p.status AS pregnancy_status,
         p.expected_date_of_delivery,
+        p.last_menstrual_period,
 
         (SELECT COUNT(*) FROM children c WHERE c.mother_id = mo.mother_id) AS children_count
 

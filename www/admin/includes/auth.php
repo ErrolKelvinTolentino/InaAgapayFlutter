@@ -2,7 +2,7 @@
 session_start();
 
 if (
-    !isset($_SESSION['admin_id']) ||
+    !isset($_SESSION['account_id']) ||
     ($_SESSION['account_type'] ?? '') !== 'admin'
 ) {
     http_response_code(403);

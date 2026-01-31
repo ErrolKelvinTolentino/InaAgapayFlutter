@@ -13,8 +13,11 @@ SELECT
     m.barangay,
     m.city_municipality,
     m.province,
+    p.pregnancy_id,
     p.pregnancy_risk_level,
-    p.status AS pregnancy_status
+    p.status AS pregnancy_status,
+    p.expected_date_of_delivery,
+    p.last_menstrual_period
 FROM mothers m
 JOIN accounts a ON m.account_id = a.account_id
 LEFT JOIN pregnancies p 

@@ -1,4 +1,4 @@
--- =====================================================
+INAAGAPAY SADD DATABASE -- =====================================================
 -- DATABASE: Maternal & Child Health Information System
 -- MySQL 8+
 -- =====================================================
@@ -22,8 +22,10 @@ CREATE TABLE accounts (
     status ENUM('active', 'inactive', 'suspended') DEFAULT 'active',
     reset_code VARCHAR(6) NULL,
     reset_expires DATETIME NULL,
+    last_login_token VARCHAR(128) NULL,
+    last_login_at DATETIME NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATECURRENT_TIMESTAMP
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = 'System user accounts';
 CREATE TABLE password_history (
     pass_history_id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -68,6 +70,7 @@ CREATE TABLE mothers (
     mother_id BIGINT AUTO_INCREMENT PRIMARY KEY,
     account_id BIGINT NOT NULL UNIQUE,
     assigned_bhc_id BIGINT NULL,
+    birthdate DATE,
     house_number VARCHAR(50),
     street VARCHAR(100),
     barangay VARCHAR(100),
@@ -75,6 +78,7 @@ CREATE TABLE mothers (
     province VARCHAR(100),
     status ENUM('active', 'inactive') DEFAULT 'active',
     height DECIMAL(5, 2),
+    weight DECIMAL(5, 2),
     blood_type VARCHAR(100),
     FOREIGN KEY (account_id) REFERENCES accounts(account_id),
     FOREIGN KEY (assigned_bhc_id) REFERENCES bhc(bhc_id) ON DELETE CASCADE
@@ -88,6 +92,7 @@ CREATE TABLE emergency_contacts (
     middle_name VARCHAR(100),
     extension_name VARCHAR(20),
     phone_number VARCHAR(20),
+    affiliation VARCHAR(100) NULL,
     email_address VARCHAR(255),
     house_number VARCHAR(50),
     street VARCHAR(100),
@@ -156,7 +161,7 @@ CREATE TABLE prenatal_checkups (
     fetal_heart_beat INT,
     fetal_heart_tone VARCHAR(100),
     td_vaccine_dose VARCHAR(50),
-    edema BOOLEAN,
+    edema ENUM('none', 'mild', 'moderate', 'severe') DEFAULT 'none',
     remarks TEXT,
     checkup_date DATE NOT NULL,
     next_schedule DATE,
@@ -219,7 +224,9 @@ CREATE TABLE birth_details (
     child_id BIGINT NOT NULL UNIQUE,
     birthdate DATE,
     birth_weight DECIMAL(5, 2),
-    birth_place VARCHAR(255),
+    birth VARCHAR(255),
+    birthplace_city_municipality VARCHAR(255),
+    birthplace_province VARCHAR(255),
     birth_length DECIMAL(5, 2),
     head_circumference DECIMAL(5, 2),
     birth_complications TEXT,
@@ -303,11 +310,11 @@ CREATE TABLE mother_medications (
 -- -------------------------
 CREATE TABLE given_medications (
     given_medication_id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    mother_medication_id BIGINT NOT NULL,
+    mother_id BIGINT NOT NULL,
     given_medication_name VARCHAR(255) NOT NULL,
     quantity INT NOT NULL,
     date_given DATE NOT NULL,
-    CONSTRAINT fk_given_medication_plan FOREIGN KEY (mother_medication_id) REFERENCES mother_medications(mother_medication_id) ON DELETE CASCADE
+    CONSTRAINT fk_given_medication_plan FOREIGN KEY (mother_id) REFERENCES mothers(mother_id) ON DELETE CASCADE
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = 'Actual medication doses given to mothers';
 -- -------------------------
 -- JOURNAL ENTRIES (NOTES / OBSERVATIONS)

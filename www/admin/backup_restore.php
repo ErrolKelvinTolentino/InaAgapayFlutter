@@ -2,7 +2,7 @@
 session_start();
 
 // Check if user is logged in and is an admin
-if (!isset($_SESSION['admin_id']) || $_SESSION['account_type'] !== 'admin') {
+if (!isset($_SESSION['account_id']) || ($_SESSION['account_type'] ?? '') !== 'admin') {
     header("Location: login.php");
     exit();
 }
@@ -15,46 +15,52 @@ $error = '';
 // Handle database backup
 if (isset($_POST['backup'])) {
     try {
-        // Get all table names
-        $tables = array();
-        $result = $conn->query("SHOW TABLES");
-        while ($row = $result->fetch(PDO::FETCH_NUM)) {
-            $tables[] = $row[0];
+        $tables = [];
+        if ($result = $conn->query("SHOW TABLES")) {
+            while ($row = $result->fetch_row()) {
+                $tables[] = $row[0];
+            }
         }
 
         $output = '';
 
-        // Generate SQL for each table
         foreach ($tables as $table) {
             // Table structure
             $output .= "--\n-- Table structure for table `$table`\n--\n";
             $output .= "DROP TABLE IF EXISTS `$table`;\n";
-            $result = $conn->query("SHOW CREATE TABLE `$table`");
-            $row = $result->fetch(PDO::FETCH_NUM);
-            $output .= $row[1] . ";\n\n";
+            $createRes = $conn->query("SHOW CREATE TABLE `$table`");
+            $createRow = $createRes ? $createRes->fetch_row() : null;
+            if (!$createRow) {
+                throw new RuntimeException("Failed to read schema for {$table}");
+            }
+            $output .= $createRow[1] . ";\n\n";
 
             // Table data
             $output .= "--\n-- Dumping data for table `$table`\n--\n";
-            $result = $conn->query("SELECT * FROM `$table`");
-            while ($row = $result->fetch(PDO::FETCH_ASSOC)) {
-                $output .= "INSERT INTO `$table` VALUES(";
-                $values = array();
-                foreach ($row as $value) {
-                    $values[] = $conn->quote($value);
+            $dataRes = $conn->query("SELECT * FROM `$table`");
+            if ($dataRes) {
+                while ($row = $dataRes->fetch_assoc()) {
+                    $values = [];
+                    foreach ($row as $value) {
+                        if (is_null($value)) {
+                            $values[] = 'NULL';
+                        } else {
+                            $values[] = "'" . $conn->real_escape_string($value) . "'";
+                        }
+                    }
+                    $output .= "INSERT INTO `$table` VALUES(" . implode(',', $values) . ");\n";
                 }
-                $output .= implode(',', $values) . ");\n";
             }
             $output .= "\n";
         }
 
-        // Set headers for download
         header('Content-Type: application/octet-stream');
         header('Content-Disposition: attachment; filename="inaagapay_backup_' . date('Y-m-d_H-i-s') . '.sql"');
 
         echo $output;
         exit();
 
-    } catch (PDOException $e) {
+    } catch (Throwable $e) {
         $error = "Error generating backup: " . $e->getMessage();
     }
 }
@@ -65,37 +71,32 @@ if (isset($_FILES['import_file'])) {
 
     if ($file['error'] === UPLOAD_ERR_OK) {
         $fileInfo = pathinfo($file['name']);
-        if (strtolower($fileInfo['extension']) === 'sql') {
+        if (strtolower($fileInfo['extension'] ?? '') === 'sql') {
             $sql = file_get_contents($file['tmp_name']);
 
-            try {
-                // Disable foreign key checks temporarily
-                $conn->exec("SET FOREIGN_KEY_CHECKS=0");
+            $conn->query("SET FOREIGN_KEY_CHECKS=0");
 
-                // Split SQL file into individual queries
-                $queries = explode(';', $sql);
-
-                // Execute each query
-                foreach ($queries as $query) {
-                    if (trim($query)) {
-                        $conn->exec($query);
+            if ($conn->multi_query($sql)) {
+                do {
+                    if ($result = $conn->store_result()) {
+                        $result->free();
                     }
-                }
-
-                // Re-enable foreign key checks
-                $conn->exec("SET FOREIGN_KEY_CHECKS=1");
+                } while ($conn->more_results() && $conn->next_result());
 
                 $message = "Database restored successfully!";
 
-                // Record action in audit trail
-                $stmt = $conn->prepare("INSERT INTO audit_trail (account_id, action, description, ip_address) VALUES (?, 'database_backup', ?, ?)");
-                $stmt->execute([$_SESSION['account_id'], $message, $_SERVER['REMOTE_ADDR']]);
-
-            } catch (PDOException $e) {
-                $error = "Error restoring database: " . $e->getMessage();
-                // Ensure foreign key checks are re-enabled if there was an error
-                $conn->exec("SET FOREIGN_KEY_CHECKS=1");
+                $stmt = $conn->prepare("INSERT INTO audit_trail (account_id, action, description, ip_address) VALUES (?, 'database_restore', ?, ?)");
+                if ($stmt) {
+                    $desc = $message;
+                    $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+                    $stmt->bind_param('iss', $_SESSION['account_id'], $desc, $ip);
+                    $stmt->execute();
+                }
+            } else {
+                $error = "Error restoring database: " . $conn->error;
             }
+
+            $conn->query("SET FOREIGN_KEY_CHECKS=1");
         } else {
             $error = "Please upload a valid SQL file.";
         }
@@ -112,16 +113,34 @@ if (isset($_FILES['import_file'])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Database Backup - InaAgapay Admin</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="../styles/header_navbar.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
+        :root {
+            --primary-color: #ec407a;
+            --primary-dark: #d81b60;
+            --secondary-color: #ff9eb7;
+            --gray-dark: #3f3d56;
+            --gray-light: #fff5fb;
+            --gray: #e5d6df;
+            --border: #f0c6d8;
+        }
+
+        body {
+            background: radial-gradient(circle at 20% 20%, #ffeef6, #ffffff 35%),
+                radial-gradient(circle at 80% 0%, #fff5fb, #ffffff 40%);
+            margin: 0;
+            font-family: 'Poppins', 'Segoe UI', sans-serif;
+        }
+
         .backup-container {
             max-width: 800px;
             margin: 2rem auto;
             padding: 2rem;
             background: white;
             border-radius: 10px;
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+            border: 1px solid var(--border);
+            box-shadow: 0 12px 40px rgba(236, 64, 122, 0.12);
         }
 
         .backup-header {
@@ -219,52 +238,55 @@ if (isset($_FILES['import_file'])) {
 <body>
     <?php include 'header_navbar.php'; ?>
 
-    <div class="content">
-        <div class="backup-container">
-            <div class="backup-header">
-                <h1><i class="fas fa-database"></i> Database Backup</h1>
-                <p>Manage your database backups and restores</p>
-            </div>
-
-            <?php if (!empty($message)): ?>
-                <div class="success-message">
-                    <i class="fas fa-check-circle"></i>
-                    <?php echo $message; ?>
+    <main class="main-content" id="mainContent">
+        <div class="content">
+            <div class="backup-container">
+                <div class="backup-header">
+                    <h1><i class="fas fa-database"></i> Database Backup</h1>
+                    <p>Manage your database backups and restores</p>
                 </div>
-            <?php endif; ?>
 
-            <?php if (!empty($error)): ?>
-                <div class="error-message">
-                    <i class="fas fa-exclamation-circle"></i>
-                    <?php echo $error; ?>
-                </div>
-            <?php endif; ?>
-
-            <div class="backup-section">
-                <h2><i class="fas fa-download"></i> Backup Database</h2>
-                <p>Download a complete backup of your database. This file can be used to restore your data later.</p>
-                <form method="post">
-                    <button type="submit" name="backup" class="btn-backup">
-                        <i class="fas fa-download"></i> Download Backup
-                    </button>
-                </form>
-            </div>
-
-            <div class="backup-section">
-                <h2><i class="fas fa-upload"></i> Restore Database</h2>
-                <p>Import a previously created backup file to restore your database. Warning: This will overwrite
-                    existing data.</p>
-                <form method="post" enctype="multipart/form-data">
-                    <div class="file-upload">
-                        <input type="file" name="import_file" accept=".sql" required>
-                        <button type="submit" class="btn-backup btn-import">
-                            <i class="fas fa-upload"></i> Import Backup
-                        </button>
+                <?php if (!empty($message)): ?>
+                    <div class="success-message">
+                        <i class="fas fa-check-circle"></i>
+                        <?php echo $message; ?>
                     </div>
-                </form>
+                <?php endif; ?>
+
+                <?php if (!empty($error)): ?>
+                    <div class="error-message">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <?php echo $error; ?>
+                    </div>
+                <?php endif; ?>
+
+                <div class="backup-section">
+                    <h2><i class="fas fa-download"></i> Backup Database</h2>
+                    <p>Download a complete backup of your database. This file can be used to restore your data later.
+                    </p>
+                    <form method="post">
+                        <button type="submit" name="backup" class="btn-backup">
+                            <i class="fas fa-download"></i> Download Backup
+                        </button>
+                    </form>
+                </div>
+
+                <div class="backup-section">
+                    <h2><i class="fas fa-upload"></i> Restore Database</h2>
+                    <p>Import a previously created backup file to restore your database. Warning: This will overwrite
+                        existing data.</p>
+                    <form method="post" enctype="multipart/form-data">
+                        <div class="file-upload">
+                            <input type="file" name="import_file" accept=".sql" required>
+                            <button type="submit" class="btn-backup btn-import">
+                                <i class="fas fa-upload"></i> Import Backup
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
-    </div>
+    </main>
 
     <script>
         // Confirm before importing
