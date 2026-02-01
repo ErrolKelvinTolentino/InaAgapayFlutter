@@ -9,13 +9,15 @@ class BabyGrowth {
 }
 
 /// Ideal / typical baby size & weight per week
-/// Source: aggregated medical references (ACOG, BabyCenter-style averages)
+/// Uses NUMERICAL values even for early pregnancy (Option B)
 class BabyGrowthData {
   static const Map<int, BabyGrowth> byWeek = {
-    1: BabyGrowth(size: '—', weight: '—'),
-    2: BabyGrowth(size: '—', weight: '—'),
-    3: BabyGrowth(size: '—', weight: '—'),
+    // ✅ VERY EARLY (force numbers)
+    1: BabyGrowth(size: '0.01 cm', weight: '< 1 g'),
+    2: BabyGrowth(size: '0.05 cm', weight: '< 1 g'),
+    3: BabyGrowth(size: '0.10 cm', weight: '< 1 g'),
 
+    // ✅ EARLY DEVELOPMENT
     4: BabyGrowth(size: '0.1 cm', weight: '< 1 g'),
     5: BabyGrowth(size: '0.2 cm', weight: '< 1 g'),
     6: BabyGrowth(size: '0.4 cm', weight: '< 1 g'),
@@ -24,9 +26,12 @@ class BabyGrowthData {
     9: BabyGrowth(size: '2.3 cm', weight: '2 g'),
     10: BabyGrowth(size: '3.1 cm', weight: '4 g'),
 
+    // ✅ FIRST TRIMESTER END
     11: BabyGrowth(size: '4.1 cm', weight: '7 g'),
     12: BabyGrowth(size: '5.4 cm', weight: '14 g'),
     13: BabyGrowth(size: '7.4 cm', weight: '23 g'),
+
+    // ✅ SECOND TRIMESTER
     14: BabyGrowth(size: '8.7 cm', weight: '43 g'),
     15: BabyGrowth(size: '10.1 cm', weight: '70 g'),
     16: BabyGrowth(size: '11.6 cm', weight: '100 g'),
@@ -42,8 +47,9 @@ class BabyGrowthData {
     25: BabyGrowth(size: '34.6 cm', weight: '660 g'),
     26: BabyGrowth(size: '35.6 cm', weight: '760 g'),
     27: BabyGrowth(size: '36.6 cm', weight: '875 g'),
-    28: BabyGrowth(size: '37.6 cm', weight: '1 kg'),
+    28: BabyGrowth(size: '37.6 cm', weight: '1.0 kg'),
 
+    // ✅ THIRD TRIMESTER
     29: BabyGrowth(size: '38.6 cm', weight: '1.2 kg'),
     30: BabyGrowth(size: '39.9 cm', weight: '1.3 kg'),
     31: BabyGrowth(size: '41.1 cm', weight: '1.5 kg'),
@@ -59,6 +65,10 @@ class BabyGrowthData {
   };
 
   static BabyGrowth getForWeek(int week) {
+    if (week <= 0) {
+      return const BabyGrowth(size: '0.01 cm', weight: '< 1 g');
+    }
+
     return byWeek[week] ??
         const BabyGrowth(size: '—', weight: '—');
   }

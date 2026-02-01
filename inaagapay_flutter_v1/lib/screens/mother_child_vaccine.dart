@@ -3,11 +3,9 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../widgets/secondary_header.dart';
 import '../widgets/small_description.dart';
-import '../widgets/vaccine_list.dart';
 import '../widgets/hero_card.dart';
 import '../widgets/records_display_card.dart';
 import '../widgets/status_indicator.dart';
-import '../models/vaccine_schedule.dart';
 
 import '../services/api_service.dart';
 import '../utils/session.dart';
@@ -32,6 +30,7 @@ class MotherChildVaccinePage extends StatefulWidget {
 }
 
 class _MotherChildVaccinePageState extends State<MotherChildVaccinePage> {
+
   Future<Map<String, dynamic>> _fetchVaccines() async {
     return await ApiService.get(
       'mother/child_vaccines.php?child_id=${widget.childId}',
@@ -39,16 +38,14 @@ class _MotherChildVaccinePageState extends State<MotherChildVaccinePage> {
     );
   }
 
-  // ✅ SAFE ENUM PARSER (CRITICAL FIX)
-  VaccineStatus _parseStatus(String? value) {
-    switch (value) {
+  StatusIndicatorType _statusIcon(String status) {
+    switch (status) {
       case 'done':
-        return VaccineStatus.done;
+        return StatusIndicatorType.onTime;
       case 'pending':
-        return VaccineStatus.pending;
-      case 'locked':
+        return StatusIndicatorType.ongoing;
       default:
-        return VaccineStatus.locked;
+        return StatusIndicatorType.onTime;
     }
   }
 
@@ -68,6 +65,7 @@ class _MotherChildVaccinePageState extends State<MotherChildVaccinePage> {
       body: FutureBuilder<Map<String, dynamic>>(
         future: _fetchVaccines(),
         builder: (context, snapshot) {
+
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
@@ -75,26 +73,21 @@ class _MotherChildVaccinePageState extends State<MotherChildVaccinePage> {
           if (!snapshot.hasData || snapshot.data!['success'] != true) {
             return const Center(
               child: Text(
-                'Failed to load vaccination data',
+                'Failed to load vaccines',
                 style: TextStyle(color: AppColors.textSecondary),
               ),
             );
           }
 
-          final data = snapshot.data!;
-          final Map<String, VaccineStatus> statuses = {};
-
-          (data['statuses'] as Map<String, dynamic>).forEach((key, value) {
-            statuses[key] = _parseStatus(value);
-          });
+          final vaccines = snapshot.data!['vaccines'] as List;
 
           return SafeArea(
             child: SingleChildScrollView(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+
                   HeroCard(
                     image: const AssetImage('assets/images/baby.png'),
                     title: widget.childName,
@@ -105,40 +98,37 @@ class _MotherChildVaccinePageState extends State<MotherChildVaccinePage> {
 
                   const SizedBox(height: 16),
                   const SmallDescription(
-                    text:
-                        'Track completed, pending, and upcoming vaccines',
+                    text: 'Vaccines based on official immunization schedule',
                   ),
 
                   const SizedBox(height: 16),
 
-                  RecordsDisplayCard(
-                    title: 'Overview',
-                    headerIcon: Icons.info_outline,
-                    items: [
-                      RecordItem(
-                        leadingIcon: Icons.verified,
-                        label: 'Protection Status',
-                        value: '',
-                        trailingWidget: const StatusIndicator(
-                          status: StatusIndicatorType.ongoing,
-                        ),
+                  ...vaccines.map((v) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: RecordsDisplayCard(
+                        title: '${v['name']} (Dose ${v['dose']})',
+                        headerIcon: Icons.vaccines_outlined,
+                        items: [
+                          RecordItem(
+                            leadingIcon: Icons.schedule,
+                            label: 'Recommended',
+                            value: '${v['recommended_months']} months',
+                          ),
+                          RecordItem(
+                            leadingIcon: Icons.verified,
+                            label: 'Status',
+                            value: v['status'].toUpperCase(),
+                            trailingWidget: StatusIndicator(
+                              status: _statusIcon(v['status']),
+                            ),
+                          ),
+                        ],
                       ),
-                      RecordItem(
-                        leadingIcon: Icons.schedule,
-                        label: 'Next due',
-                        value: data['next_due'] ?? '—',
-                      ),
-                    ],
-                  ),
+                    );
+                  }).toList(),
 
-                  const SizedBox(height: 16),
-
-                  VaccineList(
-                    statuses: statuses,
-                    childAgeInWeeks: data['child_age_weeks'] ?? 0,
-                  ),
-
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 24),
                 ],
               ),
             ),

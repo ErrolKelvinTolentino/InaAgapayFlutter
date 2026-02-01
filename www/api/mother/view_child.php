@@ -80,20 +80,27 @@ $stmt->execute();
 $growth = $stmt->get_result()->fetch_assoc();
 
 /**
- * Latest immunization
+ * ✅ FIXED: Latest immunization (TRUE latest)
  */
 $stmt = $conn->prepare("
-    SELECT v.vaccine_name, ir.vaccination_date
+    SELECT 
+        v.vaccine_name,
+        ir.vaccination_date
     FROM immunization_record ir
     JOIN vaccines v ON v.vaccine_id = ir.vaccine_id
     WHERE ir.child_id = ?
-    ORDER BY ir.vaccination_date DESC
+    ORDER BY 
+        ir.vaccination_date DESC,
+        ir.immunization_record_id DESC
     LIMIT 1
 ");
 $stmt->bind_param("i", $childId);
 $stmt->execute();
 $vaccine = $stmt->get_result()->fetch_assoc();
 
+/**
+ * Response
+ */
 echo json_encode([
     'success' => true,
     'child' => [
