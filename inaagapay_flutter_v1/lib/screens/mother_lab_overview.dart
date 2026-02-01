@@ -4,94 +4,80 @@ import '../widgets/secondary_header.dart';
 import '../widgets/hero_card.dart';
 import '../widgets/records_display_card.dart';
 
+import '../services/api_service.dart';
+import '../utils/session.dart';
+
 class MotherLabOverview extends StatelessWidget {
   final VoidCallback onViewDetails;
 
   const MotherLabOverview({super.key, required this.onViewDetails});
+
+  Future<Map<String, dynamic>> _fetchLabs() async {
+    return await ApiService.get(
+      'mother/lab_records.php',
+      token: Session.token,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
 
-      // 🔝 HEADER
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(60),
         child: SecondaryHeader(
           title: 'Laboratory Test Results',
-          onBack: () {
-            Navigator.pop(context); // 👈 goes back to mother_records_page
-          },
+          onBack: () => Navigator.pop(context),
         ),
       ),
 
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            // 👩‍⚕️ HERO
-            HeroCard(
-              image: const AssetImage('assets/images/lab.png'),
-              title: 'First Name MI. Last Name',
-              subtitle: 'XX Weeks Pregnant',
-              showHeartRow: false,
-              showWeekBadge: false,
-            ),
+      body: FutureBuilder<Map<String, dynamic>>(
+        future: _fetchLabs(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-            const SizedBox(height: 20),
+          final records = snapshot.data!['records'] as List;
 
-            // 🧠 OVERVIEW
-            RecordsDisplayCard(
-              title: 'Overview',
-              headerIcon: Icons.info_outline_rounded,
-              layout: RecordsCardLayout.grouped,
-              items: const [
-                RecordItem(
-                  leadingIcon: Icons.science_rounded,
-                  label: 'Latest Laboratory Test Record',
-                  value: 'Month Day, Year',
-                  centerGroupTitle: true,
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              children: [
+                HeroCard(
+                  image: const AssetImage('assets/images/lab.png'),
+                  title: 'Laboratory Records',
+                  showHeartRow: false,
+                  showWeekBadge: false,
+                ),
+
+                const SizedBox(height: 20),
+
+                RecordsDisplayCard(
+                  title: 'Laboratory Test History',
+                  headerIcon: Icons.history,
+                  items: records.map((l) {
+                    return RecordItem(
+                      leadingIcon: Icons.calendar_today,
+                      label: l['lab_test_date'],
+                      value: l['lab_test_type'],
+                      trailingWidget:
+                          _ViewDetailsPill(onTap: onViewDetails),
+                    );
+                  }).toList(),
                 ),
               ],
             ),
-
-            const SizedBox(height: 16),
-
-            // 🧪 LAB HISTORY
-           RecordsDisplayCard(
-              title: 'Laboratory Test History',
-              headerIcon: Icons.history_rounded,
-              items: [
-                RecordItem(
-                  leadingIcon: Icons.calendar_today_rounded,
-                  label: 'Month Day, Year',
-                  value: '',
-                  trailingWidget: _ViewDetailsPill(
-                    onTap: onViewDetails,
-                  ),
-                ),
-                RecordItem(
-                  leadingIcon: Icons.calendar_today_rounded,
-                  label: 'Month Day, Year',
-                  value: '',
-                  trailingWidget: _ViewDetailsPill(
-                    onTap: onViewDetails,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
 }
 
-/* --------------------------- VIEW DETAILS PILL ---------------------------- */
-
 class _ViewDetailsPill extends StatelessWidget {
   final VoidCallback onTap;
-
   const _ViewDetailsPill({required this.onTap});
 
   @override

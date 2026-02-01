@@ -7,6 +7,9 @@ import '../widgets/records_display_card.dart';
 import '../widgets/important_button.dart';
 import '../widgets/status_indicator.dart';
 
+import '../services/api_service.dart';
+import '../utils/session.dart';
+
 class MotherPrenatalOverview extends StatelessWidget {
   final VoidCallback onViewGrowth;
   final VoidCallback onViewCheckupDetails;
@@ -17,129 +20,130 @@ class MotherPrenatalOverview extends StatelessWidget {
     required this.onViewCheckupDetails,
   });
 
+  Future<Map<String, dynamic>> _fetchPrenatal() async {
+    return await ApiService.get(
+      'mother/prenatal_overview.php',
+      token: Session.token,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
 
-      // 🔝 HEADER
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(60),
         child: SecondaryHeader(
           title: 'Prenatal Check-ups',
-          onBack: () {
-            Navigator.pop(context); // 👈 goes back to mother_records_page
-          },
+          onBack: () => Navigator.pop(context),
         ),
       ),
 
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            // 👩‍🍼 HERO
-            HeroCard(
-              image: const AssetImage('assets/images/prenatal.png'),
-              title: 'First Name MI. Last Name',
-              showHeartRow: false,
-              showWeekBadge: false,
-            ),
+      body: FutureBuilder<Map<String, dynamic>>(
+        future: _fetchPrenatal(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-            const SizedBox(height: 20),
+          final data = snapshot.data!;
+          final latest = data['latest'];
+          final history = (data['history'] ?? []) as List;
 
-            // 🧠 OVERVIEW (GROUPED FORMAT)
-            RecordsDisplayCard(
-              title: 'Overview',
-              headerIcon: Icons.info_outline_rounded,
-              layout: RecordsCardLayout.grouped,
-              items: const [
-                RecordItem(
-                  leadingIcon: Icons.medical_services_rounded,
-                  label: 'Latest Health Center Visit',
-                  value: 'Month Day, Year',
-                  centerGroupTitle: true,
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              children: [
+                HeroCard(
+                  image: const AssetImage('assets/images/prenatal.png'),
+                  title: 'Prenatal Records',
+                  showHeartRow: false,
+                  showWeekBadge: false,
                 ),
-                RecordItem(
-                  leadingIcon: Icons.calendar_today_rounded,
-                  label: '(Recommended) Next Visit',
-                  value: 'Month Day, Year',
-                  centerGroupTitle: true,
+
+                const SizedBox(height: 20),
+
+                RecordsDisplayCard(
+                  title: 'Overview',
+                  headerIcon: Icons.info_outline_rounded,
+                  layout: RecordsCardLayout.grouped,
+                  items: [
+                    RecordItem(
+                      leadingIcon: Icons.medical_services,
+                      label: 'Latest Health Center Visit',
+                      value: latest?['checkup_date'] ?? '--',
+                      centerGroupTitle: true,
+                    ),
+                    RecordItem(
+                      leadingIcon: Icons.calendar_today,
+                      label: '(Recommended) Next Visit',
+                      value: latest?['next_schedule'] ?? '--',
+                      centerGroupTitle: true,
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 16),
+
+                RecordsDisplayCard(
+                  title: 'Latest Growth Records',
+                  headerIcon: Icons.bar_chart,
+                  items: [
+                    RecordItem(
+                      leadingIcon: Icons.monitor_weight,
+                      label: 'Weight',
+                      value: latest?['checkup_weight'] != null
+                          ? '${latest['checkup_weight']} kg'
+                          : '-- kg',
+                    ),
+                    RecordItem(
+                      leadingIcon: Icons.favorite,
+                      label: 'Blood Pressure',
+                      value: latest != null
+                          ? '${latest['blood_pressure_systolic']}/${latest['blood_pressure_diastolic']}'
+                          : '--',
+                      trailingWidget: const StatusIndicator(
+                        status: StatusIndicatorType.normal,
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 14),
+
+                ImportantButton(
+                  label: 'View Growth Statistics',
+                  leadingIcon: Icons.show_chart,
+                  onPressed: onViewGrowth,
+                ),
+
+                const SizedBox(height: 20),
+
+                RecordsDisplayCard(
+                  title: 'Checkup History',
+                  headerIcon: Icons.history,
+                  items: history.map((c) {
+                    return RecordItem(
+                      leadingIcon: Icons.calendar_today,
+                      label: c['checkup_date'],
+                      value: '',
+                      trailingWidget:
+                          _ViewDetailsPill(onTap: onViewCheckupDetails),
+                    );
+                  }).toList(),
                 ),
               ],
             ),
-
-            const SizedBox(height: 16),
-
-            // 📈 LATEST GROWTH RECORDS
-            RecordsDisplayCard(
-              headerIcon: Icons.bar_chart_rounded,
-              title: 'Latest Growth Records',
-              items: const [
-                RecordItem(
-                  leadingIcon: Icons.height,
-                  label: 'Height',
-                  value: '__ cm',
-                ),
-                RecordItem(
-                  leadingIcon: Icons.monitor_weight,
-                  label: 'Weight',
-                  value: '__ kg',
-                ),
-                RecordItem(
-                  leadingIcon: Icons.calculate,
-                  label: 'BMI',
-                  value: '__ kg/m²',
-                  trailingWidget: StatusIndicator(
-                    status: StatusIndicatorType.normal,
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 14),
-
-            // 🔥 PRIMARY CTA (SEPARATE — NOT A RECORD ROW)
-            ImportantButton(
-              label: 'View Growth Statistics',
-              leadingIcon: Icons.show_chart_rounded,
-              onPressed: onViewGrowth,
-            ),
-
-            const SizedBox(height: 20),
-
-            // 🕘 CHECKUP HISTORY
-            RecordsDisplayCard(
-              headerIcon: Icons.history,
-              title: 'Checkup History',
-              items: [
-                RecordItem(
-                  leadingIcon: Icons.calendar_today_outlined,
-                  label: 'Month Day, Year',
-                  value: '',
-                  trailingWidget: _ViewDetailsPill(onTap: onViewCheckupDetails),
-                ),
-                RecordItem(
-                  leadingIcon: Icons.calendar_today_outlined,
-                  label: 'Month Day, Year',
-                  value: '',
-                  trailingWidget: _ViewDetailsPill(onTap: onViewCheckupDetails),
-                ),
-              ],
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
 }
 
-/* -------------------------------------------------------------------------- */
-/*                          VIEW DETAILS PILL BUTTON                           */
-/* -------------------------------------------------------------------------- */
-
 class _ViewDetailsPill extends StatelessWidget {
   final VoidCallback onTap;
-
   const _ViewDetailsPill({required this.onTap});
 
   @override

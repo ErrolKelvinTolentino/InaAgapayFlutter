@@ -4,6 +4,9 @@ import '../widgets/secondary_header.dart';
 import '../widgets/hero_card.dart';
 import '../widgets/records_display_card.dart';
 
+import '../services/api_service.dart';
+import '../utils/session.dart';
+
 class MotherUltrasoundOverview extends StatelessWidget {
   final VoidCallback onViewDetails;
 
@@ -11,6 +14,13 @@ class MotherUltrasoundOverview extends StatelessWidget {
     super.key,
     required this.onViewDetails,
   });
+
+  Future<Map<String, dynamic>> _fetchUltrasounds() async {
+    return await ApiService.get(
+      'mother/ultrasound_records.php',
+      token: Session.token,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -21,81 +31,56 @@ class MotherUltrasoundOverview extends StatelessWidget {
         preferredSize: const Size.fromHeight(60),
         child: SecondaryHeader(
           title: 'Ultrasound Records',
-          onBack: () {
-            Navigator.pop(context); // 👈 goes back to mother_records_page
-          },
+          onBack: () => Navigator.pop(context),
         ),
       ),
 
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            // 👩‍🍼 HERO
-            HeroCard(
-              image: const AssetImage('assets/images/prenatal.png'),
-              title: 'First Name MI. Last Name',
-              subtitle: 'XX Weeks Pregnant',
-              showHeartRow: false,
-              showWeekBadge: false,
-            ),
+      body: FutureBuilder<Map<String, dynamic>>(
+        future: _fetchUltrasounds(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-            const SizedBox(height: 20),
+          final records = snapshot.data!['records'] as List;
 
-            // 🧠 OVERVIEW
-            RecordsDisplayCard(
-              title: 'Overview',
-              headerIcon: Icons.info_outline_rounded,
-              layout: RecordsCardLayout.grouped,
-              items: const [
-                RecordItem(
-                  leadingIcon: Icons.monitor_heart_rounded,
-                  label: 'Latest Ultrasound Record',
-                  value: 'Month Day, Year',
-                  centerGroupTitle: true,
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              children: [
+                HeroCard(
+                  image: const AssetImage('assets/images/prenatal.png'),
+                  title: 'Ultrasound Records',
+                  showHeartRow: false,
+                  showWeekBadge: false,
+                ),
+
+                const SizedBox(height: 20),
+
+                RecordsDisplayCard(
+                  title: 'Ultrasound History',
+                  headerIcon: Icons.history,
+                  items: records.map((u) {
+                    return RecordItem(
+                      leadingIcon: Icons.calendar_today,
+                      label: u['ultrasound_date'],
+                      value: '',
+                      trailingWidget:
+                          _ViewDetailsPill(onTap: onViewDetails),
+                    );
+                  }).toList(),
                 ),
               ],
             ),
-
-            const SizedBox(height: 16),
-
-            // 🩻 ULTRASOUND HISTORY
-            RecordsDisplayCard(
-              title: 'Ultrasound History',
-              headerIcon: Icons.history_rounded,
-              items: [
-                RecordItem(
-                  leadingIcon: Icons.calendar_today_rounded,
-                  label: 'Month Day, Year',
-                  value: '',
-                  trailingWidget: _ViewDetailsPill(
-                    onTap: onViewDetails,
-                  ),
-                ),
-                RecordItem(
-                  leadingIcon: Icons.calendar_today_rounded,
-                  label: 'Month Day, Year',
-                  value: '',
-                  trailingWidget: _ViewDetailsPill(
-                    onTap: onViewDetails,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
 }
 
-/* -------------------------------------------------------------------------- */
-/*                          VIEW DETAILS PILL BUTTON                           */
-/* -------------------------------------------------------------------------- */
-
 class _ViewDetailsPill extends StatelessWidget {
   final VoidCallback onTap;
-
   const _ViewDetailsPill({required this.onTap});
 
   @override
