@@ -32,6 +32,28 @@ class MidwifeChildrenPage extends StatelessWidget {
     return List<Map<String, dynamic>>.from(decoded['data'] ?? []);
   }
 
+  /// ================= AGE CALCULATOR =================
+  String calculateAge(String? birthdate) {
+    if (birthdate == null) return '-';
+
+    final birth = DateTime.parse(birthdate);
+    final now = DateTime.now();
+
+    int years = now.year - birth.year;
+    int months = now.month - birth.month;
+
+    if (months < 0) {
+      years--;
+      months += 12;
+    }
+
+    if (years <= 0) {
+      return '$months months';
+    } else {
+      return '$years yrs${months > 0 ? ' $months mos' : ''}';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -72,35 +94,83 @@ class MidwifeChildrenPage extends StatelessWidget {
               return Card(
                 margin: const EdgeInsets.only(bottom: 12),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(16),
                 ),
+                elevation: 1,
                 child: ListTile(
-                  leading: const Icon(
-                    Icons.child_care,
-                    color: AppColors.brandPrimary,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
                   ),
 
-                  /// CHILD NAME
-                  title: Text(
-                    '${c['first_name']} ${c['last_name']}',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
+                  /// ================= CHILD ICON =================
+                  leading: CircleAvatar(
+                    radius: 24,
+                    backgroundColor:
+                        AppColors.brandPrimary.withOpacity(0.12),
+                    child: Icon(
+                      c['sex'] == 'male'
+                          ? Icons.male
+                          : Icons.female,
+                      color: AppColors.brandPrimary,
                     ),
                   ),
 
-                  /// MOTHER NAME
-                  subtitle: Text(
-                    'Mother: ${c['mother_name'] ?? '-'}',
+                  /// ================= NAME + AGE + GENDER =================
+                  title: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          '${c['first_name']} ${c['last_name']}',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.brandPrimary.withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          '${c['sex']} • ${calculateAge(c['birthdate'])}',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.brandPrimary,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  /// ================= MOTHER NAME =================
+                  subtitle: Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      'Mother: ${c['mother_name'] ?? '-'}',
+                      style: const TextStyle(fontSize: 13),
+                    ),
                   ),
 
                   trailing: const Icon(Icons.chevron_right),
 
+                  /// ================= NAVIGATION =================
                   onTap: () {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (_) => ChildProfilePage(
-                          childData: c,
+                          childId: int.parse(
+                            c['child_id'].toString(),
+                          ),
                         ),
                       ),
                     );

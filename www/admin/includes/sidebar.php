@@ -1,13 +1,13 @@
 <aside class="admin-sidebar">
     <nav>
         <ul>
-            <li><a href="/admin/dashboard.php" class="active">📊 Dashboard</a></li>
-            <li><a href="#">👥 Accounts</a></li>
-            <li><a href="#">🧑‍⚕️ Midwives</a></li>
-            <li><a href="#">🤰 Mothers</a></li>
-            <li><a href="#">📈 Reports</a></li>
-            <li class="divider"></li>
-            <li><a href="/admin/logout.php">🚪 Logout</a></li>
+            <a href="/admin/dashboard.php" class="active">📊 Dashboard</a>
+            <a href="#">👥 Accounts</a>
+            <a href="#">🧑‍⚕️ Midwives</a>
+            <a href="#">🤰 Mothers</a>
+            <a href="#">📈 Reports</a>
+
+            <a href="/admin/logout.php">🚪 Logout</a>
         </ul>
     </nav>
 </aside>
