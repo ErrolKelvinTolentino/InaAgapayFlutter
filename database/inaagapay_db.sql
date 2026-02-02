@@ -163,7 +163,7 @@ CREATE TABLE prenatal_checkups (
     td_vaccine_dose VARCHAR(50),
     edema ENUM('none', 'mild', 'moderate', 'severe') DEFAULT 'none',
     remarks TEXT,
-    checkup_date DATE NOT NULL,
+    checkup_datetime TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     next_schedule DATE,
     FOREIGN KEY (pregnancy_id) REFERENCES pregnancies(pregnancy_id) ON DELETE CASCADE,
     FOREIGN KEY (midwife_id) REFERENCES midwives(midwife_id) ON DELETE RESTRICT

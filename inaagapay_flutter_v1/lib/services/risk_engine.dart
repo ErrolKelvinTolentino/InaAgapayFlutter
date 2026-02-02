@@ -136,7 +136,7 @@ class RiskEngine {
 
     final aog =
         prenatal.ageOfGestationWeeks ??
-        _weeksBetween(form.lmp, prenatal.checkupDate);
+        _weeksBetween(form.lmp, prenatal.checkupDateTime);
     final position = (prenatal.fetalPosition ?? '').toLowerCase();
     final isLatePregnancy = aog != null && aog >= 28;
     final positionAbnormal =

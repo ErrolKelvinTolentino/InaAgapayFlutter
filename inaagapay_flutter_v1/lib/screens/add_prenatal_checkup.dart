@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
 
 import '../models/add_mother_form_data.dart';
 import '../services/auth_storage.dart';
@@ -38,16 +39,20 @@ class _AddPrenatalCheckupScreenState extends State<AddPrenatalCheckupScreen> {
   final TextEditingController _fetalBeat = TextEditingController();
   final TextEditingController _fetalTone = TextEditingController();
   final TextEditingController _remarks = TextEditingController();
+  DateTime? _nextSchedule;
 
   int step = 0;
   static const int totalSteps = 5;
   bool submitting = false;
   double? aogWeeks;
+  String _baselineRisk = 'low';
+  bool _riskLoading = true;
 
   @override
   void initState() {
     super.initState();
     _prefill();
+    _loadBaselineRisk();
   }
 
   @override
@@ -62,7 +67,7 @@ class _AddPrenatalCheckupScreenState extends State<AddPrenatalCheckupScreen> {
   }
 
   void _prefill() {
-    prenatal.checkupDate = DateTime.now();
+    prenatal.checkupDateTime = DateTime.now();
     if (widget.motherWeight != null) {
       _weight.text = widget.motherWeight!.toStringAsFixed(1);
       prenatal.checkupWeight = widget.motherWeight;
@@ -70,9 +75,38 @@ class _AddPrenatalCheckupScreenState extends State<AddPrenatalCheckupScreen> {
     _recomputeAog();
   }
 
+  Future<void> _loadBaselineRisk() async {
+    try {
+      final token = await AuthStorage.getToken();
+      if (token == null) throw Exception('Not authenticated');
+      final res = await http.get(
+        Uri.parse(
+          'https://inaagapay.alwaysdata.net/api/midwife/mother_profile.php?mother_id=${widget.motherId}',
+        ),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Accept': 'application/json',
+        },
+      );
+      final decoded = jsonDecode(res.body);
+      if (decoded['success'] == true) {
+        final risk = decoded['mother']?['current_pregnancy']?['risk'];
+        setState(() {
+          _baselineRisk = (risk?['level'] ?? 'low').toString();
+          _riskLoading = false;
+        });
+      } else {
+        throw Exception(decoded['message'] ?? 'Failed to load risk');
+      }
+    } catch (_) {
+      if (mounted) setState(() => _riskLoading = false);
+    }
+  }
+
   void _recomputeAog() {
     if (widget.lmp == null) return;
-    final days = DateTime.now().difference(widget.lmp!).inDays;
+    final ref = prenatal.checkupDateTime;
+    final days = ref.difference(widget.lmp!).inDays;
     final weeks = double.parse((days / 7).toStringAsFixed(1));
     setState(() {
       aogWeeks = weeks;
@@ -145,12 +179,7 @@ class _AddPrenatalCheckupScreenState extends State<AddPrenatalCheckupScreen> {
             content: Text('Prenatal checkup saved. Redirecting to profile...'),
           ),
         );
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => MotherProfilePage(motherId: widget.motherId),
-          ),
-        );
+        Navigator.pop(context, true);
       } else {
         throw Exception(decoded['message'] ?? 'Save failed');
       }
@@ -195,7 +224,7 @@ class _AddPrenatalCheckupScreenState extends State<AddPrenatalCheckupScreen> {
           children: [
             Expanded(
               child: AppInputField(
-                hintText: 'Systolic',
+                hintText: 'Systolic (mmHg)',
                 controller: _sys,
                 keyboardType: TextInputType.number,
                 onChanged: (v) =>
@@ -208,7 +237,7 @@ class _AddPrenatalCheckupScreenState extends State<AddPrenatalCheckupScreen> {
             ),
             Expanded(
               child: AppInputField(
-                hintText: 'Diastolic',
+                hintText: 'Diastolic (mmHg)',
                 controller: _dia,
                 keyboardType: TextInputType.number,
                 onChanged: (v) =>
@@ -226,6 +255,8 @@ class _AddPrenatalCheckupScreenState extends State<AddPrenatalCheckupScreen> {
               ? '${aogWeeks!.toStringAsFixed(1)} weeks'
               : 'Set once LMP is available',
         ),
+        const SizedBox(height: 12),
+        _riskCard(),
         const SizedBox(height: 20),
         _controls(),
       ],
@@ -234,6 +265,15 @@ class _AddPrenatalCheckupScreenState extends State<AddPrenatalCheckupScreen> {
 
   Widget _fetalStep() {
     final positions = ['unknown', 'cephalic', 'vertex', 'breech', 'transverse'];
+    const heartToneOptions = [
+      'Normal',
+      'Tachycardia',
+      'Bradycardia',
+      'Irregular',
+      'Muffled',
+      'Absent',
+      'Other',
+    ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -262,12 +302,22 @@ class _AddPrenatalCheckupScreenState extends State<AddPrenatalCheckupScreen> {
           },
         ),
         const SizedBox(height: 12),
-        AppInputField(
-          hintText: 'Fetal heart tone',
-          controller: _fetalTone,
-          onChanged: (v) => prenatal.fetalHeartTone = v.trim(),
+        DropdownButtonFormField<String>(
+          value: prenatal.fetalHeartTone,
+          decoration: const InputDecoration(labelText: 'Fetal heart tone'),
+          items: heartToneOptions
+              .map((p) => DropdownMenuItem(value: p, child: Text(p)))
+              .toList(),
+          onChanged: (v) {
+            setState(() {
+              prenatal.fetalHeartTone = v;
+              _fetalTone.text = v ?? '';
+            });
+          },
         ),
         const SizedBox(height: 20),
+        _riskCard(),
+        const SizedBox(height: 12),
         _controls(),
       ],
     );
@@ -301,6 +351,8 @@ class _AddPrenatalCheckupScreenState extends State<AddPrenatalCheckupScreen> {
           ),
         ),
         const SizedBox(height: 20),
+        _riskCard(),
+        const SizedBox(height: 12),
         _controls(),
       ],
     );
@@ -369,6 +421,8 @@ class _AddPrenatalCheckupScreenState extends State<AddPrenatalCheckupScreen> {
           );
         }),
         const SizedBox(height: 20),
+        _riskCard(),
+        const SizedBox(height: 12),
         _controls(),
       ],
     );
@@ -378,11 +432,29 @@ class _AddPrenatalCheckupScreenState extends State<AddPrenatalCheckupScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SwitchListTile(
-          title: const Text('Missed scheduled checkups?'),
-          value: prenatal.missedScheduledCheckups,
-          onChanged: (v) =>
-              setState(() => prenatal.missedScheduledCheckups = v),
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          title: const Text('Next scheduled checkup'),
+          subtitle: Text(
+            _nextSchedule == null
+                ? 'Pick a date'
+                : DateFormat('MMM d, yyyy').format(_nextSchedule!),
+          ),
+          trailing: const Icon(Icons.calendar_today),
+          onTap: () async {
+            final picked = await showDatePicker(
+              context: context,
+              initialDate: _nextSchedule ?? DateTime.now(),
+              firstDate: DateTime.now().subtract(const Duration(days: 1)),
+              lastDate: DateTime.now().add(const Duration(days: 365)),
+            );
+            if (picked != null) {
+              setState(() {
+                _nextSchedule = picked;
+                prenatal.nextSchedule = picked;
+              });
+            }
+          },
         ),
         const SizedBox(height: 8),
         TextField(
@@ -397,7 +469,7 @@ class _AddPrenatalCheckupScreenState extends State<AddPrenatalCheckupScreen> {
         const SizedBox(height: 12),
         _infoChip(
           'Checkup date',
-          prenatal.checkupDate.toIso8601String().split('T').first,
+          DateFormat('MMM d, yyyy h:mm a').format(prenatal.checkupDateTime),
         ),
         _infoChip(
           'Age of gestation',
@@ -405,6 +477,8 @@ class _AddPrenatalCheckupScreenState extends State<AddPrenatalCheckupScreen> {
               ? '${aogWeeks!.toStringAsFixed(1)} weeks'
               : 'Not set',
         ),
+        const SizedBox(height: 8),
+        _riskCard(),
         const SizedBox(height: 20),
         _controls(showSubmit: true),
       ],
@@ -466,7 +540,7 @@ class _AddPrenatalCheckupScreenState extends State<AddPrenatalCheckupScreen> {
         TextButton.icon(
           onPressed: onAdd,
           icon: const Icon(Icons.add),
-          label: const Text('Add'),
+          label: const Text('New'),
           style: TextButton.styleFrom(foregroundColor: AppColors.brandAccent),
         ),
       ],
@@ -614,6 +688,128 @@ class _AddPrenatalCheckupScreenState extends State<AddPrenatalCheckupScreen> {
           prenatal.givenMedications.add(entry);
         }
       });
+    }
+  }
+
+  Widget _riskCard() {
+    final result = _computeLocalRisk();
+    final level = result.$1;
+    final reasons = result.$2;
+    Color tone;
+    switch (level) {
+      case 'high':
+        tone = Colors.red.shade100;
+        break;
+      case 'medium':
+        tone = Colors.orange.shade100;
+        break;
+      default:
+        tone = Colors.green.shade100;
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: tone,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.black12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Risk: ${level.toUpperCase()}',
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+          if (_riskLoading)
+            const Padding(
+              padding: EdgeInsets.only(top: 6),
+              child: Text('Loading baseline risk...'),
+            )
+          else if (reasons.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: reasons
+                  .map(
+                    (r) => Chip(
+                      label: Text(r),
+                      backgroundColor: Colors.white,
+                      side: const BorderSide(color: Colors.black12),
+                    ),
+                  )
+                  .toList(),
+            ),
+          ],
+          if (reasons.isEmpty)
+            const Padding(
+              padding: EdgeInsets.only(top: 6),
+              child: Text(
+                'Risk factors update automatically as you fill vitals.',
+                style: TextStyle(color: AppColors.textSecondary),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  (String, List<String>) _computeLocalRisk() {
+    final bpSys = int.tryParse(_sys.text);
+    final bpDia = int.tryParse(_dia.text);
+    final edema = prenatal.edema;
+    final fetalBeat = int.tryParse(_fetalBeat.text);
+
+    int score = _baselineScore();
+    final reasons = <String>[];
+
+    if (_baselineRisk != 'low') {
+      reasons.add('Current risk: ${_baselineRisk.toUpperCase()}');
+    }
+
+    if (bpSys != null && bpSys >= 140 || bpDia != null && bpDia >= 90) {
+      score += 3;
+      reasons.add('High blood pressure');
+    }
+
+    if (edema == 'mild') {
+      score += 1;
+      reasons.add('Mild edema');
+    } else if (edema == 'moderate') {
+      score += 2;
+      reasons.add('Moderate edema');
+    } else if (edema == 'severe') {
+      score += 3;
+      reasons.add('Severe edema');
+    }
+
+    if (fetalBeat != null && (fetalBeat < 110 || fetalBeat > 160)) {
+      score += 3;
+      reasons.add('Abnormal fetal heartbeat');
+    }
+
+    String level;
+    if (score >= 6) {
+      level = 'high';
+    } else if (score >= 3) {
+      level = 'medium';
+    } else {
+      level = 'low';
+    }
+
+    return (level, reasons);
+  }
+
+  int _baselineScore() {
+    switch (_baselineRisk.toLowerCase()) {
+      case 'high':
+        return 6;
+      case 'medium':
+        return 3;
+      default:
+        return 0;
     }
   }
 

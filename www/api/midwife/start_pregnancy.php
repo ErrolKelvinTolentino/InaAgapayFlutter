@@ -23,14 +23,6 @@ function fmtDate(?string $value): ?string
     return date('Y-m-d', strtotime($value));
 }
 
-function fmtDateTime(?string $value): ?string
-{
-    if (empty($value)) {
-        return null;
-    }
-    return date('Y-m-d H:i:s', strtotime($value));
-}
-
 function weeksBetween(?string $start, ?string $end): ?float
 {
     if (!$start || !$end) {
@@ -70,7 +62,7 @@ function computeRisk(
     array $conditions,
     array $allergies,
     array $history,
-    array $first,
+    array $latestCheckup,
     ?string $lmp,
     ?string $checkupDate
 ): array {
@@ -165,15 +157,15 @@ function computeRisk(
         $add(1, 'Three or more past pregnancies');
     }
 
-    // Prenatal check factors
-    if (!empty($first)) {
-        $sys = (int) ($first['blood_pressure_systolic'] ?? 0);
-        $dia = (int) ($first['blood_pressure_diastolic'] ?? 0);
+    // Latest checkup factors (if any)
+    if (!empty($latestCheckup)) {
+        $sys = (int) ($latestCheckup['blood_pressure_systolic'] ?? 0);
+        $dia = (int) ($latestCheckup['blood_pressure_diastolic'] ?? 0);
         if ($sys >= 140 || $dia >= 90) {
             $add(3, 'High blood pressure');
         }
 
-        $edema = $first['edema'] ?? 'none';
+        $edema = $latestCheckup['edema'] ?? 'none';
         if ($edema === 'mild') {
             $add(1, 'Mild edema');
         } elseif ($edema === 'moderate') {
@@ -182,16 +174,16 @@ function computeRisk(
             $add(3, 'Severe edema');
         }
 
-        $fetalBeat = $first['fetal_heart_beat'] ?? null;
-        $beatAbnormal = ($first['abnormal_fetal_heart_beat'] ?? false) ||
+        $fetalBeat = $latestCheckup['fetal_heart_beat'] ?? null;
+        $beatAbnormal = ($latestCheckup['abnormal_fetal_heart_beat'] ?? false) ||
             ($fetalBeat !== null && ($fetalBeat < 110 || $fetalBeat > 160));
         if ($beatAbnormal) {
             $add(3, 'Abnormal fetal heartbeat');
         }
 
-        $aog = $first['age_of_gestation'] ?? weeksBetween($lmp, $checkupDate);
-        $pos = strtolower($first['fetal_position'] ?? '');
-        $posAbnormal = ($first['abnormal_fetal_position'] ?? false) ||
+        $aog = $latestCheckup['age_of_gestation'] ?? weeksBetween($lmp, $checkupDate);
+        $pos = strtolower($latestCheckup['fetal_position'] ?? '');
+        $posAbnormal = ($latestCheckup['abnormal_fetal_position'] ?? false) ||
             ($pos !== '' && $pos !== 'cephalic' && $pos !== 'vertex' && $pos !== 'unknown');
         if ($aog !== null && $aog >= 28 && $posAbnormal) {
             $add(1, 'Non-vertex fetal position (late)');
@@ -201,7 +193,7 @@ function computeRisk(
             $add(2, 'Late first checkup (>20 weeks)');
         }
 
-        if (!empty($first['missed_scheduled_checkups'])) {
+        if (!empty($latestCheckup['missed_scheduled_checkups'])) {
             $add(1, 'Missed scheduled checkups');
         }
     }
@@ -219,14 +211,25 @@ function computeRisk(
 
 try {
     expect(isset($AUTH_USER['account_type']), 'Unauthorized');
-    expect($AUTH_USER['account_type'] === 'midwife', 'Only midwives can add prenatal checkups');
+    expect($AUTH_USER['account_type'] === 'midwife', 'Only midwives can start pregnancies');
 
     $raw = file_get_contents('php://input');
     $input = json_decode($raw, true);
     expect(is_array($input), 'Invalid JSON payload');
 
-    $pregnancyId = $input['pregnancy_id'] ?? null;
-    expect(!empty($pregnancyId), 'pregnancy_id is required');
+    $motherId = $input['mother_id'] ?? null;
+    $lmp = fmtDate($input['last_menstrual_period'] ?? null);
+    $edd = fmtDate($input['expected_date_of_delivery'] ?? null);
+    expect(!empty($motherId), 'mother_id is required');
+    expect(!empty($lmp), 'last_menstrual_period is required');
+    expect(!empty($edd), 'expected_date_of_delivery is required');
+
+    $daysDiff = (new DateTime($lmp))->diff(new DateTime($edd))->days;
+    expect($daysDiff >= 259 && $daysDiff <= 294, 'EDD must be 37–42 weeks from LMP');
+
+    $today = new DateTime('today');
+    expect(new DateTime($lmp) <= $today, 'LMP cannot be in the future');
+    expect(new DateTime($edd) >= $today, 'EDD cannot be in the past');
 
     // midwife context
     $ctx = $conn->prepare("SELECT m.midwife_id, m.assigned_bhc_id FROM midwives m WHERE m.account_id = ? LIMIT 1");
@@ -235,123 +238,24 @@ try {
     $ctx->execute();
     $ctxRes = $ctx->get_result()->fetch_assoc();
     expect($ctxRes !== null, 'Midwife context not found');
-    $midwifeId = (int) $ctxRes['midwife_id'];
     $midwifeBhcId = (int) $ctxRes['assigned_bhc_id'];
 
-    // pregnancy context
-    $pregStmt = $conn->prepare("SELECT p.pregnancy_id, p.mother_id, p.last_menstrual_period, p.status, m.assigned_bhc_id AS mother_bhc_id FROM pregnancies p JOIN mothers m ON m.mother_id = p.mother_id WHERE p.pregnancy_id = ? LIMIT 1");
-    $pregStmt->bind_param('i', $pregnancyId);
-    $pregStmt->execute();
-    $pregRow = $pregStmt->get_result()->fetch_assoc();
-    expect($pregRow !== null, 'Pregnancy not found');
-    expect($pregRow['status'] === 'ongoing', 'Only ongoing pregnancies can receive prenatal checkups');
-    expect((int) $pregRow['mother_bhc_id'] === $midwifeBhcId, 'Pregnancy is not assigned to your BHC');
+    // mother context
+    $momStmt = $conn->prepare("SELECT mother_id, birthdate, height, weight, assigned_bhc_id FROM mothers WHERE mother_id = ? LIMIT 1");
+    $momStmt->bind_param('i', $motherId);
+    $momStmt->execute();
+    $mother = $momStmt->get_result()->fetch_assoc();
+    expect($mother !== null, 'Mother not found');
+    expect((int) $mother['assigned_bhc_id'] === $midwifeBhcId, 'Mother is not assigned to your BHC');
 
-    $motherId = (int) $pregRow['mother_id'];
-    $lmp = $pregRow['last_menstrual_period'];
+    // ensure no ongoing pregnancy
+    $ongoingStmt = $conn->prepare("SELECT COUNT(*) AS c FROM pregnancies WHERE mother_id = ? AND status = 'ongoing'");
+    $ongoingStmt->bind_param('i', $motherId);
+    $ongoingStmt->execute();
+    $ongoing = $ongoingStmt->get_result()->fetch_assoc();
+    expect(($ongoing['c'] ?? 0) == 0, 'Mother already has an ongoing pregnancy');
 
-    $first = $input['prenatal_checkup'] ?? [];
-    $checkupDateTime = fmtDateTime($first['checkup_datetime'] ?? $first['checkup_date'] ?? date('Y-m-d H:i:s'));
-    $checkupDateOnly = $checkupDateTime ? date('Y-m-d', strtotime($checkupDateTime)) : null;
-    $ageOfGestation = $first['age_of_gestation'] ?? weeksBetween($lmp, $checkupDateOnly);
-    $nextSchedule = fmtDate($first['next_schedule'] ?? null);
-
-    $conn->begin_transaction();
-
-    $checkupWeight = $first['checkup_weight'] ?? null;
-    $bpSys = $first['blood_pressure_systolic'] ?? null;
-    $bpDia = $first['blood_pressure_diastolic'] ?? null;
-    $fetalPos = $first['fetal_position'] ?? null;
-    $fetalHb = $first['fetal_heart_beat'] ?? null;
-    $fetalHt = $first['fetal_heart_tone'] ?? null;
-    $tdDose = $first['td_vaccine_dose'] ?? null;
-    $edema = $first['edema'] ?? 'none';
-    $remarks = $first['remarks'] ?? null;
-
-    $prenatalStmt = $conn->prepare("INSERT INTO prenatal_checkups (pregnancy_id, midwife_id, age_of_gestation, checkup_weight, blood_pressure_systolic, blood_pressure_diastolic, fetal_position, fetal_heart_beat, fetal_heart_tone, td_vaccine_dose, edema, remarks, checkup_datetime, next_schedule) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-    $prenatalStmt->bind_param(
-        'iiddiisissssss',
-        $pregnancyId,
-        $midwifeId,
-        $ageOfGestation,
-        $checkupWeight,
-        $bpSys,
-        $bpDia,
-        $fetalPos,
-        $fetalHb,
-        $fetalHt,
-        $tdDose,
-        $edema,
-        $remarks,
-        $checkupDateTime,
-        $nextSchedule
-    );
-    $prenatalStmt->execute();
-    $prenatalId = $conn->insert_id;
-
-    // medication plans
-    if (!empty($first['mother_medications'])) {
-        $medPlanStmt = $conn->prepare("INSERT INTO mother_medications (mother_id, mother_medication_name, frequency, quantity, start_date, end_date, status) VALUES (?, ?, ?, ?, ?, ?, ?)");
-        $medName = null;
-        $medFreq = null;
-        $medQty = null;
-        $medStart = null;
-        $medEnd = null;
-        $medStatus = null;
-        $medPlanStmt->bind_param(
-            'ississs',
-            $motherId,
-            $medName,
-            $medFreq,
-            $medQty,
-            $medStart,
-            $medEnd,
-            $medStatus
-        );
-        foreach ($first['mother_medications'] as $m) {
-            if (empty($m['mother_medication_name'])) {
-                continue;
-            }
-            $medName = $m['mother_medication_name'];
-            $medFreq = $m['frequency'] ?? null;
-            $medQty = $m['quantity'] ?? null;
-            $medStart = fmtDate($m['start_date'] ?? null);
-            $medEnd = fmtDate($m['end_date'] ?? null);
-            $medStatus = $m['status'] ?? 'active';
-            $medPlanStmt->execute();
-        }
-    }
-
-    // given medications
-    if (!empty($first['given_medications'])) {
-        $givenStmt = $conn->prepare("INSERT INTO given_medications (mother_id, given_medication_name, quantity, date_given) VALUES (?, ?, ?, ?)");
-        $givenName = null;
-        $givenQty = null;
-        $givenDate = null;
-        $givenStmt->bind_param(
-            'isis',
-            $motherId,
-            $givenName,
-            $givenQty,
-            $givenDate
-        );
-        foreach ($first['given_medications'] as $g) {
-            if (empty($g['given_medication_name']) || empty($g['quantity'])) {
-                continue;
-            }
-            $givenName = $g['given_medication_name'];
-            $givenQty = $g['quantity'];
-            $givenDate = fmtDate($g['date_given'] ?? date('Y-m-d'));
-            $givenStmt->execute();
-        }
-    }
-
-    // Recompute pregnancy risk level based on latest checkup
-    $profileStmt = $conn->prepare("SELECT birthdate, height, weight FROM mothers WHERE mother_id = ? LIMIT 1");
-    $profileStmt->bind_param('i', $motherId);
-    $profileStmt->execute();
-    $profile = $profileStmt->get_result()->fetch_assoc() ?? [];
-
+    // supporting data
     $condStmt = $conn->prepare("SELECT condition_name, status FROM medical_conditions WHERE mother_id = ?");
     $condStmt->bind_param('i', $motherId);
     $condStmt->execute();
@@ -367,30 +271,21 @@ try {
     $histStmt->execute();
     $history = $histStmt->get_result()->fetch_all(MYSQLI_ASSOC);
 
-    $risk = computeRisk(
-        $profile,
-        $conditions,
-        $allergies,
-        $history,
-        $first,
-        $lmp,
-        $checkupDateOnly
-    );
-    $riskLevel = $risk['level'];
+    $risk = computeRisk($mother, $conditions, $allergies, $history, [], $lmp, null);
 
-    $riskStmt = $conn->prepare("UPDATE pregnancies SET pregnancy_risk_level = ? WHERE pregnancy_id = ?");
-    $riskStmt->bind_param('si', $riskLevel, $pregnancyId);
-    $riskStmt->execute();
+    $conn->begin_transaction();
+
+    $insert = $conn->prepare("INSERT INTO pregnancies (mother_id, pregnancy_risk_level, last_menstrual_period, expected_date_of_delivery, status) VALUES (?, ?, ?, ?, 'ongoing')");
+    $insert->bind_param('isss', $motherId, $risk['level'], $lmp, $edd);
+    $insert->execute();
+    $pregnancyId = $conn->insert_id;
 
     $conn->commit();
 
     echo json_encode([
         'success' => true,
-        'prenatal_checkup_id' => $prenatalId,
         'pregnancy_id' => $pregnancyId,
-        'mother_id' => $motherId,
-        'age_of_gestation' => $ageOfGestation,
-        'next_schedule' => $nextSchedule,
+        'pregnancy_risk_level' => $risk['level'],
         'risk' => $risk,
     ]);
 } catch (Throwable $e) {

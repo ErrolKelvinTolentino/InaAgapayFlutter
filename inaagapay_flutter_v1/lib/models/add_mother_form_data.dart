@@ -132,7 +132,7 @@ class GivenMedicationEntry {
 }
 
 class PrenatalCheckInput {
-  DateTime checkupDate = DateTime.now();
+  DateTime checkupDateTime = DateTime.now();
   double? checkupWeight;
   int? bloodPressureSystolic;
   int? bloodPressureDiastolic;
@@ -146,12 +146,13 @@ class PrenatalCheckInput {
   bool abnormalFetalPosition = false;
   double? ageOfGestationWeeks;
   bool missedScheduledCheckups = false;
+  DateTime? nextSchedule;
 
   final List<MotherMedicationEntry> motherMedications = [];
   final List<GivenMedicationEntry> givenMedications = [];
 
   Map<String, dynamic> toJson() => {
-    'checkup_date': _fmtDate(checkupDate),
+    'checkup_datetime': _fmtDateTime(checkupDateTime),
     'checkup_weight': checkupWeight,
     'blood_pressure_systolic': bloodPressureSystolic,
     'blood_pressure_diastolic': bloodPressureDiastolic,
@@ -165,6 +166,7 @@ class PrenatalCheckInput {
     'td_vaccine_dose': tdVaccineDose,
     'age_of_gestation': ageOfGestationWeeks,
     'missed_scheduled_checkups': missedScheduledCheckups,
+    'next_schedule': _fmtDate(nextSchedule),
     'mother_medications': motherMedications.map((m) => m.toJson()).toList(),
     'given_medications': givenMedications.map((g) => g.toJson()).toList(),
   };
@@ -323,4 +325,9 @@ class AddMotherFormData {
 String? _fmtDate(DateTime? date) {
   if (date == null) return null;
   return date.toIso8601String().split('T').first;
+}
+
+String? _fmtDateTime(DateTime? date) {
+  if (date == null) return null;
+  return date.toIso8601String();
 }

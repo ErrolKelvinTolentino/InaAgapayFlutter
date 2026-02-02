@@ -22,6 +22,14 @@ function fmtDate(?string $value): ?string
     return date('Y-m-d', strtotime($value));
 }
 
+
+function fmtDateTime(?string $value): ?string
+{
+    if (empty($value)) {
+        return null;
+    }
+    return date('Y-m-d H:i:s', strtotime($value));
+}
 function weeksBetween(?string $start, ?string $end): ?float
 {
     if (!$start || !$end)
@@ -154,7 +162,9 @@ function computeRisk(array $input, array $profile, array $conditions, array $all
             $add('Abnormal fetal heartbeat', 3);
         }
 
-        $aog = $first['age_of_gestation'] ?? weeksBetween($input['current_pregnancy']['last_menstrual_period'] ?? null, $first['checkup_date'] ?? null);
+        $checkDate = $first['checkup_datetime'] ?? $first['checkup_date'] ?? null;
+        $checkDateOnly = $checkDate ? date('Y-m-d', strtotime($checkDate)) : null;
+        $aog = $first['age_of_gestation'] ?? weeksBetween($input['current_pregnancy']['last_menstrual_period'] ?? null, $checkDateOnly);
         $pos = strtolower($first['fetal_position'] ?? '');
         $posAbnormal = ($first['abnormal_fetal_position'] ?? false) ||
             ($pos !== '' && $pos !== 'cephalic' && $pos !== 'vertex' && $pos !== 'unknown');
@@ -423,14 +433,15 @@ try {
     if ($includeFirstPrenatal) {
         // First prenatal checkup (optional when include_first_prenatal is false)
         $first = $input['first_prenatal_checkup'] ?? [];
-        $checkupDate = fmtDate($first['checkup_date'] ?? date('Y-m-d'));
-        $checkupDateObj = new DateTime($checkupDate);
+        $checkupDateTime = fmtDateTime($first['checkup_datetime'] ?? $first['checkup_date'] ?? date('Y-m-d H:i:s'));
+        $checkupDateObj = new DateTime($checkupDateTime);
         $createdAt = new DateTime();
         if ($checkupDateObj < $createdAt) {
-            $checkupDate = $createdAt->format('Y-m-d');
+            $checkupDateTime = $createdAt->format('Y-m-d H:i:s');
         }
 
-        $ageOfGestation = $first['age_of_gestation'] ?? weeksBetween($lmp, $checkupDate);
+        $checkupDateOnly = date('Y-m-d', strtotime($checkupDateTime));
+        $ageOfGestation = $first['age_of_gestation'] ?? weeksBetween($lmp, $checkupDateOnly);
 
         $checkupWeight = $first['checkup_weight'] ?? null;
         $bpSys = $first['blood_pressure_systolic'] ?? null;
@@ -442,7 +453,7 @@ try {
         $edema = $first['edema'] ?? 'none';
         $remarks = $first['remarks'] ?? null;
 
-        $prenatalStmt = $conn->prepare("INSERT INTO prenatal_checkups (pregnancy_id, midwife_id, age_of_gestation, checkup_weight, blood_pressure_systolic, blood_pressure_diastolic, fetal_position, fetal_heart_beat, fetal_heart_tone, td_vaccine_dose, edema, remarks, checkup_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $prenatalStmt = $conn->prepare("INSERT INTO prenatal_checkups (pregnancy_id, midwife_id, age_of_gestation, checkup_weight, blood_pressure_systolic, blood_pressure_diastolic, fetal_position, fetal_heart_beat, fetal_heart_tone, td_vaccine_dose, edema, remarks, checkup_datetime) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
         $prenatalStmt->bind_param(
             'iiddiisisssss',
             $pregnancyId,
@@ -457,7 +468,7 @@ try {
             $tdDose,
             $edema,
             $remarks,
-            $checkupDate
+            $checkupDateTime
         );
         $prenatalStmt->execute();
         $prenatalId = $conn->insert_id;

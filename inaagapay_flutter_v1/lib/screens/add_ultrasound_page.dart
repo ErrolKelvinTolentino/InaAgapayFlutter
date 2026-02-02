@@ -122,8 +122,9 @@ class _AddUltrasoundPageState extends State<AddUltrasoundPage> {
         context,
       ).showSnackBar(SnackBar(content: Text('Save failed: $e')));
     } finally {
-      if (!mounted) return;
-      setState(() => _submitting = false);
+      if (mounted) {
+        setState(() => _submitting = false);
+      }
     }
   }
 
