@@ -211,22 +211,6 @@ class _MidwifeDashboardState extends State<MidwifeDashboard> {
 
                     const SizedBox(height: 20),
 
-                    // ================= NEW: CARE ALERTS =================
-                    section('Care Alerts'),
-                    statRow(
-                      'Mothers Needing Checkups',
-                      s.mothersNeedingCheckups,
-                    ),
-                    const SizedBox(height: 20),
-
-                    // ================= NEW: BIRTH OUTCOMES =================
-                    section('Birth Outcomes'),
-                    ...s.birthOutcomes.entries.map(
-                      (e) => statRow(e.key, e.value),
-                    ),
-                    const SizedBox(height: 20),
-
-                    // ================= EXISTING: TRIMESTERS =================
                     section('Mothers by Trimester'),
                     statRow('1st Trimester', s.firstTrimester),
                     statRow('2nd Trimester', s.secondTrimester),
@@ -244,38 +228,38 @@ class _MidwifeDashboardState extends State<MidwifeDashboard> {
   // ================= HELPERS =================
 
   static Widget section(String title) => Padding(
-        padding: const EdgeInsets.only(bottom: 8),
-        child: Text(
-          title,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            color: AppColors.brandText,
-          ),
-        ),
-      );
+    padding: const EdgeInsets.only(bottom: 8),
+    child: Text(
+      title,
+      style: const TextStyle(
+        fontWeight: FontWeight.bold,
+        color: AppColors.brandText,
+      ),
+    ),
+  );
 
   static Widget statRow(String label, int value) => Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: AppColors.faintWhite,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.borderPrimary),
+    margin: const EdgeInsets.only(bottom: 10),
+    padding: const EdgeInsets.all(14),
+    decoration: BoxDecoration(
+      color: AppColors.faintWhite,
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: AppColors.borderPrimary),
+    ),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label),
+        Text(
+          value.toString(),
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            color: AppColors.brandAccent,
+          ),
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(label),
-            Text(
-              value.toString(),
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                color: AppColors.brandAccent,
-              ),
-            ),
-          ],
-        ),
-      );
+      ],
+    ),
+  );
 }
 
 // ================= ENUM =================
@@ -303,7 +287,7 @@ class GreetingModel {
 
   factory GreetingModel.fromJson(Map<String, dynamic> json) {
     return GreetingModel(
-      accountType: json['role']?.toString(),
+      accountType: json['role']?.toString(), // PHP sends role = account_type
       firstName: json['first_name']?.toString(),
       middleName: json['middle_name']?.toString(),
       lastName: json['last_name']?.toString(),
@@ -340,16 +324,10 @@ class DashboardStats {
   final int secondTrimester;
   final int thirdTrimester;
 
-  // 🔥 NEW
-  final int mothersNeedingCheckups;
-  final Map<String, int> birthOutcomes;
-
   DashboardStats({
     required this.firstTrimester,
     required this.secondTrimester,
     required this.thirdTrimester,
-    required this.mothersNeedingCheckups,
-    required this.birthOutcomes,
   });
 
   factory DashboardStats.fromJson(Map<String, dynamic> json) {
@@ -359,15 +337,6 @@ class DashboardStats {
       firstTrimester: safe(json['trimester']['first_trimester']),
       secondTrimester: safe(json['trimester']['second_trimester']),
       thirdTrimester: safe(json['trimester']['third_trimester']),
-      mothersNeedingCheckups:
-          safe(json['checkups']['mothers_due']),
-      birthOutcomes: {
-        'Live Birth': safe(json['outcomes']['live_birth']),
-        'Stillbirth': safe(json['outcomes']['stillbirth']),
-        'Miscarriage': safe(json['outcomes']['miscarriage']),
-        'Abortion': safe(json['outcomes']['abortion']),
-        'Ectopic': safe(json['outcomes']['ectopic']),
-      },
     );
   }
 }
