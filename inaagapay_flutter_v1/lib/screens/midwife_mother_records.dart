@@ -9,7 +9,7 @@ import '../widgets/midwife_bottom_navigation.dart';
 import 'midwife_prenatal_stack.dart';
 import 'midwife_ultrasound_stack.dart';
 import 'midwife_lab_stack.dart';
-
+import 'midwife_pregnancy_details.dart';
 
 class MidwifeMotherRecordsPage extends StatelessWidget {
   const MidwifeMotherRecordsPage({super.key});
@@ -120,6 +120,22 @@ class MidwifeMotherRecordsPage extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => MidwifeLabStack()),
+                );
+              },
+            ),
+
+            const SizedBox(height: 12),
+
+            _RecordCategoryCard(
+              title: 'Pregnancy History',
+              countText: '2 records',
+              icon: Icons.history_rounded,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const MidwifePregnancyDetailsPage(),
+                  ),
                 );
               },
             ),
