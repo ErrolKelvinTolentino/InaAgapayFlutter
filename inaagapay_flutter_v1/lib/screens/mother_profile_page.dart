@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
+import 'package:fl_chart/fl_chart.dart';
 
 import '../theme/app_colors.dart';
 import '../services/auth_storage.dart';
@@ -9,12 +11,23 @@ import 'add_prenatal_checkup.dart';
 import 'add_ultrasound_page.dart';
 import 'add_lab_test_page.dart';
 
-class MotherProfilePage extends StatelessWidget {
+class MotherProfilePage extends StatefulWidget {
   final int motherId;
 
   const MotherProfilePage({super.key, required this.motherId});
 
-  // ================= API =================
+  @override
+  State<MotherProfilePage> createState() => _MotherProfilePageState();
+}
+
+class _MotherProfilePageState extends State<MotherProfilePage> {
+  Future<Map<String, dynamic>>? _future;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = fetchMotherProfile();
+  }
 
   Future<Map<String, dynamic>> fetchMotherProfile() async {
     final token = await AuthStorage.getToken();
@@ -23,7 +36,7 @@ class MotherProfilePage extends StatelessWidget {
     final res = await http.get(
       Uri.parse(
         'https://inaagapay.alwaysdata.net/api/midwife/mother_profile.php'
-        '?mother_id=$motherId',
+        '?mother_id=${widget.motherId}',
       ),
       headers: {'Authorization': 'Bearer $token', 'Accept': 'application/json'},
     );
@@ -35,6 +48,11 @@ class MotherProfilePage extends StatelessWidget {
     }
 
     return decoded['mother'];
+  }
+
+  Future<void> _refresh() async {
+    setState(() => _future = fetchMotherProfile());
+    await _future;
   }
 
   // ================= UI =================
@@ -51,7 +69,7 @@ class MotherProfilePage extends StatelessWidget {
       ),
 
       body: FutureBuilder<Map<String, dynamic>>(
-        future: fetchMotherProfile(),
+        future: _future,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -101,6 +119,10 @@ class MotherProfilePage extends StatelessWidget {
             );
           }
 
+          Widget infoCard(String title, List<Widget> children) {
+            return section(title, children);
+          }
+
           Widget field(String label, dynamic value) {
             return Padding(
               padding: const EdgeInsets.only(bottom: 6),
@@ -143,14 +165,116 @@ class MotherProfilePage extends StatelessWidget {
             return 'https://inaagapay.alwaysdata.net/$cleaned';
           }
 
-          Widget infoCard(String title, List<Widget> children) {
+          DateTime? parseDate(dynamic v) {
+            if (v == null) return null;
+            return DateTime.tryParse(v.toString());
+          }
+
+          String shortDate(dynamic v) {
+            final parsed = parseDate(v);
+            if (parsed == null) return '—';
+            return DateFormat('MMM d').format(parsed);
+          }
+
+          double? toDouble(dynamic v) {
+            if (v == null) return null;
+            return double.tryParse(v.toString());
+          }
+
+          List<Map<String, dynamic>> sortedCheckups(dynamic v) {
+            final list = listOrEmpty(
+              v,
+            ).whereType<Map<String, dynamic>>().toList();
+            list.sort((a, b) {
+              final da = parseDate(a['checkup_date']);
+              final db = parseDate(b['checkup_date']);
+              if (da == null && db == null) return 0;
+              if (da == null) return 1;
+              if (db == null) return -1;
+              return da.compareTo(db);
+            });
+            return list;
+          }
+
+          Widget metricTile({
+            required String title,
+            required String value,
+            required IconData icon,
+            Color? color,
+          }) {
+            final accent = color ?? AppColors.brandPrimary;
+            return Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: AppColors.borderPrimary),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.04),
+                    blurRadius: 12,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: accent.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(icon, color: accent, size: 20),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: const TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 12,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          value,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          Widget chartCard({
+            required String title,
+            required Widget chart,
+            String? subtitle,
+          }) {
             return Container(
               margin: const EdgeInsets.only(bottom: 12),
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: AppColors.faintWhite,
-                borderRadius: BorderRadius.circular(14),
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: AppColors.borderPrimary),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.04),
+                    blurRadius: 16,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -162,10 +286,90 @@ class MotherProfilePage extends StatelessWidget {
                       color: AppColors.brandText,
                     ),
                   ),
-                  const SizedBox(height: 10),
-                  ...children,
+                  if (subtitle != null) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(color: AppColors.textSecondary),
+                    ),
+                  ],
+                  const SizedBox(height: 12),
+                  SizedBox(height: 190, child: chart),
                 ],
               ),
+            );
+          }
+
+          Widget emptyChart(String label) {
+            return Container(
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: AppColors.bgSecondary,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                label,
+                style: const TextStyle(color: AppColors.textSecondary),
+              ),
+            );
+          }
+
+          LineChartData lineChartData({
+            required List<LineChartBarData> lines,
+            required List<String> labels,
+            double? minY,
+            double? maxY,
+          }) {
+            return LineChartData(
+              minY: minY,
+              maxY: maxY,
+              gridData: FlGridData(show: true, drawVerticalLine: false),
+              borderData: FlBorderData(show: false),
+              titlesData: FlTitlesData(
+                topTitles: const AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
+                ),
+                rightTitles: const AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
+                ),
+                leftTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    reservedSize: 36,
+                    getTitlesWidget: (value, _) => Text(
+                      value.toInt().toString(),
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 10,
+                      ),
+                    ),
+                  ),
+                ),
+                bottomTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    reservedSize: 28,
+                    interval: 1,
+                    getTitlesWidget: (value, _) {
+                      final index = value.toInt();
+                      if (index < 0 || index >= labels.length) {
+                        return const SizedBox.shrink();
+                      }
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: Text(
+                          labels[index],
+                          style: const TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 10,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+              lineBarsData: lines,
             );
           }
 
@@ -407,7 +611,7 @@ class MotherProfilePage extends StatelessWidget {
               context,
               MaterialPageRoute(
                 builder: (_) => AddPrenatalCheckupScreen(
-                  motherId: motherId,
+                  motherId: widget.motherId,
                   pregnancyId: int.parse(pregnancyId.toString()),
                   lmp: lmp,
                   motherWeight: null,
@@ -416,7 +620,7 @@ class MotherProfilePage extends StatelessWidget {
             );
 
             if (added == true) {
-              (context as Element).reassemble();
+              await _refresh();
             }
           }
 
@@ -425,843 +629,1212 @@ class MotherProfilePage extends StatelessWidget {
             child: Column(
               children: [
                 Expanded(
-                  child: NestedScrollView(
-                    headerSliverBuilder: (context, _) => [
-                      SliverToBoxAdapter(
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            children: [
-                              Center(
-                                child: Column(
-                                  children: [
-                                    const CircleAvatar(
-                                      radius: 42,
-                                      child: Icon(Icons.person, size: 40),
-                                    ),
-                                    const SizedBox(height: 10),
-                                    Text(
-                                      fullName.isNotEmpty
-                                          ? fullName
-                                          : 'Unnamed Mother',
-                                      style: const TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      'Status: ${m['status'] ?? '—'}',
-                                      style: const TextStyle(
-                                        color: AppColors.brandAccent,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 12),
-                                    Wrap(
-                                      spacing: 8,
-                                      runSpacing: 8,
-                                      alignment: WrapAlignment.center,
-                                      children: [
-                                        statChip(
-                                          'Children',
-                                          '${m['children_count'] ?? 0}',
-                                        ),
-                                        statChip(
-                                          'Risk',
-                                          '${m['pregnancy_risk_level'] ?? '—'}',
-                                        ),
+                  child: RefreshIndicator(
+                    onRefresh: _refresh,
+                    child: NestedScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      headerSliverBuilder: (context, _) => [
+                        SliverToBoxAdapter(
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              children: [
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(18),
+                                    gradient: const LinearGradient(
+                                      colors: [
+                                        Color(0xFFFFECF3),
+                                        Color(0xFFFFF7FB),
                                       ],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
                                     ),
-                                  ],
+                                    border: Border.all(
+                                      color: AppColors.borderPrimary,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.center,
+                                    children: [
+                                      Container(
+                                        width: 64,
+                                        height: 64,
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          shape: BoxShape.circle,
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: Colors.black.withOpacity(
+                                                0.06,
+                                              ),
+                                              blurRadius: 12,
+                                            ),
+                                          ],
+                                        ),
+                                        child: const Icon(
+                                          Icons.person,
+                                          size: 34,
+                                          color: AppColors.brandText,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 14),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              fullName.isNotEmpty
+                                                  ? fullName
+                                                  : 'Unnamed Mother',
+                                              style: const TextStyle(
+                                                fontSize: 18,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              m['phone_number'] ?? '—',
+                                              style: const TextStyle(
+                                                color: AppColors.textSecondary,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 8),
+                                            Wrap(
+                                              spacing: 8,
+                                              runSpacing: 8,
+                                              children: [
+                                                statChip(
+                                                  'Status',
+                                                  '${m['status'] ?? '—'}',
+                                                ),
+                                                statChip(
+                                                  'Risk',
+                                                  '${m['pregnancy_risk_level'] ?? '—'}',
+                                                ),
+                                              ],
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(height: 16),
-                              const TabBar(
-                                tabs: [
-                                  Tab(text: 'Overview'),
-                                  Tab(text: 'Current'),
-                                  Tab(text: 'History'),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                    body: TabBarView(
-                      children: [
-                        // ================= OVERVIEW =================
-                        SingleChildScrollView(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 12,
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              infoCard('Quick Actions', [
+                                const SizedBox(height: 14),
                                 Wrap(
                                   spacing: 10,
                                   runSpacing: 10,
+                                  alignment: WrapAlignment.center,
                                   children: [
-                                    ElevatedButton.icon(
-                                      onPressed: addPrenatalCheckup,
-                                      icon: const Icon(Icons.add),
-                                      label: const Text('Add Checkup'),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.pink,
-                                      ),
+                                    statChip(
+                                      'Children',
+                                      '${m['children_count'] ?? 0}',
                                     ),
-                                    OutlinedButton.icon(
-                                      onPressed: () async {
-                                        final added = await Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (_) => AddUltrasoundPage(
-                                              motherId: motherId,
-                                            ),
-                                          ),
-                                        );
-                                        if (added == true) {
-                                          (context as Element).reassemble();
-                                        }
-                                      },
-                                      icon: const Icon(Icons.monitor_heart),
-                                      label: const Text('Add Ultrasound'),
+                                    statChip(
+                                      'Barangay',
+                                      '${m['barangay'] ?? '—'}',
                                     ),
-                                    OutlinedButton.icon(
-                                      onPressed: () async {
-                                        final added = await Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (_) => AddLabTestPage(
-                                              motherId: motherId,
-                                            ),
-                                          ),
-                                        );
-                                        if (added == true) {
-                                          (context as Element).reassemble();
-                                        }
-                                      },
-                                      icon: const Icon(Icons.science),
-                                      label: const Text('Add Lab Test'),
+                                    statChip(
+                                      'City',
+                                      '${m['city_municipality'] ?? '—'}',
                                     ),
                                   ],
                                 ),
-                              ]),
-                              infoCard('Personal Information', [
-                                field('Phone', m['phone_number']),
-                                field('Email', m['email_address']),
-                                field('Birthdate', m['birthdate']),
-                              ]),
-                              infoCard('Address', [
-                                field('House No.', m['house_number']),
-                                field('Street', m['street']),
-                                field('Barangay', m['barangay']),
-                                field('City', m['city_municipality']),
-                                field('Province', m['province']),
-                              ]),
-                              infoCard('Medical Info', [
-                                field('Height (cm)', m['height']),
-                                field('Weight (kg)', m['weight']),
-                                field('Blood Type', m['blood_type']),
-                                ExpansionTile(
-                                  tilePadding: EdgeInsets.zero,
-                                  title: Text(
-                                    'Medical Conditions (${medicalConditions.length})',
-                                  ),
-                                  children: medicalConditions.isEmpty
-                                      ? [
-                                          const Padding(
-                                            padding: EdgeInsets.only(bottom: 8),
-                                            child: Text('No records.'),
-                                          ),
-                                        ]
-                                      : medicalConditions.map((c) {
-                                          return ListTile(
-                                            dense: true,
-                                            title: Text(
-                                              c['condition_name'] ?? '—',
-                                            ),
-                                            subtitle: Text(
-                                              '${c['status'] ?? 'active'} • ${fmtDate(c['diagnosis_date']) ?? '—'}',
-                                            ),
-                                          );
-                                        }).toList(),
-                                ),
-                                ExpansionTile(
-                                  tilePadding: EdgeInsets.zero,
-                                  title: Text(
-                                    'Allergies (${allergies.length})',
-                                  ),
-                                  children: allergies.isEmpty
-                                      ? [
-                                          const Padding(
-                                            padding: EdgeInsets.only(bottom: 8),
-                                            child: Text('No records.'),
-                                          ),
-                                        ]
-                                      : allergies.map((a) {
-                                          return ListTile(
-                                            dense: true,
-                                            title: Text(a['allergen'] ?? '—'),
-                                            subtitle: Text(
-                                              '${a['status'] ?? 'active'} • ${fmtDate(a['diagnosis_date']) ?? '—'}',
-                                            ),
-                                          );
-                                        }).toList(),
-                                ),
-                              ]),
-                            ],
-                          ),
-                        ),
-
-                        // ================= CURRENT PREGNANCY =================
-                        SingleChildScrollView(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 12,
-                          ),
-                          child: currentPreg == null
-                              ? infoCard('Current Pregnancy', const [
-                                  Text('No ongoing pregnancy found.'),
-                                ])
-                              : Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    infoCard('Current Pregnancy', [
-                                      field(
-                                        'Risk Level',
-                                        currentPreg['pregnancy_risk_level'],
-                                      ),
-                                      field('Status', currentPreg['status']),
-                                      field(
-                                        'LMP',
-                                        fmtDate(
-                                          currentPreg['last_menstrual_period'],
-                                        ),
-                                      ),
-                                      field(
-                                        'EDD',
-                                        fmtDate(
-                                          currentPreg['expected_date_of_delivery'],
-                                        ),
-                                      ),
-                                    ]),
-                                    infoCard('Checkups', [
-                                      ...listOrEmpty(
-                                        currentPreg['checkups'],
-                                      ).map((c) {
-                                        final date =
-                                            fmtDate(c['checkup_date']) ?? '—';
-                                        final bpSys = fmtValue(
-                                          c['blood_pressure_systolic'],
-                                        );
-                                        final bpDia = fmtValue(
-                                          c['blood_pressure_diastolic'],
-                                        );
-                                        final bp =
-                                            (bpSys == '—' && bpDia == '—')
-                                            ? null
-                                            : 'BP: $bpSys/$bpDia';
-                                        final aog = fmtValue(
-                                          c['age_of_gestation'],
-                                        );
-                                        final wt = fmtValue(
-                                          c['checkup_weight'],
-                                        );
-                                        final tags = <String>[];
-                                        if (bp != null) tags.add(bp);
-                                        if (aog != '—') tags.add('AOG: $aog');
-                                        if (wt != '—') tags.add('Wt: $wt kg');
-
-                                        final next = fmtDate(
-                                          c['next_schedule'],
-                                        );
-                                        return recordCard(
-                                          icon: Icons.medical_services,
-                                          title: 'Checkup • $date',
-                                          subtitle:
-                                              (next == null || next.isEmpty)
-                                              ? null
-                                              : 'Next: $next',
-                                          tags: tags,
-                                          onTap: () => showRecordSheet(
-                                            title: 'Checkup Details',
-                                            subtitle: date,
-                                            icon: Icons.medical_services,
-                                            rows: [
-                                              MapEntry(
-                                                'Checkup Date',
-                                                fmtValue(
-                                                  fmtDate(c['checkup_date']),
-                                                ),
-                                              ),
-                                              MapEntry(
-                                                'Age of Gestation',
-                                                fmtValue(c['age_of_gestation']),
-                                              ),
-                                              MapEntry(
-                                                'Weight (kg)',
-                                                fmtValue(c['checkup_weight']),
-                                              ),
-                                              MapEntry(
-                                                'Blood Pressure',
-                                                '${fmtValue(c['blood_pressure_systolic'])}/${fmtValue(c['blood_pressure_diastolic'])}',
-                                              ),
-                                              MapEntry(
-                                                'Fetal Position',
-                                                fmtValue(c['fetal_position']),
-                                              ),
-                                              MapEntry(
-                                                'Fetal Heart Beat',
-                                                fmtValue(c['fetal_heart_beat']),
-                                              ),
-                                              MapEntry(
-                                                'Fetal Heart Tone',
-                                                fmtValue(c['fetal_heart_tone']),
-                                              ),
-                                              MapEntry(
-                                                'TD Vaccine Dose',
-                                                fmtValue(c['td_vaccine_dose']),
-                                              ),
-                                              MapEntry(
-                                                'Edema',
-                                                fmtValue(c['edema']),
-                                              ),
-                                              MapEntry(
-                                                'Remarks',
-                                                fmtValue(c['remarks']),
-                                              ),
-                                              MapEntry(
-                                                'Next Schedule',
-                                                fmtValue(
-                                                  fmtDate(c['next_schedule']),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        );
-                                      }),
-                                      if (listOrEmpty(
-                                        currentPreg['checkups'],
-                                      ).isEmpty)
-                                        const Text('No checkups yet.'),
-                                    ]),
-                                    infoCard('Ultrasounds', [
-                                      ...listOrEmpty(
-                                        currentPreg['ultrasounds'],
-                                      ).map((u) {
-                                        final date =
-                                            fmtDate(u['ultrasound_date']) ??
-                                            '—';
-                                        final imageUrl = resolveImageUrl(
-                                          u['ultrasound_image'],
-                                        );
-                                        final tags = <String>[];
-                                        final worker = fmtValue(
-                                          u['health_worker_name'],
-                                        );
-                                        if (worker != '—') {
-                                          tags.add(worker);
-                                        }
-                                        if (imageUrl != null) {
-                                          tags.add('Image');
-                                        }
-                                        return recordCard(
-                                          icon: Icons.monitor_heart,
-                                          title: 'Ultrasound • $date',
-                                          subtitle: fmtValue(
-                                            u['ultrasound_location'],
-                                          ),
-                                          tags: tags,
-                                          onTap: () => showRecordSheet(
-                                            title: 'Ultrasound Details',
-                                            subtitle: date,
-                                            icon: Icons.monitor_heart,
-                                            imageUrl: imageUrl,
-                                            rows: [
-                                              MapEntry(
-                                                'Date',
-                                                fmtValue(
-                                                  fmtDate(u['ultrasound_date']),
-                                                ),
-                                              ),
-                                              MapEntry(
-                                                'Location',
-                                                fmtValue(
-                                                  u['ultrasound_location'],
-                                                ),
-                                              ),
-                                              MapEntry(
-                                                'Health Worker',
-                                                fmtValue(
-                                                  u['health_worker_name'],
-                                                ),
-                                              ),
-                                              MapEntry(
-                                                'Institution',
-                                                fmtValue(
-                                                  u['health_worker_institution'],
-                                                ),
-                                              ),
-                                              MapEntry(
-                                                'Profession',
-                                                fmtValue(
-                                                  u['health_worker_profession'],
-                                                ),
-                                              ),
-                                              MapEntry(
-                                                'Remarks',
-                                                fmtValue(u['remarks']),
-                                              ),
-                                            ],
-                                          ),
-                                        );
-                                      }),
-                                      if (listOrEmpty(
-                                        currentPreg['ultrasounds'],
-                                      ).isEmpty)
-                                        const Text('No ultrasounds yet.'),
-                                    ]),
-                                    infoCard('Lab Tests', [
-                                      ...listOrEmpty(
-                                        currentPreg['lab_tests'],
-                                      ).map((l) {
-                                        final date =
-                                            fmtDate(l['lab_test_date']) ?? '—';
-                                        final imageUrl = resolveImageUrl(
-                                          l['lab_test_image'],
-                                        );
-                                        final tags = <String>[];
-                                        final worker = fmtValue(
-                                          l['health_worker_name'],
-                                        );
-                                        if (worker != '—') {
-                                          tags.add(worker);
-                                        }
-                                        if (imageUrl != null) {
-                                          tags.add('Image');
-                                        }
-                                        return recordCard(
-                                          icon: Icons.science,
-                                          title:
-                                              '${l['lab_test_type'] ?? 'Lab Test'} • $date',
-                                          subtitle: fmtValue(
-                                            l['lab_test_location'],
-                                          ),
-                                          tags: tags,
-                                          onTap: () => showRecordSheet(
-                                            title: 'Lab Test Details',
-                                            subtitle: date,
-                                            icon: Icons.science,
-                                            imageUrl: imageUrl,
-                                            rows: [
-                                              MapEntry(
-                                                'Type',
-                                                fmtValue(l['lab_test_type']),
-                                              ),
-                                              MapEntry(
-                                                'Date',
-                                                fmtValue(
-                                                  fmtDate(l['lab_test_date']),
-                                                ),
-                                              ),
-                                              MapEntry(
-                                                'Location',
-                                                fmtValue(
-                                                  l['lab_test_location'],
-                                                ),
-                                              ),
-                                              MapEntry(
-                                                'Health Worker',
-                                                fmtValue(
-                                                  l['health_worker_name'],
-                                                ),
-                                              ),
-                                              MapEntry(
-                                                'Institution',
-                                                fmtValue(
-                                                  l['health_worker_institution'],
-                                                ),
-                                              ),
-                                              MapEntry(
-                                                'Profession',
-                                                fmtValue(
-                                                  l['health_worker_profession'],
-                                                ),
-                                              ),
-                                              MapEntry(
-                                                'Remarks',
-                                                fmtValue(l['remarks']),
-                                              ),
-                                            ],
-                                          ),
-                                        );
-                                      }),
-                                      if (listOrEmpty(
-                                        currentPreg['lab_tests'],
-                                      ).isEmpty)
-                                        const Text('No lab tests yet.'),
-                                    ]),
+                                const SizedBox(height: 16),
+                                const TabBar(
+                                  tabs: [
+                                    Tab(text: 'Overview'),
+                                    Tab(text: 'Current'),
+                                    Tab(text: 'History'),
                                   ],
                                 ),
-                        ),
-
-                        // ================= HISTORY =================
-                        SingleChildScrollView(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 12,
+                              ],
+                            ),
                           ),
-                          child: pastPregs.isEmpty
-                              ? infoCard('Past Pregnancies', const [
-                                  Text('No past pregnancies recorded.'),
-                                ])
-                              : Column(
-                                  children: pastPregs.map((p) {
-                                    final delivery = p['delivery'];
-                                    return infoCard('Pregnancy • ${p['outcome'] ?? '—'}', [
-                                      field(
-                                        'Outcome Date',
-                                        fmtDate(p['outcome_date']),
-                                      ),
-                                      field(
-                                        'Gestational Age',
-                                        p['gestational_age_at_end'],
-                                      ),
-                                      if (delivery != null) ...[
-                                        field(
-                                          'Delivery Place',
-                                          delivery['place_of_delivery'],
-                                        ),
-                                        field(
-                                          'Delivery Method',
-                                          delivery['delivery_method'],
-                                        ),
-                                      ],
-                                      ExpansionTile(
-                                        tilePadding: EdgeInsets.zero,
-                                        title: Text(
-                                          'Checkups (${listOrEmpty(p['checkups']).length})',
-                                        ),
-                                        children:
-                                            listOrEmpty(p['checkups']).isEmpty
-                                            ? [
-                                                const Padding(
-                                                  padding: EdgeInsets.only(
-                                                    bottom: 8,
-                                                  ),
-                                                  child: Text('No checkups.'),
-                                                ),
-                                              ]
-                                            : listOrEmpty(p['checkups']).map((
-                                                c,
-                                              ) {
-                                                final date =
-                                                    fmtDate(
-                                                      c['checkup_date'],
-                                                    ) ??
-                                                    '—';
-                                                final bpSys = fmtValue(
-                                                  c['blood_pressure_systolic'],
-                                                );
-                                                final bpDia = fmtValue(
-                                                  c['blood_pressure_diastolic'],
-                                                );
-                                                final bp =
-                                                    (bpSys == '—' &&
-                                                        bpDia == '—')
-                                                    ? null
-                                                    : 'BP: $bpSys/$bpDia';
-                                                final aog = fmtValue(
-                                                  c['age_of_gestation'],
-                                                );
-                                                final wt = fmtValue(
-                                                  c['checkup_weight'],
-                                                );
-                                                final tags = <String>[];
-                                                if (bp != null) tags.add(bp);
-                                                if (aog != '—') {
-                                                  tags.add('AOG: $aog');
-                                                }
-                                                if (wt != '—')
-                                                  tags.add('Wt: $wt kg');
-
-                                                return recordCard(
-                                                  icon: Icons.medical_services,
-                                                  title: 'Checkup • $date',
-                                                  tags: tags,
-                                                  onTap: () => showRecordSheet(
-                                                    title: 'Checkup Details',
-                                                    subtitle: date,
-                                                    icon:
-                                                        Icons.medical_services,
-                                                    rows: [
-                                                      MapEntry(
-                                                        'Checkup Date',
-                                                        fmtValue(
-                                                          fmtDate(
-                                                            c['checkup_date'],
-                                                          ),
-                                                        ),
-                                                      ),
-                                                      MapEntry(
-                                                        'Age of Gestation',
-                                                        fmtValue(
-                                                          c['age_of_gestation'],
-                                                        ),
-                                                      ),
-                                                      MapEntry(
-                                                        'Weight (kg)',
-                                                        fmtValue(
-                                                          c['checkup_weight'],
-                                                        ),
-                                                      ),
-                                                      MapEntry(
-                                                        'Blood Pressure',
-                                                        '${fmtValue(c['blood_pressure_systolic'])}/${fmtValue(c['blood_pressure_diastolic'])}',
-                                                      ),
-                                                      MapEntry(
-                                                        'Fetal Position',
-                                                        fmtValue(
-                                                          c['fetal_position'],
-                                                        ),
-                                                      ),
-                                                      MapEntry(
-                                                        'Fetal Heart Beat',
-                                                        fmtValue(
-                                                          c['fetal_heart_beat'],
-                                                        ),
-                                                      ),
-                                                      MapEntry(
-                                                        'Fetal Heart Tone',
-                                                        fmtValue(
-                                                          c['fetal_heart_tone'],
-                                                        ),
-                                                      ),
-                                                      MapEntry(
-                                                        'TD Vaccine Dose',
-                                                        fmtValue(
-                                                          c['td_vaccine_dose'],
-                                                        ),
-                                                      ),
-                                                      MapEntry(
-                                                        'Edema',
-                                                        fmtValue(c['edema']),
-                                                      ),
-                                                      MapEntry(
-                                                        'Remarks',
-                                                        fmtValue(c['remarks']),
-                                                      ),
-                                                      MapEntry(
-                                                        'Next Schedule',
-                                                        fmtValue(
-                                                          fmtDate(
-                                                            c['next_schedule'],
-                                                          ),
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                );
-                                              }).toList(),
-                                      ),
-                                      ExpansionTile(
-                                        tilePadding: EdgeInsets.zero,
-                                        title: Text(
-                                          'Ultrasounds (${listOrEmpty(p['ultrasounds']).length})',
-                                        ),
-                                        children:
-                                            listOrEmpty(
-                                              p['ultrasounds'],
-                                            ).isEmpty
-                                            ? [
-                                                const Padding(
-                                                  padding: EdgeInsets.only(
-                                                    bottom: 8,
-                                                  ),
-                                                  child: Text(
-                                                    'No ultrasounds.',
-                                                  ),
-                                                ),
-                                              ]
-                                            : listOrEmpty(
-                                                p['ultrasounds'],
-                                              ).map((u) {
-                                                final date =
-                                                    fmtDate(
-                                                      u['ultrasound_date'],
-                                                    ) ??
-                                                    '—';
-                                                final imageUrl =
-                                                    resolveImageUrl(
-                                                      u['ultrasound_image'],
-                                                    );
-                                                final tags = <String>[];
-                                                final worker = fmtValue(
-                                                  u['health_worker_name'],
-                                                );
-                                                if (worker != '—')
-                                                  tags.add(worker);
-                                                if (imageUrl != null) {
-                                                  tags.add('Image');
-                                                }
-                                                return recordCard(
-                                                  icon: Icons.monitor_heart,
-                                                  title: 'Ultrasound • $date',
-                                                  subtitle: fmtValue(
-                                                    u['ultrasound_location'],
-                                                  ),
-                                                  tags: tags,
-                                                  onTap: () => showRecordSheet(
-                                                    title: 'Ultrasound Details',
-                                                    subtitle: date,
-                                                    icon: Icons.monitor_heart,
-                                                    imageUrl: imageUrl,
-                                                    rows: [
-                                                      MapEntry(
-                                                        'Date',
-                                                        fmtValue(
-                                                          fmtDate(
-                                                            u['ultrasound_date'],
-                                                          ),
-                                                        ),
-                                                      ),
-                                                      MapEntry(
-                                                        'Location',
-                                                        fmtValue(
-                                                          u['ultrasound_location'],
-                                                        ),
-                                                      ),
-                                                      MapEntry(
-                                                        'Health Worker',
-                                                        fmtValue(
-                                                          u['health_worker_name'],
-                                                        ),
-                                                      ),
-                                                      MapEntry(
-                                                        'Institution',
-                                                        fmtValue(
-                                                          u['health_worker_institution'],
-                                                        ),
-                                                      ),
-                                                      MapEntry(
-                                                        'Profession',
-                                                        fmtValue(
-                                                          u['health_worker_profession'],
-                                                        ),
-                                                      ),
-                                                      MapEntry(
-                                                        'Remarks',
-                                                        fmtValue(u['remarks']),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                );
-                                              }).toList(),
-                                      ),
-                                      ExpansionTile(
-                                        tilePadding: EdgeInsets.zero,
-                                        title: Text(
-                                          'Lab Tests (${listOrEmpty(p['lab_tests']).length})',
-                                        ),
-                                        children:
-                                            listOrEmpty(p['lab_tests']).isEmpty
-                                            ? [
-                                                const Padding(
-                                                  padding: EdgeInsets.only(
-                                                    bottom: 8,
-                                                  ),
-                                                  child: Text('No lab tests.'),
-                                                ),
-                                              ]
-                                            : listOrEmpty(p['lab_tests']).map((
-                                                l,
-                                              ) {
-                                                final date =
-                                                    fmtDate(
-                                                      l['lab_test_date'],
-                                                    ) ??
-                                                    '—';
-                                                final imageUrl =
-                                                    resolveImageUrl(
-                                                      l['lab_test_image'],
-                                                    );
-                                                final tags = <String>[];
-                                                final worker = fmtValue(
-                                                  l['health_worker_name'],
-                                                );
-                                                if (worker != '—')
-                                                  tags.add(worker);
-                                                if (imageUrl != null)
-                                                  tags.add('Image');
-                                                return recordCard(
-                                                  icon: Icons.science,
-                                                  title:
-                                                      '${l['lab_test_type'] ?? 'Lab Test'} • $date',
-                                                  subtitle: fmtValue(
-                                                    l['lab_test_location'],
-                                                  ),
-                                                  tags: tags,
-                                                  onTap: () => showRecordSheet(
-                                                    title: 'Lab Test Details',
-                                                    subtitle: date,
-                                                    icon: Icons.science,
-                                                    imageUrl: imageUrl,
-                                                    rows: [
-                                                      MapEntry(
-                                                        'Type',
-                                                        fmtValue(
-                                                          l['lab_test_type'],
-                                                        ),
-                                                      ),
-                                                      MapEntry(
-                                                        'Date',
-                                                        fmtValue(
-                                                          fmtDate(
-                                                            l['lab_test_date'],
-                                                          ),
-                                                        ),
-                                                      ),
-                                                      MapEntry(
-                                                        'Location',
-                                                        fmtValue(
-                                                          l['lab_test_location'],
-                                                        ),
-                                                      ),
-                                                      MapEntry(
-                                                        'Health Worker',
-                                                        fmtValue(
-                                                          l['health_worker_name'],
-                                                        ),
-                                                      ),
-                                                      MapEntry(
-                                                        'Institution',
-                                                        fmtValue(
-                                                          l['health_worker_institution'],
-                                                        ),
-                                                      ),
-                                                      MapEntry(
-                                                        'Profession',
-                                                        fmtValue(
-                                                          l['health_worker_profession'],
-                                                        ),
-                                                      ),
-                                                      MapEntry(
-                                                        'Remarks',
-                                                        fmtValue(l['remarks']),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                );
-                                              }).toList(),
-                                      ),
-                                    ]);
-                                  }).toList(),
-                                ),
                         ),
                       ],
+                      body: TabBarView(
+                        children: [
+                          // ================= OVERVIEW =================
+                          SingleChildScrollView(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                infoCard('Quick Actions', [
+                                  Wrap(
+                                    spacing: 10,
+                                    runSpacing: 10,
+                                    children: [
+                                      ElevatedButton.icon(
+                                        onPressed: addPrenatalCheckup,
+                                        icon: const Icon(Icons.add),
+                                        label: const Text('Add Checkup'),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.pink,
+                                        ),
+                                      ),
+                                      OutlinedButton.icon(
+                                        onPressed: () async {
+                                          final added = await Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (_) => AddUltrasoundPage(
+                                                motherId: widget.motherId,
+                                              ),
+                                            ),
+                                          );
+                                          if (added == true) {
+                                            await _refresh();
+                                          }
+                                        },
+                                        icon: const Icon(Icons.monitor_heart),
+                                        label: const Text('Add Ultrasound'),
+                                      ),
+                                      OutlinedButton.icon(
+                                        onPressed: () async {
+                                          final added = await Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (_) => AddLabTestPage(
+                                                motherId: widget.motherId,
+                                              ),
+                                            ),
+                                          );
+                                          if (added == true) {
+                                            await _refresh();
+                                          }
+                                        },
+                                        icon: const Icon(Icons.science),
+                                        label: const Text('Add Lab Test'),
+                                      ),
+                                    ],
+                                  ),
+                                ]),
+                                infoCard('Personal Information', [
+                                  field('Phone', m['phone_number']),
+                                  field('Email', m['email_address']),
+                                  field('Birthdate', m['birthdate']),
+                                ]),
+                                infoCard('Address', [
+                                  field('House No.', m['house_number']),
+                                  field('Street', m['street']),
+                                  field('Barangay', m['barangay']),
+                                  field('City', m['city_municipality']),
+                                  field('Province', m['province']),
+                                ]),
+                                infoCard('Medical Info', [
+                                  field('Height (cm)', m['height']),
+                                  field('Weight (kg)', m['weight']),
+                                  field('Blood Type', m['blood_type']),
+                                  ExpansionTile(
+                                    tilePadding: EdgeInsets.zero,
+                                    title: Text(
+                                      'Medical Conditions (${medicalConditions.length})',
+                                    ),
+                                    children: medicalConditions.isEmpty
+                                        ? [
+                                            const Padding(
+                                              padding: EdgeInsets.only(
+                                                bottom: 8,
+                                              ),
+                                              child: Text('No records.'),
+                                            ),
+                                          ]
+                                        : medicalConditions.map((c) {
+                                            return ListTile(
+                                              dense: true,
+                                              title: Text(
+                                                c['condition_name'] ?? '—',
+                                              ),
+                                              subtitle: Text(
+                                                '${c['status'] ?? 'active'} • ${fmtDate(c['diagnosis_date']) ?? '—'}',
+                                              ),
+                                            );
+                                          }).toList(),
+                                  ),
+                                  ExpansionTile(
+                                    tilePadding: EdgeInsets.zero,
+                                    title: Text(
+                                      'Allergies (${allergies.length})',
+                                    ),
+                                    children: allergies.isEmpty
+                                        ? [
+                                            const Padding(
+                                              padding: EdgeInsets.only(
+                                                bottom: 8,
+                                              ),
+                                              child: Text('No records.'),
+                                            ),
+                                          ]
+                                        : allergies.map((a) {
+                                            return ListTile(
+                                              dense: true,
+                                              title: Text(a['allergen'] ?? '—'),
+                                              subtitle: Text(
+                                                '${a['status'] ?? 'active'} • ${fmtDate(a['diagnosis_date']) ?? '—'}',
+                                              ),
+                                            );
+                                          }).toList(),
+                                  ),
+                                ]),
+                              ],
+                            ),
+                          ),
+
+                          // ================= CURRENT PREGNANCY =================
+                          SingleChildScrollView(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
+                            child: currentPreg == null
+                                ? infoCard('Current Pregnancy', const [
+                                    Text('No ongoing pregnancy found.'),
+                                  ])
+                                : Builder(
+                                    builder: (_) {
+                                      final checkups = sortedCheckups(
+                                        currentPreg['checkups'],
+                                      );
+                                      final lastCheckup = checkups.isNotEmpty
+                                          ? checkups.last
+                                          : null;
+                                      final lastCheckupDate = fmtDate(
+                                        lastCheckup?['checkup_date'],
+                                      );
+                                      final nextSchedule = fmtDate(
+                                        lastCheckup?['next_schedule'],
+                                      );
+
+                                      final lmp = parseDate(
+                                        currentPreg['last_menstrual_period'],
+                                      );
+                                      final edd = parseDate(
+                                        currentPreg['expected_date_of_delivery'],
+                                      );
+                                      final now = DateTime.now();
+                                      final gestWeeks = lmp == null
+                                          ? null
+                                          : (now.difference(lmp).inDays / 7)
+                                                .floor();
+                                      final daysToEdd = edd == null
+                                          ? null
+                                          : edd.difference(now).inDays;
+
+                                      Widget weightChart() {
+                                        final points = <FlSpot>[];
+                                        final labels = <String>[];
+                                        for (final c in checkups) {
+                                          final w = toDouble(
+                                            c['checkup_weight'],
+                                          );
+                                          if (w == null) continue;
+                                          points.add(
+                                            FlSpot(points.length.toDouble(), w),
+                                          );
+                                          labels.add(
+                                            shortDate(c['checkup_date']),
+                                          );
+                                        }
+                                        if (points.length < 2) {
+                                          return emptyChart('Not enough data');
+                                        }
+                                        final minY = points
+                                            .map((e) => e.y)
+                                            .reduce((a, b) => a < b ? a : b);
+                                        final maxY = points
+                                            .map((e) => e.y)
+                                            .reduce((a, b) => a > b ? a : b);
+                                        return LineChart(
+                                          lineChartData(
+                                            lines: [
+                                              LineChartBarData(
+                                                spots: points,
+                                                isCurved: true,
+                                                color: AppColors.brandPrimary,
+                                                barWidth: 3,
+                                                dotData: FlDotData(show: true),
+                                              ),
+                                            ],
+                                            labels: labels,
+                                            minY: (minY - 1),
+                                            maxY: (maxY + 1),
+                                          ),
+                                        );
+                                      }
+
+                                      Widget bpChart() {
+                                        final sys = <FlSpot>[];
+                                        final dia = <FlSpot>[];
+                                        final labels = <String>[];
+                                        for (final c in checkups) {
+                                          final s = toDouble(
+                                            c['blood_pressure_systolic'],
+                                          );
+                                          final d = toDouble(
+                                            c['blood_pressure_diastolic'],
+                                          );
+                                          if (s == null || d == null) continue;
+                                          final x = sys.length.toDouble();
+                                          sys.add(FlSpot(x, s));
+                                          dia.add(FlSpot(x, d));
+                                          labels.add(
+                                            shortDate(c['checkup_date']),
+                                          );
+                                        }
+                                        if (sys.length < 2) {
+                                          return emptyChart('Not enough data');
+                                        }
+                                        final values = [
+                                          ...sys.map((e) => e.y),
+                                          ...dia.map((e) => e.y),
+                                        ];
+                                        final minY = values.reduce(
+                                          (a, b) => a < b ? a : b,
+                                        );
+                                        final maxY = values.reduce(
+                                          (a, b) => a > b ? a : b,
+                                        );
+                                        return LineChart(
+                                          lineChartData(
+                                            lines: [
+                                              LineChartBarData(
+                                                spots: sys,
+                                                isCurved: true,
+                                                color: AppColors.brandPrimary,
+                                                barWidth: 3,
+                                                dotData: FlDotData(show: false),
+                                              ),
+                                              LineChartBarData(
+                                                spots: dia,
+                                                isCurved: true,
+                                                color: AppColors.brandAccent,
+                                                barWidth: 3,
+                                                dotData: FlDotData(show: false),
+                                              ),
+                                            ],
+                                            labels: labels,
+                                            minY: (minY - 5),
+                                            maxY: (maxY + 5),
+                                          ),
+                                        );
+                                      }
+
+                                      return Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          infoCard('Pregnancy Insights', [
+                                            Wrap(
+                                              spacing: 10,
+                                              runSpacing: 10,
+                                              children: [
+                                                SizedBox(
+                                                  width:
+                                                      (MediaQuery.of(
+                                                            context,
+                                                          ).size.width -
+                                                          56) /
+                                                      2,
+                                                  child: metricTile(
+                                                    title: 'Gestation',
+                                                    value: gestWeeks == null
+                                                        ? '—'
+                                                        : '$gestWeeks wks',
+                                                    icon: Icons.timeline,
+                                                  ),
+                                                ),
+                                                SizedBox(
+                                                  width:
+                                                      (MediaQuery.of(
+                                                            context,
+                                                          ).size.width -
+                                                          56) /
+                                                      2,
+                                                  child: metricTile(
+                                                    title: 'Days to EDD',
+                                                    value: daysToEdd == null
+                                                        ? '—'
+                                                        : daysToEdd.toString(),
+                                                    icon: Icons.event_available,
+                                                    color: AppColors.warning,
+                                                  ),
+                                                ),
+                                                SizedBox(
+                                                  width:
+                                                      (MediaQuery.of(
+                                                            context,
+                                                          ).size.width -
+                                                          56) /
+                                                      2,
+                                                  child: metricTile(
+                                                    title: 'Checkups',
+                                                    value: checkups.length
+                                                        .toString(),
+                                                    icon: Icons.fact_check,
+                                                    color: AppColors.success,
+                                                  ),
+                                                ),
+                                                SizedBox(
+                                                  width:
+                                                      (MediaQuery.of(
+                                                            context,
+                                                          ).size.width -
+                                                          56) /
+                                                      2,
+                                                  child: metricTile(
+                                                    title: 'Last Checkup',
+                                                    value:
+                                                        lastCheckupDate ?? '—',
+                                                    icon: Icons.event,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                            if (nextSchedule != null &&
+                                                nextSchedule.isNotEmpty) ...[
+                                              const SizedBox(height: 10),
+                                              Container(
+                                                width: double.infinity,
+                                                padding: const EdgeInsets.all(
+                                                  12,
+                                                ),
+                                                decoration: BoxDecoration(
+                                                  color: AppColors.brandPrimary
+                                                      .withOpacity(0.08),
+                                                  borderRadius:
+                                                      BorderRadius.circular(12),
+                                                  border: Border.all(
+                                                    color: AppColors
+                                                        .brandPrimary
+                                                        .withOpacity(0.2),
+                                                  ),
+                                                ),
+                                                child: Row(
+                                                  children: [
+                                                    const Icon(
+                                                      Icons.calendar_today,
+                                                      size: 18,
+                                                      color:
+                                                          AppColors.brandText,
+                                                    ),
+                                                    const SizedBox(width: 8),
+                                                    Expanded(
+                                                      child: Text(
+                                                        'Next checkup: $nextSchedule',
+                                                        style: const TextStyle(
+                                                          fontWeight:
+                                                              FontWeight.w600,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ],
+                                          ]),
+                                          chartCard(
+                                            title: 'Weight Trend (kg)',
+                                            subtitle:
+                                                'From recorded prenatal checkups',
+                                            chart: weightChart(),
+                                          ),
+                                          chartCard(
+                                            title: 'Blood Pressure Trend',
+                                            subtitle: 'Systolic vs Diastolic',
+                                            chart: bpChart(),
+                                          ),
+                                          infoCard('Current Pregnancy', [
+                                            field(
+                                              'Risk Level',
+                                              currentPreg['pregnancy_risk_level'],
+                                            ),
+                                            field(
+                                              'Status',
+                                              currentPreg['status'],
+                                            ),
+                                            field(
+                                              'LMP',
+                                              fmtDate(
+                                                currentPreg['last_menstrual_period'],
+                                              ),
+                                            ),
+                                            field(
+                                              'EDD',
+                                              fmtDate(
+                                                currentPreg['expected_date_of_delivery'],
+                                              ),
+                                            ),
+                                          ]),
+                                          infoCard('Checkups', [
+                                            ...listOrEmpty(
+                                              currentPreg['checkups'],
+                                            ).map((c) {
+                                              final date =
+                                                  fmtDate(c['checkup_date']) ??
+                                                  '—';
+                                              final bpSys = fmtValue(
+                                                c['blood_pressure_systolic'],
+                                              );
+                                              final bpDia = fmtValue(
+                                                c['blood_pressure_diastolic'],
+                                              );
+                                              final bp =
+                                                  (bpSys == '—' && bpDia == '—')
+                                                  ? null
+                                                  : 'BP: $bpSys/$bpDia';
+                                              final aog = fmtValue(
+                                                c['age_of_gestation'],
+                                              );
+                                              final wt = fmtValue(
+                                                c['checkup_weight'],
+                                              );
+                                              final tags = <String>[];
+                                              if (bp != null) tags.add(bp);
+                                              if (aog != '—')
+                                                tags.add('AOG: $aog');
+                                              if (wt != '—')
+                                                tags.add('Wt: $wt kg');
+
+                                              final next = fmtDate(
+                                                c['next_schedule'],
+                                              );
+                                              return recordCard(
+                                                icon: Icons.medical_services,
+                                                title: 'Checkup • $date',
+                                                subtitle:
+                                                    (next == null ||
+                                                        next.isEmpty)
+                                                    ? null
+                                                    : 'Next: $next',
+                                                tags: tags,
+                                                onTap: () => showRecordSheet(
+                                                  title: 'Checkup Details',
+                                                  subtitle: date,
+                                                  icon: Icons.medical_services,
+                                                  rows: [
+                                                    MapEntry(
+                                                      'Checkup Date',
+                                                      fmtValue(
+                                                        fmtDate(
+                                                          c['checkup_date'],
+                                                        ),
+                                                      ),
+                                                    ),
+                                                    MapEntry(
+                                                      'Age of Gestation',
+                                                      fmtValue(
+                                                        c['age_of_gestation'],
+                                                      ),
+                                                    ),
+                                                    MapEntry(
+                                                      'Weight (kg)',
+                                                      fmtValue(
+                                                        c['checkup_weight'],
+                                                      ),
+                                                    ),
+                                                    MapEntry(
+                                                      'Blood Pressure',
+                                                      '${fmtValue(c['blood_pressure_systolic'])}/${fmtValue(c['blood_pressure_diastolic'])}',
+                                                    ),
+                                                    MapEntry(
+                                                      'Fetal Position',
+                                                      fmtValue(
+                                                        c['fetal_position'],
+                                                      ),
+                                                    ),
+                                                    MapEntry(
+                                                      'Fetal Heart Beat',
+                                                      fmtValue(
+                                                        c['fetal_heart_beat'],
+                                                      ),
+                                                    ),
+                                                    MapEntry(
+                                                      'Fetal Heart Tone',
+                                                      fmtValue(
+                                                        c['fetal_heart_tone'],
+                                                      ),
+                                                    ),
+                                                    MapEntry(
+                                                      'TD Vaccine Dose',
+                                                      fmtValue(
+                                                        c['td_vaccine_dose'],
+                                                      ),
+                                                    ),
+                                                    MapEntry(
+                                                      'Edema',
+                                                      fmtValue(c['edema']),
+                                                    ),
+                                                    MapEntry(
+                                                      'Remarks',
+                                                      fmtValue(c['remarks']),
+                                                    ),
+                                                    MapEntry(
+                                                      'Next Schedule',
+                                                      fmtValue(
+                                                        fmtDate(
+                                                          c['next_schedule'],
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              );
+                                            }),
+                                            if (listOrEmpty(
+                                              currentPreg['checkups'],
+                                            ).isEmpty)
+                                              const Text('No checkups yet.'),
+                                          ]),
+                                          infoCard('Ultrasounds', [
+                                            ...listOrEmpty(
+                                              currentPreg['ultrasounds'],
+                                            ).map((u) {
+                                              final date =
+                                                  fmtDate(
+                                                    u['ultrasound_date'],
+                                                  ) ??
+                                                  '—';
+                                              final imageUrl = resolveImageUrl(
+                                                u['ultrasound_image'],
+                                              );
+                                              final tags = <String>[];
+                                              final worker = fmtValue(
+                                                u['health_worker_name'],
+                                              );
+                                              if (worker != '—') {
+                                                tags.add(worker);
+                                              }
+                                              if (imageUrl != null) {
+                                                tags.add('Image');
+                                              }
+                                              return recordCard(
+                                                icon: Icons.monitor_heart,
+                                                title: 'Ultrasound • $date',
+                                                subtitle: fmtValue(
+                                                  u['ultrasound_location'],
+                                                ),
+                                                tags: tags,
+                                                onTap: () => showRecordSheet(
+                                                  title: 'Ultrasound Details',
+                                                  subtitle: date,
+                                                  icon: Icons.monitor_heart,
+                                                  imageUrl: imageUrl,
+                                                  rows: [
+                                                    MapEntry(
+                                                      'Date',
+                                                      fmtValue(
+                                                        fmtDate(
+                                                          u['ultrasound_date'],
+                                                        ),
+                                                      ),
+                                                    ),
+                                                    MapEntry(
+                                                      'Location',
+                                                      fmtValue(
+                                                        u['ultrasound_location'],
+                                                      ),
+                                                    ),
+                                                    MapEntry(
+                                                      'Health Worker',
+                                                      fmtValue(
+                                                        u['health_worker_name'],
+                                                      ),
+                                                    ),
+                                                    MapEntry(
+                                                      'Institution',
+                                                      fmtValue(
+                                                        u['health_worker_institution'],
+                                                      ),
+                                                    ),
+                                                    MapEntry(
+                                                      'Profession',
+                                                      fmtValue(
+                                                        u['health_worker_profession'],
+                                                      ),
+                                                    ),
+                                                    MapEntry(
+                                                      'Remarks',
+                                                      fmtValue(u['remarks']),
+                                                    ),
+                                                  ],
+                                                ),
+                                              );
+                                            }),
+                                            if (listOrEmpty(
+                                              currentPreg['ultrasounds'],
+                                            ).isEmpty)
+                                              const Text('No ultrasounds yet.'),
+                                          ]),
+                                          infoCard('Lab Tests', [
+                                            ...listOrEmpty(
+                                              currentPreg['lab_tests'],
+                                            ).map((l) {
+                                              final date =
+                                                  fmtDate(l['lab_test_date']) ??
+                                                  '—';
+                                              final imageUrl = resolveImageUrl(
+                                                l['lab_test_image'],
+                                              );
+                                              final tags = <String>[];
+                                              final worker = fmtValue(
+                                                l['health_worker_name'],
+                                              );
+                                              if (worker != '—') {
+                                                tags.add(worker);
+                                              }
+                                              if (imageUrl != null) {
+                                                tags.add('Image');
+                                              }
+                                              return recordCard(
+                                                icon: Icons.science,
+                                                title:
+                                                    '${l['lab_test_type'] ?? 'Lab Test'} • $date',
+                                                subtitle: fmtValue(
+                                                  l['lab_test_location'],
+                                                ),
+                                                tags: tags,
+                                                onTap: () => showRecordSheet(
+                                                  title: 'Lab Test Details',
+                                                  subtitle: date,
+                                                  icon: Icons.science,
+                                                  imageUrl: imageUrl,
+                                                  rows: [
+                                                    MapEntry(
+                                                      'Type',
+                                                      fmtValue(
+                                                        l['lab_test_type'],
+                                                      ),
+                                                    ),
+                                                    MapEntry(
+                                                      'Date',
+                                                      fmtValue(
+                                                        fmtDate(
+                                                          l['lab_test_date'],
+                                                        ),
+                                                      ),
+                                                    ),
+                                                    MapEntry(
+                                                      'Location',
+                                                      fmtValue(
+                                                        l['lab_test_location'],
+                                                      ),
+                                                    ),
+                                                    MapEntry(
+                                                      'Health Worker',
+                                                      fmtValue(
+                                                        l['health_worker_name'],
+                                                      ),
+                                                    ),
+                                                    MapEntry(
+                                                      'Institution',
+                                                      fmtValue(
+                                                        l['health_worker_institution'],
+                                                      ),
+                                                    ),
+                                                    MapEntry(
+                                                      'Profession',
+                                                      fmtValue(
+                                                        l['health_worker_profession'],
+                                                      ),
+                                                    ),
+                                                    MapEntry(
+                                                      'Remarks',
+                                                      fmtValue(l['remarks']),
+                                                    ),
+                                                  ],
+                                                ),
+                                              );
+                                            }),
+                                            if (listOrEmpty(
+                                              currentPreg['lab_tests'],
+                                            ).isEmpty)
+                                              const Text('No lab tests yet.'),
+                                          ]),
+                                        ],
+                                      );
+                                    },
+                                  ),
+                          ),
+
+                          // ================= HISTORY =================
+                          SingleChildScrollView(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
+                            child: pastPregs.isEmpty
+                                ? infoCard('Past Pregnancies', const [
+                                    Text('No past pregnancies recorded.'),
+                                  ])
+                                : Column(
+                                    children: pastPregs.map((p) {
+                                      final delivery = p['delivery'];
+                                      return infoCard('Pregnancy • ${p['outcome'] ?? '—'}', [
+                                        field(
+                                          'Outcome Date',
+                                          fmtDate(p['outcome_date']),
+                                        ),
+                                        field(
+                                          'Gestational Age',
+                                          p['gestational_age_at_end'],
+                                        ),
+                                        if (delivery != null) ...[
+                                          field(
+                                            'Delivery Place',
+                                            delivery['place_of_delivery'],
+                                          ),
+                                          field(
+                                            'Delivery Method',
+                                            delivery['delivery_method'],
+                                          ),
+                                        ],
+                                        ExpansionTile(
+                                          tilePadding: EdgeInsets.zero,
+                                          title: Text(
+                                            'Checkups (${listOrEmpty(p['checkups']).length})',
+                                          ),
+                                          children:
+                                              listOrEmpty(p['checkups']).isEmpty
+                                              ? [
+                                                  const Padding(
+                                                    padding: EdgeInsets.only(
+                                                      bottom: 8,
+                                                    ),
+                                                    child: Text('No checkups.'),
+                                                  ),
+                                                ]
+                                              : listOrEmpty(p['checkups']).map((
+                                                  c,
+                                                ) {
+                                                  final date =
+                                                      fmtDate(
+                                                        c['checkup_date'],
+                                                      ) ??
+                                                      '—';
+                                                  final bpSys = fmtValue(
+                                                    c['blood_pressure_systolic'],
+                                                  );
+                                                  final bpDia = fmtValue(
+                                                    c['blood_pressure_diastolic'],
+                                                  );
+                                                  final bp =
+                                                      (bpSys == '—' &&
+                                                          bpDia == '—')
+                                                      ? null
+                                                      : 'BP: $bpSys/$bpDia';
+                                                  final aog = fmtValue(
+                                                    c['age_of_gestation'],
+                                                  );
+                                                  final wt = fmtValue(
+                                                    c['checkup_weight'],
+                                                  );
+                                                  final tags = <String>[];
+                                                  if (bp != null) tags.add(bp);
+                                                  if (aog != '—') {
+                                                    tags.add('AOG: $aog');
+                                                  }
+                                                  if (wt != '—')
+                                                    tags.add('Wt: $wt kg');
+
+                                                  return recordCard(
+                                                    icon:
+                                                        Icons.medical_services,
+                                                    title: 'Checkup • $date',
+                                                    tags: tags,
+                                                    onTap: () => showRecordSheet(
+                                                      title: 'Checkup Details',
+                                                      subtitle: date,
+                                                      icon: Icons
+                                                          .medical_services,
+                                                      rows: [
+                                                        MapEntry(
+                                                          'Checkup Date',
+                                                          fmtValue(
+                                                            fmtDate(
+                                                              c['checkup_date'],
+                                                            ),
+                                                          ),
+                                                        ),
+                                                        MapEntry(
+                                                          'Age of Gestation',
+                                                          fmtValue(
+                                                            c['age_of_gestation'],
+                                                          ),
+                                                        ),
+                                                        MapEntry(
+                                                          'Weight (kg)',
+                                                          fmtValue(
+                                                            c['checkup_weight'],
+                                                          ),
+                                                        ),
+                                                        MapEntry(
+                                                          'Blood Pressure',
+                                                          '${fmtValue(c['blood_pressure_systolic'])}/${fmtValue(c['blood_pressure_diastolic'])}',
+                                                        ),
+                                                        MapEntry(
+                                                          'Fetal Position',
+                                                          fmtValue(
+                                                            c['fetal_position'],
+                                                          ),
+                                                        ),
+                                                        MapEntry(
+                                                          'Fetal Heart Beat',
+                                                          fmtValue(
+                                                            c['fetal_heart_beat'],
+                                                          ),
+                                                        ),
+                                                        MapEntry(
+                                                          'Fetal Heart Tone',
+                                                          fmtValue(
+                                                            c['fetal_heart_tone'],
+                                                          ),
+                                                        ),
+                                                        MapEntry(
+                                                          'TD Vaccine Dose',
+                                                          fmtValue(
+                                                            c['td_vaccine_dose'],
+                                                          ),
+                                                        ),
+                                                        MapEntry(
+                                                          'Edema',
+                                                          fmtValue(c['edema']),
+                                                        ),
+                                                        MapEntry(
+                                                          'Remarks',
+                                                          fmtValue(
+                                                            c['remarks'],
+                                                          ),
+                                                        ),
+                                                        MapEntry(
+                                                          'Next Schedule',
+                                                          fmtValue(
+                                                            fmtDate(
+                                                              c['next_schedule'],
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  );
+                                                }).toList(),
+                                        ),
+                                        ExpansionTile(
+                                          tilePadding: EdgeInsets.zero,
+                                          title: Text(
+                                            'Ultrasounds (${listOrEmpty(p['ultrasounds']).length})',
+                                          ),
+                                          children:
+                                              listOrEmpty(
+                                                p['ultrasounds'],
+                                              ).isEmpty
+                                              ? [
+                                                  const Padding(
+                                                    padding: EdgeInsets.only(
+                                                      bottom: 8,
+                                                    ),
+                                                    child: Text(
+                                                      'No ultrasounds.',
+                                                    ),
+                                                  ),
+                                                ]
+                                              : listOrEmpty(
+                                                  p['ultrasounds'],
+                                                ).map((u) {
+                                                  final date =
+                                                      fmtDate(
+                                                        u['ultrasound_date'],
+                                                      ) ??
+                                                      '—';
+                                                  final imageUrl =
+                                                      resolveImageUrl(
+                                                        u['ultrasound_image'],
+                                                      );
+                                                  final tags = <String>[];
+                                                  final worker = fmtValue(
+                                                    u['health_worker_name'],
+                                                  );
+                                                  if (worker != '—')
+                                                    tags.add(worker);
+                                                  if (imageUrl != null) {
+                                                    tags.add('Image');
+                                                  }
+                                                  return recordCard(
+                                                    icon: Icons.monitor_heart,
+                                                    title: 'Ultrasound • $date',
+                                                    subtitle: fmtValue(
+                                                      u['ultrasound_location'],
+                                                    ),
+                                                    tags: tags,
+                                                    onTap: () => showRecordSheet(
+                                                      title:
+                                                          'Ultrasound Details',
+                                                      subtitle: date,
+                                                      icon: Icons.monitor_heart,
+                                                      imageUrl: imageUrl,
+                                                      rows: [
+                                                        MapEntry(
+                                                          'Date',
+                                                          fmtValue(
+                                                            fmtDate(
+                                                              u['ultrasound_date'],
+                                                            ),
+                                                          ),
+                                                        ),
+                                                        MapEntry(
+                                                          'Location',
+                                                          fmtValue(
+                                                            u['ultrasound_location'],
+                                                          ),
+                                                        ),
+                                                        MapEntry(
+                                                          'Health Worker',
+                                                          fmtValue(
+                                                            u['health_worker_name'],
+                                                          ),
+                                                        ),
+                                                        MapEntry(
+                                                          'Institution',
+                                                          fmtValue(
+                                                            u['health_worker_institution'],
+                                                          ),
+                                                        ),
+                                                        MapEntry(
+                                                          'Profession',
+                                                          fmtValue(
+                                                            u['health_worker_profession'],
+                                                          ),
+                                                        ),
+                                                        MapEntry(
+                                                          'Remarks',
+                                                          fmtValue(
+                                                            u['remarks'],
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  );
+                                                }).toList(),
+                                        ),
+                                        ExpansionTile(
+                                          tilePadding: EdgeInsets.zero,
+                                          title: Text(
+                                            'Lab Tests (${listOrEmpty(p['lab_tests']).length})',
+                                          ),
+                                          children:
+                                              listOrEmpty(
+                                                p['lab_tests'],
+                                              ).isEmpty
+                                              ? [
+                                                  const Padding(
+                                                    padding: EdgeInsets.only(
+                                                      bottom: 8,
+                                                    ),
+                                                    child: Text(
+                                                      'No lab tests.',
+                                                    ),
+                                                  ),
+                                                ]
+                                              : listOrEmpty(
+                                                  p['lab_tests'],
+                                                ).map((l) {
+                                                  final date =
+                                                      fmtDate(
+                                                        l['lab_test_date'],
+                                                      ) ??
+                                                      '—';
+                                                  final imageUrl =
+                                                      resolveImageUrl(
+                                                        l['lab_test_image'],
+                                                      );
+                                                  final tags = <String>[];
+                                                  final worker = fmtValue(
+                                                    l['health_worker_name'],
+                                                  );
+                                                  if (worker != '—')
+                                                    tags.add(worker);
+                                                  if (imageUrl != null)
+                                                    tags.add('Image');
+                                                  return recordCard(
+                                                    icon: Icons.science,
+                                                    title:
+                                                        '${l['lab_test_type'] ?? 'Lab Test'} • $date',
+                                                    subtitle: fmtValue(
+                                                      l['lab_test_location'],
+                                                    ),
+                                                    tags: tags,
+                                                    onTap: () => showRecordSheet(
+                                                      title: 'Lab Test Details',
+                                                      subtitle: date,
+                                                      icon: Icons.science,
+                                                      imageUrl: imageUrl,
+                                                      rows: [
+                                                        MapEntry(
+                                                          'Type',
+                                                          fmtValue(
+                                                            l['lab_test_type'],
+                                                          ),
+                                                        ),
+                                                        MapEntry(
+                                                          'Date',
+                                                          fmtValue(
+                                                            fmtDate(
+                                                              l['lab_test_date'],
+                                                            ),
+                                                          ),
+                                                        ),
+                                                        MapEntry(
+                                                          'Location',
+                                                          fmtValue(
+                                                            l['lab_test_location'],
+                                                          ),
+                                                        ),
+                                                        MapEntry(
+                                                          'Health Worker',
+                                                          fmtValue(
+                                                            l['health_worker_name'],
+                                                          ),
+                                                        ),
+                                                        MapEntry(
+                                                          'Institution',
+                                                          fmtValue(
+                                                            l['health_worker_institution'],
+                                                          ),
+                                                        ),
+                                                        MapEntry(
+                                                          'Profession',
+                                                          fmtValue(
+                                                            l['health_worker_profession'],
+                                                          ),
+                                                        ),
+                                                        MapEntry(
+                                                          'Remarks',
+                                                          fmtValue(
+                                                            l['remarks'],
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  );
+                                                }).toList(),
+                                        ),
+                                      ]);
+                                    }).toList(),
+                                  ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),

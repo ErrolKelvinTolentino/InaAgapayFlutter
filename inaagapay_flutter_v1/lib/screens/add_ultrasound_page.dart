@@ -74,46 +74,57 @@ class _AddUltrasoundPageState extends State<AddUltrasoundPage> {
     if (_pregnancyId == null || _date == null) return;
     setState(() => _submitting = true);
 
-    final token = await AuthStorage.getToken();
+    try {
+      final token = await AuthStorage.getToken();
 
-    final request = http.MultipartRequest(
-      'POST',
-      Uri.parse(
-        'https://inaagapay.alwaysdata.net/api/midwife/add_ultrasound.php',
-      ),
-    );
-
-    request.headers['Authorization'] = 'Bearer $token';
-    request.fields.addAll({
-      'pregnancy_id': _pregnancyId.toString(),
-      'ultrasound_date': DateFormat('yyyy-MM-dd').format(_date!),
-      'ultrasound_location': _locationCtrl.text,
-      'remarks': _remarksCtrl.text,
-      'health_worker_name': _workerNameCtrl.text,
-      'health_worker_institution': _institutionCtrl.text,
-      'health_worker_profession': _professionCtrl.text,
-    });
-
-    if (_imageFile != null) {
-      request.files.add(
-        await http.MultipartFile.fromPath('ultrasound_image', _imageFile!.path),
+      final request = http.MultipartRequest(
+        'POST',
+        Uri.parse(
+          'https://inaagapay.alwaysdata.net/api/midwife/add_ultrasound.php',
+        ),
       );
-    }
 
-    final streamed = await request.send();
-    final res = await http.Response.fromStream(streamed);
-    final decoded = jsonDecode(res.body);
+      request.headers['Authorization'] = 'Bearer $token';
+      request.fields.addAll({
+        'pregnancy_id': _pregnancyId.toString(),
+        'ultrasound_date': DateFormat('yyyy-MM-dd').format(_date!),
+        'ultrasound_location': _locationCtrl.text,
+        'remarks': _remarksCtrl.text,
+        'health_worker_name': _workerNameCtrl.text,
+        'health_worker_institution': _institutionCtrl.text,
+        'health_worker_profession': _professionCtrl.text,
+      });
 
-    if (!mounted) return;
-    if (decoded['success'] == true) {
-      Navigator.pop(context, true);
-      return;
+      if (_imageFile != null) {
+        request.files.add(
+          await http.MultipartFile.fromPath(
+            'ultrasound_image',
+            _imageFile!.path,
+          ),
+        );
+      }
+
+      final streamed = await request.send();
+      final res = await http.Response.fromStream(streamed);
+      final decoded = jsonDecode(res.body);
+
+      if (!mounted) return;
+      if (decoded['success'] == true) {
+        Navigator.pop(context, true);
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(decoded['message'] ?? 'Save failed')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Save failed: $e')));
+    } finally {
+      if (!mounted) return;
+      setState(() => _submitting = false);
     }
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(decoded['message'] ?? 'Save failed')),
-    );
-    if (!mounted) return;
-    setState(() => _submitting = false);
   }
 
   bool _validateStep() {
