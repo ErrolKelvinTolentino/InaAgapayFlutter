@@ -8,7 +8,7 @@ import '../widgets/app_input_field.dart';
 import '../widgets/child_card.dart';
 import '../widgets/vaccine_schedule_status.dart';
 import '../screens/midwife_child_overview.dart';
-
+import '../widgets/floating_add_child_button.dart';
 
 class MidwifeChildrenPage extends StatefulWidget {
   const MidwifeChildrenPage({super.key});
@@ -24,14 +24,11 @@ class _MidwifeChildrenPageState extends State<MidwifeChildrenPage> {
   final int childCount = 2;
 
   void _openChildProfile() {
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (_) => MidwifeChildOverviewPage(),
-    ),
-  );
-}
-
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => MidwifeChildOverviewPage()),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -158,6 +155,11 @@ class _MidwifeChildrenPageState extends State<MidwifeChildrenPage> {
         ),
       ),
 
+      floatingActionButton: FloatingAddChildButton(
+        onPressed: () {
+          Navigator.pushNamed(context, '/midwife-add-parent');
+        },
+      ),
       // 🔻 Bottom Nav (FIXED INDEX)
       bottomNavigationBar: const MidwifeBottomNavigation(
         currentIndex: 2, // ✅ Children tab active

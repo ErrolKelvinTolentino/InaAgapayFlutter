@@ -3,11 +3,13 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../widgets/secondary_header.dart';
 import '../widgets/midwife_bottom_navigation.dart';
+import '../widgets/floating_add_record_menu.dart';
 
 import '../widgets/hero_card.dart';
 import '../widgets/records_display_card.dart';
 import '../widgets/status_indicator.dart';
 import '../widgets/important_button.dart';
+
 import 'midwife_child_growth.dart';
 import 'midwife_child_vaccine.dart';
 
@@ -23,14 +25,12 @@ class MidwifeChildOverviewPage extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
 
-      /// 🔝 Header (BACK = Navigator.pop)
+      /// 🔝 Header
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(56),
         child: SecondaryHeader(
           title: 'Child Information',
-          onBack: () {
-            Navigator.pop(context); // ✅ CORRECT
-          },
+          onBack: () => Navigator.pop(context),
         ),
       ),
 
@@ -115,9 +115,6 @@ class MidwifeChildOverviewPage extends StatelessWidget {
                       size: 14,
                       color: AppColors.success,
                     ),
-                    onTap: () {
-                      // TODO: view growth history
-                    },
                   ),
                   RecordItem(
                     leadingIcon: Icons.monitor_weight,
@@ -128,9 +125,6 @@ class MidwifeChildOverviewPage extends StatelessWidget {
                       size: 14,
                       color: AppColors.error,
                     ),
-                    onTap: () {
-                      // TODO: view growth history
-                    },
                   ),
                   const RecordItem(
                     leadingIcon: Icons.calculate,
@@ -153,7 +147,7 @@ class MidwifeChildOverviewPage extends StatelessWidget {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => MidwifeChildGrowthPage(),
+                      builder: (_) => const MidwifeChildGrowthPage(),
                     ),
                   );
                 },
@@ -192,7 +186,7 @@ class MidwifeChildOverviewPage extends StatelessWidget {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => MidwifeChildVaccinePage(),
+                      builder: (_) => const MidwifeChildVaccinePage(),
                     ),
                   );
                 },
@@ -221,14 +215,26 @@ class MidwifeChildOverviewPage extends StatelessWidget {
                 ],
               ),
 
-              const SizedBox(height: 24),
+              const SizedBox(height: 40), // space for FAB
             ],
           ),
         ),
       ),
 
+      /// ➕ FLOATING ADD MENU (✅ CORRECT PLACE)
+      floatingActionButton: FloatingAddRecordMenu(
+        onAddGrowth: () {
+          Navigator.pushNamed(context, '/midwife-add-child-growth');
+        },
+        onAddImmunization: () {
+          Navigator.pushNamed(context, '/midwife-add-immunization');
+        },
+      ),
+
       /// 🔻 Bottom Nav
-      bottomNavigationBar: const MidwifeBottomNavigation(currentIndex: 2),
+      bottomNavigationBar: const MidwifeBottomNavigation(
+        currentIndex: 2,
+      ),
     );
   }
 }

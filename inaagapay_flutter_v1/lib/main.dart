@@ -11,6 +11,10 @@ import 'screens/midwife_child_growth.dart';
 import 'screens/midwife_child_vaccine.dart';
 import 'screens/midwife_add_child_growth.dart';
 import 'screens/midwife_add_immunization.dart';
+import 'screens/midwife_add_parent_1.dart';
+import 'screens/midwife_add_parent_2.dart';
+import 'screens/midwife_add_child_address.dart';
+import 'screens/midwife_add_child.dart';
 import 'screens/admin_dashboard.dart';
 import 'screens/forgot_password.dart';
 import 'screens/forgot_password_verification.dart';
@@ -68,6 +72,10 @@ class MyApp extends StatelessWidget {
         '/midwife-child-vaccine': (context) => const MidwifeChildVaccinePage(),
         '/midwife-add-child-growth': (context) => const MidwifeAddChildGrowthPage(),
         '/midwife-add-immunization': (context) => const MidwifeAddImmunizationPage(),
+        '/midwife-add-parent': (_) => const MidwifeAddParentStep1(),
+        '/midwife-add-parent-details': (_) => const MidwifeAddParentStep2(), // next
+        '/midwife-add-child-address': (_) => const MidwifeAddChildAddressPage(),
+        '/midwife-add-child': (_) => const MidwifeAddChildPage(),
         '/admin-dashboard': (context) => const AdminDashboard(),
         '/forgot-password': (context) => const ForgotPasswordScreen(),
         '/forgot-password-verify': (context) =>

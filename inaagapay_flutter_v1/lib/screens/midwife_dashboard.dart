@@ -14,6 +14,8 @@ import '../widgets/overview_info.dart';
 import '../widgets/midwife_statistics_card.dart';
 import '../widgets/midwife_history_card.dart';
 
+import '../models/add_child_form_data.dart';
+
 class MidwifeDashboard extends StatelessWidget {
   const MidwifeDashboard({super.key});
 
@@ -22,9 +24,7 @@ class MidwifeDashboard extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
 
-      bottomNavigationBar: const MidwifeBottomNavigation(
-        currentIndex: 0,
-      ),
+      bottomNavigationBar: const MidwifeBottomNavigation(currentIndex: 0),
 
       body: Column(
         children: [
@@ -125,7 +125,13 @@ class MidwifeDashboard extends StatelessWidget {
                     label: 'Register Child',
                     showIcons: true,
                     leadingIcon: Icons.add,
-                    onPressed: () {},
+                    onPressed: () {
+                      Navigator.pushNamed(
+                        context,
+                        '/midwife-add-parent',
+                        arguments: AddChildFormData(),
+                      );
+                    },
                   ),
 
                   const SizedBox(height: 32),
