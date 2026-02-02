@@ -210,12 +210,17 @@ try {
 
     // Account
     $acct = $conn->prepare("INSERT INTO accounts (email_address, account_type, first_name, middle_name, last_name, extension_name, phone_number, is_verified) VALUES (?, 'mother', ?, ?, ?, ?, ?, 1)");
+    if (!$acct) {
+        throw new Exception('Prepare failed: ' . $conn->error);
+    }
+    
     $accFirst = $acc['first_name'] ?? null;
     $accMiddle = $acc['middle_name'] ?? null;
     $accLast = $acc['last_name'] ?? null;
     $accExt = $acc['extension_name'] ?? null;
     $accPhone = $acc['phone_number'] ?? null;
-    $acct->bind_param(
+    
+    if (!$acct->bind_param(
         'ssssss',
         $email,
         $accFirst,
@@ -223,8 +228,14 @@ try {
         $accLast,
         $accExt,
         $accPhone
-    );
-    $acct->execute();
+    )) {
+        throw new Exception('Bind param failed: ' . $acct->error);
+    }
+    
+    if (!$acct->execute()) {
+        throw new Exception('Execute account insert failed: ' . $acct->error);
+    }
+    
     $accountId = $conn->insert_id;
 
     // Mother profile

@@ -16,6 +16,24 @@ class RiskResult {
   final String riskNote;
 }
 
+class PrenatalCheckupSnapshot {
+  PrenatalCheckupSnapshot({
+    this.systolic,
+    this.diastolic,
+    this.edemaLevel,
+    this.fetalHeartBeat,
+    this.fetalPosition,
+    this.ageOfGestationWeeks,
+  });
+
+  final int? systolic;
+  final int? diastolic;
+  final String? edemaLevel;
+  final int? fetalHeartBeat;
+  final String? fetalPosition;
+  final double? ageOfGestationWeeks;
+}
+
 class RiskAssessor {
   static RiskResult compute(
     AddMotherFormData form, {
@@ -40,7 +58,7 @@ class RiskAssessor {
     }
 
     // ------- RULE GROUP 2: Vital Statistics -------
-    final bmi = form.bmi();
+    final bmi = form.bmi;
     if (bmi != null) {
       if (bmi < 18.5) {
         addFactor('Underweight (BMI < 18.5)', 2);

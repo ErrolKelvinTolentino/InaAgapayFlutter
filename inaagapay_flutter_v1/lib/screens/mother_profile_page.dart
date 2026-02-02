@@ -75,32 +75,6 @@ class MotherProfilePage extends StatelessWidget {
             m['extension_name'],
           ].where((e) => e != null && e.toString().trim().isNotEmpty).join(' ');
 
-          Widget section(String title, List<Widget> children) {
-            return Container(
-              margin: const EdgeInsets.only(bottom: 16),
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.faintWhite,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: AppColors.borderPrimary),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.brandText,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  ...children,
-                ],
-              ),
-            );
-          }
-
           Widget field(String label, dynamic value) {
             return Padding(
               padding: const EdgeInsets.only(bottom: 6),
@@ -181,7 +155,7 @@ class MotherProfilePage extends StatelessWidget {
             );
           }
 
-          Widget _tagChip(String text) {
+          Widget tagChip(String text) {
             return Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
@@ -247,7 +221,7 @@ class MotherProfilePage extends StatelessWidget {
                               Wrap(
                                 spacing: 6,
                                 runSpacing: 6,
-                                children: tags.map(_tagChip).toList(),
+                                children: tags.map(tagChip).toList(),
                               ),
                             ],
                           ],
@@ -261,7 +235,7 @@ class MotherProfilePage extends StatelessWidget {
             );
           }
 
-          Widget _detailRow(String label, String value) {
+          Widget detailRow(String label, String value) {
             return Padding(
               padding: const EdgeInsets.symmetric(vertical: 6),
               child: Row(
@@ -369,7 +343,7 @@ class MotherProfilePage extends StatelessWidget {
                         ),
                         child: Column(
                           children: rows
-                              .map((r) => _detailRow(r.key, r.value))
+                              .map((r) => detailRow(r.key, r.value))
                               .toList(),
                         ),
                       ),

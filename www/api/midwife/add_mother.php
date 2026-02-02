@@ -32,16 +32,31 @@ try {
             phone_number, is_verified
         ) VALUES (?, 'mother', ?, ?, ?, ?, ?, 1)
     ");
-    $stmt->bind_param(
+    if (!$stmt) {
+        throw new Exception('Prepare failed: ' . $conn->error);
+    }
+    
+    $accFirst = $acc['first_name'] ?? null;
+    $accMiddle = $acc['middle_name'] ?? null;
+    $accLast = $acc['last_name'] ?? null;
+    $accExt = $acc['extension_name'] ?? null;
+    $accPhone = $acc['phone_number'] ?? null;
+    
+    if (!$stmt->bind_param(
         "ssssss",
         $email,
-        $acc['first_name'],
-        $acc['middle_name'],
-        $acc['last_name'],
-        $acc['extension_name'],
-        $acc['phone_number']
-    );
-    $stmt->execute();
+        $accFirst,
+        $accMiddle,
+        $accLast,
+        $accExt,
+        $accPhone
+    )) {
+        throw new Exception('Bind param failed: ' . $stmt->error);
+    }
+    
+    if (!$stmt->execute()) {
+        throw new Exception('Execute account insert failed: ' . $stmt->error);
+    }
 
     $accountId = $conn->insert_id;
 
