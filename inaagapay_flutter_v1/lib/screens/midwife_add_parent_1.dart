@@ -56,7 +56,7 @@ class _MidwifeAddParentStep1State extends State<MidwifeAddParentStep1> {
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(56),
         child: SecondaryHeader(
-          title: 'Register Child',
+          title: 'Add Child',
           onBack: () => Navigator.pop(context),
         ),
       ),

@@ -22,7 +22,10 @@ class MidwifeBottomNavigation extends StatelessWidget {
         break;
 
       case 1:
-        // TODO: Patients page
+        Navigator.pushReplacementNamed(
+          context,
+          '/midwife-mothers', // ✅ GO TO MOTHERS PAGE
+        );
         break;
 
       case 2:
@@ -69,8 +72,8 @@ class MidwifeBottomNavigation extends StatelessWidget {
               onTap: () => _handleNavigation(context, 0),
             ),
             _NavItem(
-              icon: Icons.people_alt_rounded,
-              label: 'Patients',
+              icon: Icons.pregnant_woman_rounded, // ✅ MOTHERS ICON
+              label: 'Mothers',                     // ✅ LABEL CHANGED
               isActive: currentIndex == 1,
               onTap: () => _handleNavigation(context, 1),
             ),

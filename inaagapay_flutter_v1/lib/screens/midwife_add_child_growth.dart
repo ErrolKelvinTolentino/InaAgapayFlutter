@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../theme/app_colors.dart';
 import '../widgets/secondary_header.dart';
@@ -18,11 +19,16 @@ class MidwifeAddChildGrowthPage extends StatefulWidget {
       _MidwifeAddChildGrowthPageState();
 }
 
-class _MidwifeAddChildGrowthPageState extends State<MidwifeAddChildGrowthPage> {
-  final TextEditingController _heightController = TextEditingController();
-  final TextEditingController _weightController = TextEditingController();
-  final TextEditingController _bmiController = TextEditingController();
-  final TextEditingController _remarksController = TextEditingController();
+class _MidwifeAddChildGrowthPageState
+    extends State<MidwifeAddChildGrowthPage> {
+  final TextEditingController _heightController =
+      TextEditingController();
+  final TextEditingController _weightController =
+      TextEditingController();
+  final TextEditingController _bmiController =
+      TextEditingController();
+  final TextEditingController _remarksController =
+      TextEditingController();
 
   StatusIndicatorType _bmiStatus = StatusIndicatorType.normal;
 
@@ -33,14 +39,19 @@ class _MidwifeAddChildGrowthPageState extends State<MidwifeAddChildGrowthPage> {
   /// BMI CALCULATION
   /// --------------------------------------------------
   void _recalculateBMI() {
-    final double? heightCm = double.tryParse(_heightController.text);
-    final double? weightKg = double.tryParse(_weightController.text);
+    final double? heightCm =
+        double.tryParse(_heightController.text);
+    final double? weightKg =
+        double.tryParse(_weightController.text);
 
-    if (heightCm == null || weightKg == null || heightCm == 0) {
+    if (heightCm == null ||
+        weightKg == null ||
+        heightCm == 0) {
       setState(() {
         _bmiController.text = '';
         _isFormValid = false;
-        _validationMessage = 'Please enter valid height and weight.';
+        _validationMessage =
+            'Please enter valid height and weight.';
       });
       return;
     }
@@ -71,7 +82,8 @@ class _MidwifeAddChildGrowthPageState extends State<MidwifeAddChildGrowthPage> {
         _weightController.text.isEmpty) {
       setState(() {
         _isFormValid = false;
-        _validationMessage = 'Height and weight are required.';
+        _validationMessage =
+            'Height and weight are required.';
       });
       return;
     }
@@ -79,7 +91,8 @@ class _MidwifeAddChildGrowthPageState extends State<MidwifeAddChildGrowthPage> {
     if (_bmiController.text.isEmpty) {
       setState(() {
         _isFormValid = false;
-        _validationMessage = 'BMI could not be calculated.';
+        _validationMessage =
+            'BMI could not be calculated.';
       });
       return;
     }
@@ -106,7 +119,8 @@ class _MidwifeAddChildGrowthPageState extends State<MidwifeAddChildGrowthPage> {
 
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          padding:
+              const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -121,42 +135,58 @@ class _MidwifeAddChildGrowthPageState extends State<MidwifeAddChildGrowthPage> {
 
               const SizedBox(height: 16),
 
-              /// 📏 HEIGHT
+              /// 📏 HEIGHT (NUMBERS ONLY)
               AppInputField(
                 hintText: 'Height (cm)',
                 controller: _heightController,
                 leadingIcon: Icons.height,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(
+                    RegExp(r'^\d*\.?\d*$'),
+                  ),
+                ],
                 onChanged: (_) => _recalculateBMI(),
                 isRequired: true,
               ),
 
               const SizedBox(height: 16),
 
-              /// ⚖️ WEIGHT
+              /// ⚖️ WEIGHT (NUMBERS ONLY)
               AppInputField(
                 hintText: 'Weight (kg)',
                 controller: _weightController,
                 leadingIcon: Icons.monitor_weight,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(
+                    RegExp(r'^\d*\.?\d*$'),
+                  ),
+                ],
                 onChanged: (_) => _recalculateBMI(),
                 isRequired: true,
               ),
 
               const SizedBox(height: 16),
 
-              /// 🧮 BMI (READ ONLY)
+              /// 🧮 BMI (AUTO-CALCULATED)
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
                 decoration: BoxDecoration(
                   color: AppColors.bgSecondary,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.calculate,
-                        color: AppColors.brandAccent),
+                    const Icon(
+                      Icons.calculate,
+                      color: AppColors.brandAccent,
+                    ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
@@ -176,7 +206,7 @@ class _MidwifeAddChildGrowthPageState extends State<MidwifeAddChildGrowthPage> {
 
               const SizedBox(height: 16),
 
-              /// 📝 REMARKS
+              /// 📝 REMARKS (OPTIONAL)
               AppInputField(
                 hintText: 'Remarks',
                 controller: _remarksController,
@@ -209,7 +239,8 @@ class _MidwifeAddChildGrowthPageState extends State<MidwifeAddChildGrowthPage> {
                                   'Please make sure the details are correct. Growth records cannot be edited once added.',
                               confirmText: 'Confirm',
                               cancelText: 'Cancel',
-                              onCancel: () => Navigator.pop(context),
+                              onCancel: () =>
+                                  Navigator.pop(context),
                               onConfirm: () {
                                 Navigator.pop(context);
 
@@ -219,7 +250,8 @@ class _MidwifeAddChildGrowthPageState extends State<MidwifeAddChildGrowthPage> {
                                   builder: (context) {
                                     return DialogBox(
                                       type: DialogType.success,
-                                      title: 'Growth Record Added',
+                                      title:
+                                          'Growth Record Added',
                                       subtitle:
                                           'The child’s growth information has been successfully recorded.',
                                       buttonText: 'OK',
