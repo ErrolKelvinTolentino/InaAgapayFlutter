@@ -139,8 +139,9 @@ class _AddMotherFlowState extends State<AddMotherFlow> {
       }
     } finally {
       _recomputeRisk();
-      if (!mounted) return;
-      setState(() => loadingContext = false);
+      if (mounted) {
+        setState(() => loadingContext = false);
+      }
     }
   }
 

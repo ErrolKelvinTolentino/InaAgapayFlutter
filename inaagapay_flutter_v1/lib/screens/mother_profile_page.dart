@@ -385,7 +385,7 @@ class _MotherProfilePageState extends State<MotherProfilePage> {
             );
           }
 
-          Widget _tagChip(String text) {
+          Widget tagChip(String text) {
             return Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
@@ -451,7 +451,7 @@ class _MotherProfilePageState extends State<MotherProfilePage> {
                               Wrap(
                                 spacing: 6,
                                 runSpacing: 6,
-                                children: tags.map(_tagChip).toList(),
+                                children: tags.map(tagChip).toList(),
                               ),
                             ],
                           ],
@@ -465,7 +465,7 @@ class _MotherProfilePageState extends State<MotherProfilePage> {
             );
           }
 
-          Widget _detailRow(String label, String value) {
+          Widget detailRow(String label, String value) {
             return Padding(
               padding: const EdgeInsets.symmetric(vertical: 6),
               child: Row(
@@ -573,7 +573,7 @@ class _MotherProfilePageState extends State<MotherProfilePage> {
                         ),
                         child: Column(
                           children: rows
-                              .map((r) => _detailRow(r.key, r.value))
+                              .map((r) => detailRow(r.key, r.value))
                               .toList(),
                         ),
                       ),

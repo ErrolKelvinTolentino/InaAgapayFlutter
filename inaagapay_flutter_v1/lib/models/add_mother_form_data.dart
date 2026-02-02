@@ -228,11 +228,45 @@ class AddMotherFormData {
     return age;
   }
 
+  int? ageInYears({DateTime? onDate}) {
+    if (birthdate == null) return null;
+    final refDate = onDate ?? DateTime.now();
+    int age = refDate.year - birthdate!.year;
+    if (refDate.month < birthdate!.month ||
+        (refDate.month == birthdate!.month && refDate.day < birthdate!.day)) {
+      age--;
+    }
+    return age;
+  }
+
   double? get bmi {
     if (heightCm == null || weightKg == null) return null;
     if (heightCm == 0) return null;
     final heightM = heightCm! / 100;
     return double.parse((weightKg! / (heightM * heightM)).toStringAsFixed(1));
+  }
+
+  int get activeMedicalConditionCount {
+    return medicalConditions.where((c) => c.isActive).length;
+  }
+
+  bool get hasActiveAllergy {
+    return allergies.any((a) => a.isActive);
+  }
+
+  List<PregnancyHistoryEntry> get pastPregnancies {
+    return pregnancyHistory;
+  }
+
+  int get totalEndedPregnancies {
+    return pregnancyHistory.length;
+  }
+
+  double? ageOfGestationWeeks({DateTime? onDate}) {
+    if (lmp == null) return null;
+    final refDate = onDate ?? DateTime.now();
+    final diffDays = refDate.difference(lmp!).inDays;
+    return diffDays / 7.0;
   }
 
   String? _addressValue(String? field, {String? fallback}) {
