@@ -17,6 +17,11 @@ import 'screens/midwife_add_child_address.dart';
 import 'screens/midwife_add_child.dart';
 import 'screens/midwife_mother_overview.dart';
 import 'screens/midwife_mothers_page.dart';
+import 'screens/midwife_mother_records.dart';
+import 'screens/midwife_prenatal_stack.dart';
+import 'screens/midwife_ultrasound_stack.dart';
+import 'screens/midwife_lab_stack.dart';
+
 
 import 'screens/admin_dashboard.dart';
 import 'screens/forgot_password.dart';
@@ -67,6 +72,7 @@ class MyApp extends StatelessWidget {
         '/mother-ultrasound-stack': (context) => MotherUltrasoundStack(),
         '/mother-lab-stack': (context) => MotherLabStack(),
         '/mother-pregnancy': (context) => PregnancyDetailsPage(),
+
         '/midwife-dashboard': (context) => const MidwifeDashboard(),
         '/midwife-children': (context) => const MidwifeChildrenPage(),
         '/midwife-child-overview': (context) =>
@@ -85,6 +91,12 @@ class MyApp extends StatelessWidget {
         '/midwife-mothers': (context) => const MidwifeMothersPage(),
         '/midwife-mother-overview': (context) =>
             const MidwifeMotherOverviewPage(),
+
+        '/midwife-mother-records': (context) => MidwifeMotherRecordsPage(),
+        '/midwife-prenatal-stack': (context) => MidwifePrenatalStack(),
+        '/midwife-ultrasound-stack': (context) => MidwifeUltrasoundStack(),
+        '/midwife-lab-stack': (context) => MidwifeLabStack(),
+
 
         '/admin-dashboard': (context) => const AdminDashboard(),
         '/forgot-password': (context) => const ForgotPasswordScreen(),

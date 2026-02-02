@@ -134,7 +134,7 @@ class MidwifeMotherOverviewPage extends StatelessWidget {
                 label: 'View Pregnancy Records',
                 leadingIcon: Icons.favorite,
                 onPressed: () {
-                  // TODO: navigate to pregnancy records stack
+                  Navigator.pushNamed(context, '/midwife-mother-records');
                 },
               ),
 
