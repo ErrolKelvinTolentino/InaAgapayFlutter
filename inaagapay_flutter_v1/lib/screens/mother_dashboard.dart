@@ -1,13 +1,41 @@
 import 'package:flutter/material.dart';
+
 import '../theme/app_colors.dart';
 import '../widgets/main_header.dart';
 import '../widgets/main_bottom_navigation.dart';
+import '../widgets/headline.dart';
+import '../widgets/small_description.dart';
+
+import '../widgets/hero_card.dart';
+import '../widgets/small_info_box.dart';
+import '../widgets/long_info_box.dart';
+import '../widgets/comparison_card.dart';
+
+import '../widgets/main_button.dart';
+import '../widgets/secondary_button.dart';
+
+// 🆕 MODEL IMPORT
+import '../models/baby_growth_model.dart';
 
 class MotherDashboard extends StatelessWidget {
   const MotherDashboard({super.key});
 
+  // 🧠 Trimester logic
+  String _getTrimester(int week) {
+    if (week <= 13) return 'First Trimester';
+    if (week <= 27) return 'Second Trimester';
+    return 'Third Trimester';
+  }
+
   @override
   Widget build(BuildContext context) {
+    // 🔧 TEMP HARD-CODED DATA (backend later)
+    const int week = 27;
+    final String trimester = _getTrimester(week);
+
+    // 🧠 IDEAL BABY DATA (size + weight)
+    final babyGrowth = BabyGrowthData.getForWeek(week);
+
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
 
@@ -16,13 +44,13 @@ class MotherDashboard extends StatelessWidget {
         preferredSize: const Size.fromHeight(72),
         child: MainHeader(
           title: 'HOME',
-          onNotificationTap: () {
-            // TODO: open notifications
+          onViewProfile: () => Navigator.pushNamed(context, '/profile'),
+          onSettings: () => Navigator.pushNamed(context, '/settings'),
+          onHelp: () => Navigator.pushNamed(context, '/help'),
+          onLogout: () {
+            // clear session, navigate to login
+            Navigator.pushReplacementNamed(context, '/login');
           },
-          onAvatarTap: () {
-            // TODO: open profile
-          },
-          // avatarImage: AssetImage('assets/images/avatar.png'), // optional
         ),
       ),
 
@@ -34,104 +62,33 @@ class MotherDashboard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // 👋 Welcome
-              const Text(
-                'Welcome, First Name! 🌸',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.brandPrimary,
-                ),
-              ),
-
-              const SizedBox(height: 8),
-
-              Row(
-                children: const [
-                  Icon(
-                    Icons.calendar_today,
-                    size: 16,
-                    color: AppColors.textSecondary,
-                  ),
-                  SizedBox(width: 6),
-                  Text(
-                    'Week X • First Trimester',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: AppColors.textSecondary,
+              Center(
+                child: Column(
+                  children: [
+                    const Headline(
+                      text: 'Welcome, [First Name]! 🌸',
+                      textAlign: TextAlign.center,
                     ),
-                  ),
-                ],
+
+                    const SizedBox(height: 8),
+
+                    SmallDescription(
+                      icon: Icons.calendar_today,
+                      text: 'Week $week • $trimester',
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
               ),
 
               const SizedBox(height: 20),
 
-              // 🧸 Main Card
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppColors.bgSecondary,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Column(
-                  children: [
-                    Stack(
-                      alignment: Alignment.topRight,
-                      children: [
-                        Center(
-                          child: Container(
-                            padding: const EdgeInsets.all(24),
-                            decoration: const BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: AppColors.faintWhite,
-                            ),
-                            child: Image.asset(
-                              'assets/images/pregnant1.png',
-                              height: 140,
-                            ),
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.brandPrimary,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: const Text(
-                            'Week X',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: AppColors.textOnColor,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: const [
-                        Icon(
-                          Icons.favorite,
-                          size: 16,
-                          color: AppColors.brandPrimary,
-                        ),
-                        SizedBox(width: 6),
-                        Text(
-                          'Your baby is growing beautifully!',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+              // 🧸 HERO CARD
+              HeroCard(
+                image: const AssetImage('assets/images/pregnant1.png'),
+                week: 39,
+                showWeekBadge: true,
+                showHeartRow: true,
               ),
 
               const SizedBox(height: 20),
@@ -139,16 +96,16 @@ class MotherDashboard extends StatelessWidget {
               // 📦 Baby stats
               Row(
                 children: [
-                  _infoBox(
+                  SmallInfoBox(
                     icon: Icons.straighten,
-                    title: 'Baby Size',
-                    value: '0.1 – 0.2 cm',
+                    title: 'Ideal Baby Size',
+                    value: babyGrowth.size,
                   ),
                   const SizedBox(width: 12),
-                  _infoBox(
+                  SmallInfoBox(
                     icon: Icons.monitor_weight,
-                    title: 'Baby Weight',
-                    value: '< 1 g',
+                    title: 'Ideal Baby Weight',
+                    value: babyGrowth.weight,
                   ),
                 ],
               ),
@@ -156,199 +113,96 @@ class MotherDashboard extends StatelessWidget {
               const SizedBox(height: 16),
 
               // 📅 Due date
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.brandPrimary),
-                ),
-                child: Row(
-                  children: const [
-                    Icon(Icons.calendar_month, color: AppColors.brandPrimary),
-                    SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        'Due Date: Month Day, Year\n'
-                        'You are X weeks away from meeting!',
-                        style: TextStyle(
-                          fontSize: 13,
-                          height: 1.4,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
+              const LongInfoBox(
+                icon: Icons.calendar_month,
+                text: [
+                  TextSpan(
+                    text: 'Due Date: ',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimary,
                     ),
-                  ],
-                ),
+                  ),
+                  TextSpan(
+                    text: 'Month Day, Year\n',
+                    style: TextStyle(color: AppColors.textSecondary),
+                  ),
+                  TextSpan(
+                    text: 'You are ',
+                    style: TextStyle(color: AppColors.textSecondary),
+                  ),
+                  TextSpan(
+                    text: 'X Weeks away',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.brandPrimary,
+                    ),
+                  ),
+                  TextSpan(
+                    text: ' from meeting!',
+                    style: TextStyle(color: AppColors.textSecondary),
+                  ),
+                ],
               ),
 
               const SizedBox(height: 16),
 
-              // 🫐 Fruit comparison
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      AppColors.brandPrimary.withOpacity(0.15),
-                      AppColors.brandPrimary.withOpacity(0.05),
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: RichText(
-                        text: const TextSpan(
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: AppColors.textSecondary,
-                          ),
-                          children: [
-                            TextSpan(text: 'Your baby is now as big as\n'),
-                            TextSpan(
-                              text: 'A Blueberry!',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.brandPrimary,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    Image.asset('assets/images/blueberry.png', height: 60),
-                  ],
-                ),
-              ),
+              // 🫐 Comparison
+              ComparisonCard(week: week),
 
               const SizedBox(height: 20),
 
               // 🔔 Next check-up
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.borderPrimary),
-                ),
-                child: Row(
-                  children: const [
-                    Icon(Icons.notifications, color: AppColors.brandPrimary),
-                    SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        'Next Check-up:\nMonth Day, Year – Day',
-                        style: TextStyle(
-                          fontSize: 13,
-                          height: 1.4,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
+              const LongInfoBox(
+                icon: Icons.notifications,
+                borderColor: AppColors.borderPrimary,
+                iconColor: AppColors.brandPrimary,
+                text: [
+                  TextSpan(
+                    text: 'Next Check-up\n',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimary,
                     ),
-                  ],
-                ),
+                  ),
+                  TextSpan(
+                    text: 'Month Day, Year – Day',
+                    style: TextStyle(color: AppColors.textSecondary),
+                  ),
+                ],
               ),
 
-              const SizedBox(height: 20),
+              const SizedBox(height: 24),
 
-              // 🔘 Buttons
-              _actionButton(
-                text: 'More Info',
-                icon: Icons.info_outline,
-                filled: true,
+              // 🔘 Actions
+              MainButton(
+                label: 'More Info',
+                showIcons: true,
+                leadingIcon: Icons.info_outline,
+                onPressed: () {
+                  // TODO
+                },
               ),
+
               const SizedBox(height: 12),
-              _actionButton(
-                text: 'Conclude Pregnancy',
-                icon: Icons.check,
-                filled: false,
+
+              SecondaryButton(
+                label: 'Conclude Pregnancy',
+                showIcons: true,
+                leadingIcon: Icons.check,
+                onPressed: () {
+                  // TODO
+                },
               ),
 
-              const SizedBox(height: 80),
+              const SizedBox(height: 10),
             ],
           ),
         ),
       ),
 
       // 🔻 Bottom Nav
-      bottomNavigationBar: MainBottomNavigation(
-        currentIndex: 0,
-        onTap: (index) {
-          // TODO: handle navigation later
-          // example:
-          // if (index == 0) Navigator.pushNamed(context, '/home');
-        },
-      ),
-    );
-  }
-
-  // 🔹 Info box
-  Widget _infoBox({
-    required IconData icon,
-    required String title,
-    required String value,
-  }) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.brandPrimary),
-        ),
-        child: Column(
-          children: [
-            Icon(icon, color: AppColors.brandPrimary),
-            const SizedBox(height: 6),
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 12,
-                color: AppColors.textSecondary,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              value,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textPrimary,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // 🔹 Action button
-  Widget _actionButton({
-    required String text,
-    required IconData icon,
-    required bool filled,
-  }) {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton.icon(
-        onPressed: () {},
-        icon: Icon(
-          icon,
-          color: filled ? AppColors.textOnColor : AppColors.brandPrimary,
-        ),
-        label: Text(text),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: filled ? AppColors.brandPrimary : Colors.transparent,
-          foregroundColor: filled
-              ? AppColors.textOnColor
-              : AppColors.brandPrimary,
-          side: filled ? null : const BorderSide(color: AppColors.brandPrimary),
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(30),
-          ),
-          elevation: filled ? 2 : 0,
-        ),
-      ),
+      bottomNavigationBar: MainBottomNavigation(currentIndex: 0),
     );
   }
 }
