@@ -11,6 +11,7 @@ import 'add_prenatal_checkup.dart';
 import 'add_ultrasound_page.dart';
 import 'add_lab_test_page.dart';
 import 'child_profile_page.dart';
+import 'midwife/start_pregnancy_screen.dart';
 
 class MotherProfilePage extends StatefulWidget {
   final int motherId;
@@ -67,8 +68,16 @@ class _MotherProfilePageState extends State<MotherProfilePage>
   }
 
   Future<void> _refresh() async {
-    setState(() => _future = fetchMotherProfile());
-    await _future;
+    if (!mounted) return;
+    final next = fetchMotherProfile();
+    setState(() {
+      _future = next;
+    });
+    try {
+      await next;
+    } catch (_) {
+      // Swallow refresh errors to avoid crashing the refresh indicator.
+    }
   }
 
   // ================= UI =================
@@ -98,6 +107,10 @@ class _MotherProfilePageState extends State<MotherProfilePage>
                 style: const TextStyle(color: Colors.red),
               ),
             );
+          }
+
+          if (!snapshot.hasData) {
+            return const Center(child: Text('No profile data found.'));
           }
 
           final m = snapshot.data!;
@@ -186,6 +199,40 @@ class _MotherProfilePageState extends State<MotherProfilePage>
             if (v == null) return '—';
             final value = v.toString().trim();
             return value.isEmpty ? '—' : value;
+          }
+
+          String formatOutcome(dynamic v) {
+            final raw = v?.toString().trim().toLowerCase() ?? '';
+            switch (raw) {
+              case 'live_birth':
+              case 'livebirth':
+                return 'Livebirth';
+              case 'stillbirth':
+                return 'Stillbirth';
+              case 'miscarriage':
+                return 'Miscarriage';
+              case 'abortion':
+                return 'Abortion';
+              case 'ectopic':
+                return 'Ectopic';
+              default:
+                return raw.isEmpty ? '—' : raw;
+            }
+          }
+
+          String formatDeliveryMethod(dynamic v) {
+            final raw = v?.toString().trim() ?? '';
+            if (raw.isEmpty) return '—';
+            switch (raw.toUpperCase()) {
+              case 'NSD':
+                return 'Normal Spontaneous Delivery';
+              case 'CS':
+                return 'Cesarean Section';
+              case 'INSTRUMENTAL':
+                return 'Instrumental';
+              default:
+                return raw;
+            }
           }
 
           List<dynamic> listOrEmpty(dynamic v) => v is List ? v : [];
@@ -707,295 +754,35 @@ class _MotherProfilePageState extends State<MotherProfilePage>
           }
 
           Future<void> startNewPregnancy() async {
-            DateTime? lmp;
-            DateTime? edd;
-            String method = 'lmp';
-            final weeksCtrl = TextEditingController();
-            final daysCtrl = TextEditingController();
-
-            await showModalBottomSheet<void>(
-              context: context,
-              isScrollControlled: true,
-              backgroundColor: Colors.white,
-              shape: const RoundedRectangleBorder(
-                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+            final started = await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => StartPregnancyScreen(
+                  motherId: widget.motherId,
+                  motherName: fullName,
+                ),
               ),
-              builder: (ctx) {
-                return StatefulBuilder(
-                  builder: (ctx, setModal) {
-                    void computeFromAog() {
-                      final weeks = int.tryParse(weeksCtrl.text.trim()) ?? 0;
-                      final days = int.tryParse(daysCtrl.text.trim()) ?? 0;
-                      final totalDays = (weeks * 7) + days;
-                      setModal(() {
-                        if (totalDays <= 0) {
-                          lmp = null;
-                          edd = null;
-                        } else {
-                          final base = DateTime.now().subtract(
-                            Duration(days: totalDays),
-                          );
-                          lmp = base;
-                          edd = base.add(const Duration(days: 280));
-                        }
-                      });
-                    }
-
-                    Future<void> pickDate(bool isLmp) async {
-                      final picked = await showDatePicker(
-                        context: ctx,
-                        initialDate: DateTime.now(),
-                        firstDate: DateTime(1900),
-                        lastDate: DateTime.now().add(const Duration(days: 365)),
-                      );
-                      if (picked != null) {
-                        setModal(() {
-                          if (isLmp) {
-                            lmp = picked;
-                            edd = picked.add(const Duration(days: 280));
-                          } else {
-                            edd = picked;
-                            lmp = picked.subtract(const Duration(days: 280));
-                          }
-                        });
-                      }
-                    }
-
-                    return Padding(
-                      padding: EdgeInsets.only(
-                        left: 16,
-                        right: 16,
-                        bottom: MediaQuery.of(ctx).viewInsets.bottom + 16,
-                        top: 16,
-                      ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              const Icon(Icons.playlist_add_check_circle),
-                              const SizedBox(width: 8),
-                              const Text(
-                                'Start New Pregnancy',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const Spacer(),
-                              IconButton(
-                                icon: const Icon(Icons.close),
-                                onPressed: () => Navigator.pop(ctx),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            children: [
-                              const Text('Method'),
-                              const SizedBox(width: 12),
-                              DropdownButton<String>(
-                                value: method,
-                                items: const [
-                                  DropdownMenuItem(
-                                    value: 'lmp',
-                                    child: Text('LMP'),
-                                  ),
-                                  DropdownMenuItem(
-                                    value: 'edd',
-                                    child: Text('EDD'),
-                                  ),
-                                  DropdownMenuItem(
-                                    value: 'aog',
-                                    child: Text('AOG'),
-                                  ),
-                                ],
-                                onChanged: (v) {
-                                  if (v == null) return;
-                                  setModal(() {
-                                    method = v;
-                                    lmp = null;
-                                    edd = null;
-                                    weeksCtrl.clear();
-                                    daysCtrl.clear();
-                                  });
-                                },
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          if (method == 'lmp')
-                            ListTile(
-                              contentPadding: EdgeInsets.zero,
-                              title: const Text('Last menstrual period'),
-                              subtitle: Text(
-                                lmp == null
-                                    ? 'Pick date'
-                                    : DateFormat('MMM d, yyyy').format(lmp!),
-                              ),
-                              trailing: const Icon(Icons.calendar_today),
-                              onTap: () => pickDate(true),
-                            )
-                          else if (method == 'edd')
-                            ListTile(
-                              contentPadding: EdgeInsets.zero,
-                              title: const Text('Expected date of delivery'),
-                              subtitle: Text(
-                                edd == null
-                                    ? 'Pick date'
-                                    : DateFormat('MMM d, yyyy').format(edd!),
-                              ),
-                              trailing: const Icon(Icons.calendar_today),
-                              onTap: () => pickDate(false),
-                            )
-                          else
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: TextField(
-                                    controller: weeksCtrl,
-                                    keyboardType: TextInputType.number,
-                                    decoration: const InputDecoration(
-                                      labelText: 'Weeks',
-                                    ),
-                                    onChanged: (_) => computeFromAog(),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: TextField(
-                                    controller: daysCtrl,
-                                    keyboardType: TextInputType.number,
-                                    decoration: const InputDecoration(
-                                      labelText: 'Days',
-                                    ),
-                                    onChanged: (_) => computeFromAog(),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          const SizedBox(height: 12),
-                          ListTile(
-                            contentPadding: EdgeInsets.zero,
-                            title: const Text('Computed LMP'),
-                            subtitle: Text(
-                              lmp == null
-                                  ? '—'
-                                  : DateFormat('MMM d, yyyy').format(lmp!),
-                            ),
-                          ),
-                          ListTile(
-                            contentPadding: EdgeInsets.zero,
-                            title: const Text('Computed EDD'),
-                            subtitle: Text(
-                              edd == null
-                                  ? '—'
-                                  : DateFormat('MMM d, yyyy').format(edd!),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          ElevatedButton.icon(
-                            onPressed: () async {
-                              if (method == 'aog') {
-                                computeFromAog();
-                              }
-
-                              if (lmp == null || edd == null) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                      'Provide gestational info to compute LMP and EDD.',
-                                    ),
-                                  ),
-                                );
-                                return;
-                              }
-
-                              final spanDays = edd!.difference(lmp!).inDays;
-                              if (spanDays < 259 || spanDays > 294) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                      'EDD must be 37–42 weeks from LMP.',
-                                    ),
-                                  ),
-                                );
-                                return;
-                              }
-
-                              try {
-                                final token = await AuthStorage.getToken();
-                                if (token == null) {
-                                  throw Exception('Not authenticated');
-                                }
-
-                                final res = await http.post(
-                                  Uri.parse(
-                                    'https://inaagapay.alwaysdata.net/api/midwife/start_pregnancy.php',
-                                  ),
-                                  headers: {
-                                    'Authorization': 'Bearer $token',
-                                    'Accept': 'application/json',
-                                    'Content-Type': 'application/json',
-                                  },
-                                  body: jsonEncode({
-                                    'mother_id': widget.motherId,
-                                    'last_menstrual_period': lmp!
-                                        .toIso8601String(),
-                                    'expected_date_of_delivery': edd!
-                                        .toIso8601String(),
-                                  }),
-                                );
-
-                                final decoded = jsonDecode(res.body);
-                                if (decoded['success'] != true) {
-                                  throw Exception(
-                                    decoded['message'] ??
-                                        'Failed to start pregnancy',
-                                  );
-                                }
-
-                                if (!mounted) return;
-                                Navigator.pop(ctx);
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Pregnancy started.'),
-                                  ),
-                                );
-                                await _refresh();
-                              } catch (e) {
-                                if (!mounted) return;
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text(e.toString())),
-                                );
-                              }
-                            },
-                            icon: const Icon(Icons.play_arrow),
-                            label: const Text('Start Pregnancy'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.brandPrimary,
-                              foregroundColor: Colors.white,
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                );
-              },
             );
+
+            if (started == true) {
+              if (!mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Pregnancy started.')),
+              );
+              await _refresh();
+            }
           }
 
           Future<void> concludePregnancy() async {
             if (currentPreg == null) return;
-            String outcome = 'livebirth';
+            String outcome = 'live_birth';
             DateTime? outcomeDate;
             DateTime? deliveryDate;
             String? deliveryMethod;
             String? placeOfDelivery;
             double? gestAge;
             final gestAgeController = TextEditingController();
+            final placeCtrl = TextEditingController();
             final lmpDate = parseDate(
               currentPreg['last_menstrual_period'] ??
                   m['last_menstrual_period'],
@@ -1004,7 +791,7 @@ class _MotherProfilePageState extends State<MotherProfilePage>
             void recomputeGestAge() {
               if (lmpDate == null) return;
               final reference =
-                  (outcome == 'livebirth' || outcome == 'stillbirth')
+                  (outcome == 'live_birth' || outcome == 'stillbirth')
                   ? (deliveryDate ?? outcomeDate ?? DateTime.now())
                   : (outcomeDate ?? DateTime.now());
               final weeks = reference.difference(lmpDate).inDays / 7;
@@ -1082,8 +869,8 @@ class _MotherProfilePageState extends State<MotherProfilePage>
                             ),
                             items: const [
                               DropdownMenuItem(
-                                value: 'livebirth',
-                                child: Text('Livebirth'),
+                                value: 'live_birth',
+                                child: Text('Live birth'),
                               ),
                               DropdownMenuItem(
                                 value: 'stillbirth',
@@ -1108,7 +895,7 @@ class _MotherProfilePageState extends State<MotherProfilePage>
                             }),
                           ),
                           const SizedBox(height: 8),
-                          if (outcome == 'livebirth' ||
+                          if (outcome == 'live_birth' ||
                               outcome == 'stillbirth') ...[
                             ListTile(
                               contentPadding: EdgeInsets.zero,
@@ -1124,6 +911,7 @@ class _MotherProfilePageState extends State<MotherProfilePage>
                               onTap: () => pickDate(true),
                             ),
                             TextField(
+                              controller: placeCtrl,
                               decoration: const InputDecoration(
                                 labelText: 'Place of delivery',
                               ),
@@ -1178,6 +966,31 @@ class _MotherProfilePageState extends State<MotherProfilePage>
                           const SizedBox(height: 8),
                           ElevatedButton.icon(
                             onPressed: () async {
+                              if (outcome == 'live_birth' ||
+                                  outcome == 'stillbirth') {
+                                if (deliveryDate == null) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'Please select the delivery date.',
+                                      ),
+                                    ),
+                                  );
+                                  return;
+                                }
+                              } else {
+                                if (outcomeDate == null) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'Please select the outcome date.',
+                                      ),
+                                    ),
+                                  );
+                                  return;
+                                }
+                              }
+
                               final confirm = await showDialog<bool>(
                                 context: ctx,
                                 builder: (dialogContext) => AlertDialog(
@@ -1206,6 +1019,22 @@ class _MotherProfilePageState extends State<MotherProfilePage>
                                 if (token == null)
                                   throw Exception('Not authenticated');
 
+                                final placeValue = placeCtrl.text.trim();
+                                final normalizedPlace = placeValue.isEmpty
+                                    ? (placeOfDelivery?.trim().isEmpty ?? true
+                                          ? null
+                                          : placeOfDelivery?.trim())
+                                    : placeValue;
+                                final normalizedMethod =
+                                    deliveryMethod?.trim().isEmpty ?? true
+                                    ? null
+                                    : deliveryMethod?.trim();
+                                final normalizedOutcomeDate =
+                                    (outcome == 'live_birth' ||
+                                        outcome == 'stillbirth')
+                                    ? deliveryDate
+                                    : outcomeDate;
+
                                 final res = await http.post(
                                   Uri.parse(
                                     'https://inaagapay.alwaysdata.net/api/midwife/conclude_pregnancy.php',
@@ -1218,12 +1047,12 @@ class _MotherProfilePageState extends State<MotherProfilePage>
                                   body: jsonEncode({
                                     'pregnancy_id': currentPreg['pregnancy_id'],
                                     'outcome': outcome,
-                                    'outcome_date': outcomeDate
+                                    'outcome_date': normalizedOutcomeDate
                                         ?.toIso8601String(),
                                     'delivery_date': deliveryDate
                                         ?.toIso8601String(),
-                                    'delivery_method': deliveryMethod,
-                                    'place_of_delivery': placeOfDelivery,
+                                    'delivery_method': normalizedMethod,
+                                    'place_of_delivery': normalizedPlace,
                                     'gestational_age_at_end': gestAge,
                                   }),
                                 );
@@ -1264,6 +1093,7 @@ class _MotherProfilePageState extends State<MotherProfilePage>
               },
             );
             gestAgeController.dispose();
+            placeCtrl.dispose();
           }
 
           return DefaultTabController(
@@ -1913,8 +1743,14 @@ class _MotherProfilePageState extends State<MotherProfilePage>
                               vertical: 12,
                             ),
                             child: currentPreg == null
-                                ? infoCard('Current Pregnancy', const [
-                                    Text('No ongoing pregnancy found.'),
+                                ? infoCard('Current Pregnancy', [
+                                    const Text('No ongoing pregnancy found.'),
+                                    const SizedBox(height: 12),
+                                    OutlinedButton.icon(
+                                      onPressed: startNewPregnancy,
+                                      icon: const Icon(Icons.play_arrow),
+                                      label: const Text('Start New Pregnancy'),
+                                    ),
                                   ])
                                 : Builder(
                                     builder: (_) {
@@ -2615,11 +2451,14 @@ class _MotherProfilePageState extends State<MotherProfilePage>
                                 : Column(
                                     children: pastPregs.map((p) {
                                       final delivery = p['delivery'];
-                                      return infoCard('Pregnancy • ${p['outcome'] ?? '—'}', [
-                                        field(
-                                          'Outcome Date',
-                                          fmtDate(p['outcome_date']),
-                                        ),
+                                      final outcomeLabel = formatOutcome(
+                                        p['outcome'],
+                                      );
+                                      final outcomeDate =
+                                          fmtDate(p['outcome_date']) ??
+                                          fmtDate(delivery?['delivery_date']);
+                                      return infoCard('Pregnancy • $outcomeLabel', [
+                                        field('Outcome Date', outcomeDate),
                                         field(
                                           'Gestational Age',
                                           p['gestational_age_at_end'],
@@ -2631,7 +2470,9 @@ class _MotherProfilePageState extends State<MotherProfilePage>
                                           ),
                                           field(
                                             'Delivery Method',
-                                            delivery['delivery_method'],
+                                            formatDeliveryMethod(
+                                              delivery['delivery_method'],
+                                            ),
                                           ),
                                         ],
                                         ExpansionTile(
