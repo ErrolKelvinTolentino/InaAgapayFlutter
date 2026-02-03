@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // ✅ REQUIRED
 import '../theme/app_colors.dart';
 
 class AppInputField extends StatefulWidget {
@@ -23,9 +22,6 @@ class AppInputField extends StatefulWidget {
   final TextInputType keyboardType;
   final bool readOnly;
 
-  /// ✅ NEW (OPTIONAL, NON-BREAKING)
-  final List<TextInputFormatter>? inputFormatters;
-
   /// Error
   final String? errorText;
 
@@ -42,7 +38,6 @@ class AppInputField extends StatefulWidget {
     this.obscureText = false,
     this.keyboardType = TextInputType.text,
     this.readOnly = false,
-    this.inputFormatters, // ✅ added
     this.errorText,
   });
 
@@ -69,8 +64,7 @@ class _AppInputFieldState extends State<AppInputField> {
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
       child: Focus(
-        onFocusChange: (focused) =>
-            setState(() => _isFocused = focused),
+        onFocusChange: (focused) => setState(() => _isFocused = focused),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -80,10 +74,7 @@ class _AppInputFieldState extends State<AppInputField> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(28),
-                border: Border.all(
-                  color: borderColor(),
-                  width: 1.5,
-                ),
+                border: Border.all(color: borderColor(), width: 1.5),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.06),
@@ -97,13 +88,10 @@ class _AppInputFieldState extends State<AppInputField> {
                   if (widget.leadingIcon != null)
                     Icon(
                       widget.leadingIcon,
-                      color: hasError
-                          ? AppColors.error
-                          : AppColors.brandAccent,
+                      color: hasError ? AppColors.error : AppColors.brandAccent,
                     ),
 
-                  if (widget.leadingIcon != null)
-                    const SizedBox(width: 12),
+                  if (widget.leadingIcon != null) const SizedBox(width: 12),
 
                   Expanded(
                     child: TextField(
@@ -112,12 +100,8 @@ class _AppInputFieldState extends State<AppInputField> {
                       keyboardType: widget.keyboardType,
                       readOnly: widget.readOnly,
 
-                      // ✅ NEW (SAFE)
-                      inputFormatters: widget.inputFormatters,
-
                       // 🔒 Prevent taps when read-only
-                      onTap:
-                          widget.readOnly ? null : widget.onTap,
+                      onTap: widget.onTap,
 
                       // 🔑 Needed for validation
                       onChanged: widget.onChanged,
@@ -130,10 +114,9 @@ class _AppInputFieldState extends State<AppInputField> {
                       ),
                       decoration: InputDecoration(
                         border: InputBorder.none,
-                        floatingLabelBehavior:
-                            widget.controller.text.isNotEmpty
-                                ? FloatingLabelBehavior.always
-                                : FloatingLabelBehavior.auto,
+                        floatingLabelBehavior: widget.controller.text.isNotEmpty
+                            ? FloatingLabelBehavior.always
+                            : FloatingLabelBehavior.auto,
                         label: RichText(
                           text: TextSpan(
                             text: widget.hintText,
@@ -176,14 +159,10 @@ class _AppInputFieldState extends State<AppInputField> {
 
             if (hasError)
               Padding(
-                padding:
-                    const EdgeInsets.only(left: 16, top: 6),
+                padding: const EdgeInsets.only(left: 16, top: 6),
                 child: Text(
                   widget.errorText!,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: AppColors.error,
-                  ),
+                  style: const TextStyle(fontSize: 12, color: AppColors.error),
                 ),
               ),
           ],

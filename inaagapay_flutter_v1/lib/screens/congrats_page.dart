@@ -15,7 +15,10 @@ class CongratsPage extends StatelessWidget {
   final int monthsLeft = 6;
   final String dueDate = 'October 15, 2026';
 
-  const CongratsPage({super.key, required this.mode});
+  const CongratsPage({
+    super.key,
+    required this.mode,
+  });
 
   bool get isPregnant => mode == DueDateMode.pregnant;
 
@@ -40,7 +43,8 @@ class CongratsPage extends StatelessWidget {
                       // 🖼 Illustration
                       Image.asset(
                         'assets/images/pregnant1.png',
-                        height: MediaQuery.of(context).size.height * 0.30,
+                        height:
+                            MediaQuery.of(context).size.height * 0.30,
                         fit: BoxFit.contain,
                       ),
 
@@ -59,33 +63,34 @@ class CongratsPage extends StatelessWidget {
 
                       // 🧠 Supporting subtitle
                       if (!isPregnant)
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 24),
-                          child: Text(
-                            "You're now supporting someone through their pregnancy journey!",
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              fontSize: 13,
-                              height: 1.5,
-                              color: AppColors.textSecondary,
-                            ),
-                          ),
-                        ),
+  Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 24),
+    child: Text(
+      "You're now supporting someone through their pregnancy journey!",
+      textAlign: TextAlign.center,
+      style: const TextStyle(
+        fontSize: 13,
+        height: 1.5,
+        color: AppColors.textSecondary,
+      ),
+    ),
+  ),
+
 
                       const SizedBox(height: 32),
 
                       // 🧾 Section label (centered correctly)
                       const Center(
-                        child: Text(
-                          'This means...',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500,
-                            color: AppColors.textPrimary,
-                          ),
-                        ),
-                      ),
+  child: Text(
+    'This means...',
+    textAlign: TextAlign.center,
+    style: TextStyle(
+      fontSize: 13,
+      fontWeight: FontWeight.w500,
+      color: AppColors.textPrimary,
+    ),
+  ),
+),
 
                       const SizedBox(height: 16),
 
@@ -95,7 +100,8 @@ class CongratsPage extends StatelessWidget {
                         text: TextSpan(
                           children: [
                             TextSpan(
-                              text: isPregnant ? 'You are ' : 'They are ',
+                              text:
+                                  isPregnant ? 'You are ' : 'They are ',
                             ),
                             TextSpan(
                               text: '$weeksPregnant weeks',
@@ -146,7 +152,8 @@ class CongratsPage extends StatelessWidget {
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
-                            const TextSpan(text: ' away from meeting!'),
+                            const TextSpan(
+                                text: ' away from meeting!'),
                           ],
                         ),
                       ),
@@ -164,10 +171,10 @@ class CongratsPage extends StatelessWidget {
                     : "Let's begin the journey!",
                 onPressed: () {
                   Navigator.pushNamedAndRemoveUntil(
-                    context,
-                    '/mother-dashboard',
-                    (route) => false,
-                  );
+  context,
+  '/mother-dashboard',
+  (route) => false,
+);
                 },
               ),
 

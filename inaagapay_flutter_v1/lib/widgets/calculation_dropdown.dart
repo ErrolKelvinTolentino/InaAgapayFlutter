@@ -125,7 +125,10 @@ class _DropdownList extends StatelessWidget {
   final DueDateBasis selected;
   final ValueChanged<DueDateBasis> onSelect;
 
-  const _DropdownList({required this.selected, required this.onSelect});
+  const _DropdownList({
+    required this.selected,
+    required this.onSelect,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -180,9 +183,8 @@ class _DropdownList extends StatelessWidget {
                           color: isSelected
                               ? AppColors.brandPrimary
                               : AppColors.textSecondary,
-                          fontWeight: isSelected
-                              ? FontWeight.w600
-                              : FontWeight.w400,
+                          fontWeight:
+                              isSelected ? FontWeight.w600 : FontWeight.w400,
                         ),
                       ),
                     ),
