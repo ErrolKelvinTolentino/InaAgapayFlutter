@@ -40,8 +40,13 @@ class _MidwifeChildrenPageState extends State<MidwifeChildrenPage> {
         preferredSize: const Size.fromHeight(72),
         child: MainHeader(
           title: 'CHILDREN',
-          onNotificationTap: () {},
-          onAvatarTap: () {},
+          onViewProfile: () => Navigator.pushNamed(context, '/profile'),
+          onSettings: () => Navigator.pushNamed(context, '/settings'),
+          onHelp: () => Navigator.pushNamed(context, '/help'),
+          onLogout: () {
+            // clear session, navigate to login
+            Navigator.pushReplacementNamed(context, '/login');
+          },
         ),
       ),
 

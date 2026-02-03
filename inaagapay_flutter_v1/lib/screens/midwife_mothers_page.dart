@@ -25,9 +25,7 @@ class _MidwifeMothersPageState extends State<MidwifeMothersPage> {
   void _openMotherProfile() {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (_) => const MidwifeMotherOverviewPage(),
-      ),
+      MaterialPageRoute(builder: (_) => const MidwifeMotherOverviewPage()),
     );
   }
 
@@ -41,8 +39,13 @@ class _MidwifeMothersPageState extends State<MidwifeMothersPage> {
         preferredSize: const Size.fromHeight(72),
         child: MainHeader(
           title: 'MOTHERS',
-          onNotificationTap: () {},
-          onAvatarTap: () {},
+          onViewProfile: () => Navigator.pushNamed(context, '/profile'),
+          onSettings: () => Navigator.pushNamed(context, '/settings'),
+          onHelp: () => Navigator.pushNamed(context, '/help'),
+          onLogout: () {
+            // clear session, navigate to login
+            Navigator.pushReplacementNamed(context, '/login');
+          },
         ),
       ),
 
@@ -231,10 +234,7 @@ class _MotherCard extends StatelessWidget {
               ),
             ),
 
-            const Icon(
-              Icons.chevron_right,
-              color: AppColors.brandPrimary,
-            ),
+            const Icon(Icons.chevron_right, color: AppColors.brandPrimary),
           ],
         ),
       ),

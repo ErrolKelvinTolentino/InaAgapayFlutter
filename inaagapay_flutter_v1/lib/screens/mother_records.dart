@@ -21,8 +21,13 @@ class MotherRecordsPage extends StatelessWidget {
         preferredSize: const Size.fromHeight(60),
         child: MainHeader(
           title: 'Records',
-          onNotificationTap: () {},
-          onAvatarTap: () {},
+          onViewProfile: () => Navigator.pushNamed(context, '/profile'),
+          onSettings: () => Navigator.pushNamed(context, '/settings'),
+          onHelp: () => Navigator.pushNamed(context, '/help'),
+          onLogout: () {
+            // clear session, navigate to login
+            Navigator.pushReplacementNamed(context, '/login');
+          },
         ),
       ),
 
@@ -134,9 +139,7 @@ class MotherRecordsPage extends StatelessWidget {
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (_) => const MotherLabStack(),
-                  ),
+                  MaterialPageRoute(builder: (_) => const MotherLabStack()),
                 );
               },
             ),
@@ -150,9 +153,7 @@ class MotherRecordsPage extends StatelessWidget {
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (_) => PregnancyDetailsPage(),
-                  ),
+                  MaterialPageRoute(builder: (_) => PregnancyDetailsPage()),
                 );
               },
             ),

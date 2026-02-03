@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../theme/app_colors.dart';
 
 // layout
@@ -6,34 +7,60 @@ import '../widgets/main_header.dart';
 import '../widgets/midwife_bottom_navigation.dart';
 
 // reusable widgets
-import '../widgets/main_button.dart';
 import '../widgets/hero_card.dart';
-
-// dashboard widgets
 import '../widgets/overview_info.dart';
 import '../widgets/midwife_statistics_card.dart';
 import '../widgets/midwife_history_card.dart';
-
-import '../models/add_child_form_data.dart';
+import '../widgets/chart_card.dart';
 
 class MidwifeDashboard extends StatelessWidget {
   const MidwifeDashboard({super.key});
 
   @override
   Widget build(BuildContext context) {
+    // 🔧 TEMP MOCK DATA (backend later)
+    const int ferrousGiven = 90;
+    const int calciumGiven = 65;
+    const int tdDosesGiven = 12;
+
+    const int totalPregnancies = 13;
+    const int firstTrimester = 4;
+    const int secondTrimester = 5;
+    const int thirdTrimester = 4;
+
+    // BHC visits mock data
+    final List<double> bhcVisitValues = [5, 7, 6, 8, 9, 4, 3];
+    final List<String> bhcVisitDays = [
+      'Mon',
+      'Tue',
+      'Wed',
+      'Thu',
+      'Fri',
+      'Sat',
+      'Sun',
+    ];
+
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
 
+      /// 🔻 Bottom Navigation
       bottomNavigationBar: const MidwifeBottomNavigation(currentIndex: 0),
 
       body: Column(
         children: [
+          /// 🔝 HEADER
           MainHeader(
             title: 'Home',
-            onNotificationTap: () {},
-            onAvatarTap: () {},
+            onViewProfile: () => Navigator.pushNamed(context, '/profile'),
+            onSettings: () => Navigator.pushNamed(context, '/settings'),
+            onHelp: () => Navigator.pushNamed(context, '/help'),
+            onLogout: () {
+              // clear session, navigate to login
+              Navigator.pushReplacementNamed(context, '/login');
+            },
           ),
 
+          /// 🔽 BODY
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -41,6 +68,7 @@ class MidwifeDashboard extends StatelessWidget {
                 children: [
                   const SizedBox(height: 16),
 
+                  /// 👋 HERO
                   HeroCard(
                     image: const AssetImage('assets/images/midwife.png'),
                     title: 'Welcome, [First Name]! 🌸',
@@ -51,6 +79,7 @@ class MidwifeDashboard extends StatelessWidget {
 
                   const SizedBox(height: 20),
 
+                  /// 📊 QUICK OVERVIEW
                   Row(
                     children: const [
                       Expanded(
@@ -69,11 +98,34 @@ class MidwifeDashboard extends StatelessWidget {
                         ),
                       ),
                       SizedBox(width: 12),
+                    ],
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  Row(
+                    children: [
                       Expanded(
                         child: OverviewInfo(
-                          value: 12,
-                          label: 'RHU Visits\nThis week',
-                          icon: Icons.local_hospital,
+                          value: ferrousGiven,
+                          label: 'Ferrous FA\ngiven',
+                          icon: Icons.medication,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: OverviewInfo(
+                          value: calciumGiven,
+                          label: 'Calcium\ngiven',
+                          icon: Icons.local_pharmacy,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: OverviewInfo(
+                          value: tdDosesGiven,
+                          label: 'TD Vaccine\ndoses given',
+                          icon: Icons.vaccines,
                         ),
                       ),
                     ],
@@ -81,57 +133,55 @@ class MidwifeDashboard extends StatelessWidget {
 
                   const SizedBox(height: 20),
 
+                  /// 🤰 ACTIVE PREGNANCIES CARD  ✅ ADDED
                   const MidwifeStatisticsCard(
-                    totalPregnancies: 13,
-                    firstTrimester: 4,
-                    secondTrimester: 5,
-                    thirdTrimester: 4,
+                    totalPregnancies: totalPregnancies,
+                    firstTrimester: firstTrimester,
+                    secondTrimester: secondTrimester,
+                    thirdTrimester: thirdTrimester,
                   ),
 
                   const SizedBox(height: 20),
 
+                  const SizedBox(height: 20),
+
+                  /// 🕘 RECENT VISITS
                   MidwifeHistoryCard(
                     visits: const [
                       MidwifeVisitItem(
                         fullName: 'First Name Last Name',
-                        visitType: 'Visit Type',
+                        visitType: 'Prenatal Check-up',
                         timeLabel: 'Today',
                       ),
                       MidwifeVisitItem(
                         fullName: 'First Name Last Name',
-                        visitType: 'Visit Type',
+                        visitType: 'Prenatal Check-up',
                         timeLabel: 'Yesterday',
                       ),
                       MidwifeVisitItem(
                         fullName: 'First Name Last Name',
-                        visitType: 'Visit Type',
+                        visitType: 'Prenatal Check-up',
                         timeLabel: '2 days ago',
                       ),
                     ],
                   ),
 
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 20),
 
-                  MainButton(
-                    label: 'Register Mother',
-                    showIcons: true,
-                    leadingIcon: Icons.person_add,
-                    onPressed: () {},
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  MainButton(
-                    label: 'Register Child',
-                    showIcons: true,
-                    leadingIcon: Icons.add,
-                    onPressed: () {
-                      Navigator.pushNamed(
-                        context,
-                        '/midwife-add-parent',
-                        arguments: AddChildFormData(),
-                      );
-                    },
+                  /// 📈 BHC VISITS CHART  ✅ ADDED
+                  ChartCard(
+                    title: 'BHC Daily Visits Chart',
+                    headerIcon: Icons.show_chart_rounded,
+                    values: bhcVisitValues,
+                    labels: bhcVisitDays,
+                    unit: 'visits',
+                    lineColor: AppColors.brandPrimary,
+                    startingLabel: 'Lowest',
+                    startingValue: '3 visits',
+                    latestLabel: 'Highest',
+                    latestValue: '9 visits',
+                    insightText:
+                        'Tuesday had the most prenatal visits this week!',
                   ),
 
                   const SizedBox(height: 32),

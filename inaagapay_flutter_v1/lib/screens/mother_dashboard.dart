@@ -44,11 +44,12 @@ class MotherDashboard extends StatelessWidget {
         preferredSize: const Size.fromHeight(72),
         child: MainHeader(
           title: 'HOME',
-          onNotificationTap: () {
-            // TODO: notifications
-          },
-          onAvatarTap: () {
-            // TODO: profile
+          onViewProfile: () => Navigator.pushNamed(context, '/profile'),
+          onSettings: () => Navigator.pushNamed(context, '/settings'),
+          onHelp: () => Navigator.pushNamed(context, '/help'),
+          onLogout: () {
+            // clear session, navigate to login
+            Navigator.pushReplacementNamed(context, '/login');
           },
         ),
       ),
@@ -84,13 +85,11 @@ class MotherDashboard extends StatelessWidget {
 
               // 🧸 HERO CARD
               HeroCard(
-  image: const AssetImage('assets/images/pregnant1.png'),
-  week: 39,
-  showWeekBadge: true,
-  showHeartRow: true,
-),
-
-
+                image: const AssetImage('assets/images/pregnant1.png'),
+                week: 39,
+                showWeekBadge: true,
+                showHeartRow: true,
+              ),
 
               const SizedBox(height: 20),
 
@@ -203,9 +202,7 @@ class MotherDashboard extends StatelessWidget {
       ),
 
       // 🔻 Bottom Nav
-      bottomNavigationBar: MainBottomNavigation(
-        currentIndex: 0,
-      ),
+      bottomNavigationBar: MainBottomNavigation(currentIndex: 0),
     );
   }
 }

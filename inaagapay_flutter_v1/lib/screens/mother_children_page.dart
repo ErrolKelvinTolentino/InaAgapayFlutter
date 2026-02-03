@@ -22,15 +22,12 @@ class _MotherChildrenPageState extends State<MotherChildrenPage> {
   // 🔧 TEMP MOCK DATA (backend later)
   final int childCount = 2;
 
-void _openChildProfile() {
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (_) => MotherChildStack(),
-    ),
-  );
-}
-
+  void _openChildProfile() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => MotherChildStack()),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -42,8 +39,13 @@ void _openChildProfile() {
         preferredSize: const Size.fromHeight(72),
         child: MainHeader(
           title: 'CHILDREN',
-          onNotificationTap: () {},
-          onAvatarTap: () {},
+          onViewProfile: () => Navigator.pushNamed(context, '/profile'),
+          onSettings: () => Navigator.pushNamed(context, '/settings'),
+          onHelp: () => Navigator.pushNamed(context, '/help'),
+          onLogout: () {
+            // clear session, navigate to login
+            Navigator.pushReplacementNamed(context, '/login');
+          },
         ),
       ),
 
