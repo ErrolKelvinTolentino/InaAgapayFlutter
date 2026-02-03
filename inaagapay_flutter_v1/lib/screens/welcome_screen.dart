@@ -18,18 +18,26 @@ class WelcomeScreen extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               // ===== LOGO =====
-              Image.asset('assets/images/logo.png', height: 120),
+              Image.asset(
+                'assets/images/logo.png',
+                height: 120,
+              ),
 
               const SizedBox(height: 24),
 
               // ===== HEADLINE =====
-              const Headline(text: 'Welcome, [First Name]!'),
+              const Headline(
+                text: 'Welcome, [First Name]!',
+              ),
 
               const SizedBox(height: 6),
 
               const Text(
                 'What brings you here today?',
-                style: TextStyle(fontSize: 14, color: AppColors.textPrimary),
+                style: TextStyle(
+                  fontSize: 14,
+                  color: AppColors.textPrimary,
+                ),
               ),
 
               const SizedBox(height: 32),
@@ -43,8 +51,9 @@ class WelcomeScreen extends StatelessWidget {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) =>
-                          DueDateSetterScreen(mode: DueDateMode.pregnant),
+                      builder: (_) => DueDateSetterScreen(
+                        mode: DueDateMode.pregnant,
+                      ),
                     ),
                   );
                 },
@@ -54,7 +63,10 @@ class WelcomeScreen extends StatelessWidget {
 
               const Text(
                 "First-time or experienced, we’re here for you!",
-                style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textSecondary,
+                ),
               ),
 
               const SizedBox(height: 20),
@@ -71,8 +83,9 @@ class WelcomeScreen extends StatelessWidget {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) =>
-                          DueDateSetterScreen(mode: DueDateMode.supporting),
+                      builder: (_) => DueDateSetterScreen(
+                        mode: DueDateMode.supporting,
+                      ),
                     ),
                   );
                 },
@@ -82,7 +95,10 @@ class WelcomeScreen extends StatelessWidget {
 
               const Text(
                 "Partner, family member, or friend",
-                style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textSecondary,
+                ),
               ),
 
               const SizedBox(height: 20),
@@ -104,14 +120,20 @@ class WelcomeScreen extends StatelessWidget {
 
               const Text(
                 "For educational purposes",
-                style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textSecondary,
+                ),
               ),
 
               const SizedBox(height: 24),
 
               const Text(
                 "You can change this anytime in your settings",
-                style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                style: TextStyle(
+                  fontSize: 11,
+                  color: AppColors.textSecondary,
+                ),
               ),
             ],
           ),

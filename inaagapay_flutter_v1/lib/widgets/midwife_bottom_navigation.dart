@@ -3,94 +3,59 @@ import '../theme/app_colors.dart';
 
 class MidwifeBottomNavigation extends StatelessWidget {
   final int currentIndex;
+  final ValueChanged<int> onTap;
 
   const MidwifeBottomNavigation({
     super.key,
     required this.currentIndex,
+    required this.onTap,
   });
-
-  void _handleNavigation(BuildContext context, int index) {
-    // Prevent reloading the same page
-    if (index == currentIndex) return;
-
-    switch (index) {
-      case 0:
-        Navigator.pushReplacementNamed(
-          context,
-          '/midwife-dashboard',
-        );
-        break;
-
-      case 1:
-        Navigator.pushReplacementNamed(
-          context,
-          '/midwife-mothers', // ✅ GO TO MOTHERS PAGE
-        );
-        break;
-
-      case 2:
-        Navigator.pushReplacementNamed(
-          context,
-          '/midwife-children',
-        );
-        break;
-
-      case 3:
-        // TODO: Schedules page
-        break;
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      top: false,
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(24),
-            topRight: Radius.circular(24),
+    return Container(
+      height: 72,
+      decoration: BoxDecoration(
+        color: AppColors.bgPrimary,
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(24),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 16,
+            offset: const Offset(0, -4),
           ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.08),
-              blurRadius: 20,
-              offset: const Offset(0, -6),
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            _NavItem(
-              icon: Icons.home_filled,
-              label: 'Home',
-              isActive: currentIndex == 0,
-              onTap: () => _handleNavigation(context, 0),
-            ),
-            _NavItem(
-              icon: Icons.pregnant_woman_rounded, // ✅ MOTHERS ICON
-              label: 'Mothers',                     // ✅ LABEL CHANGED
-              isActive: currentIndex == 1,
-              onTap: () => _handleNavigation(context, 1),
-            ),
-            _NavItem(
-              icon: Icons.child_care_outlined,
-              label: 'Children',
-              isActive: currentIndex == 2,
-              onTap: () => _handleNavigation(context, 2),
-            ),
-            _NavItem(
-              icon: Icons.calendar_today_rounded,
-              label: 'Schedules',
-              isActive: currentIndex == 3,
-              onTap: () => _handleNavigation(context, 3),
-            ),
-          ],
-        ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          _NavItem(
+            icon: Icons.home_rounded,
+            label: 'Home',
+            isActive: currentIndex == 0,
+            onTap: () => onTap(0),
+          ),
+          _NavItem(
+            icon: Icons.people_alt_rounded,
+            label: 'Patients',
+            isActive: currentIndex == 1,
+            onTap: () => onTap(1),
+          ),
+          _NavItem(
+            icon: Icons.child_care_rounded,
+            label: 'Children',
+            isActive: currentIndex == 2,
+            onTap: () => onTap(2),
+          ),
+          _NavItem(
+            icon: Icons.calendar_today_rounded,
+            label: 'Schedules',
+            isActive: currentIndex == 3,
+            onTap: () => onTap(3),
+          ),
+        ],
       ),
     );
   }
@@ -111,14 +76,14 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color color =
+    final color =
         isActive ? AppColors.brandPrimary : AppColors.textSecondary;
 
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: Column(
-        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
             icon,
@@ -130,13 +95,15 @@ class _NavItem extends StatelessWidget {
             label,
             style: TextStyle(
               fontSize: 12,
-              fontWeight: FontWeight.w500,
+              fontWeight:
+                  isActive ? FontWeight.w600 : FontWeight.w400,
               color: color,
             ),
           ),
-          const SizedBox(height: 6),
 
-          if (isActive)
+          // 🔴 Active indicator dot
+          if (isActive) ...[
+            const SizedBox(height: 4),
             Container(
               width: 6,
               height: 6,
@@ -145,6 +112,7 @@ class _NavItem extends StatelessWidget {
                 shape: BoxShape.circle,
               ),
             ),
+          ],
         ],
       ),
     );

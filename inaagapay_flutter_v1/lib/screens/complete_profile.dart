@@ -11,7 +11,8 @@ class CompleteProfileScreen extends StatefulWidget {
   const CompleteProfileScreen({super.key});
 
   @override
-  State<CompleteProfileScreen> createState() => _CompleteProfileScreenState();
+  State<CompleteProfileScreen> createState() =>
+      _CompleteProfileScreenState();
 }
 
 class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
@@ -83,51 +84,62 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
 
             const SizedBox(height: 16),
 
-            ProgressiveStepIndicator(currentStep: _currentStep, totalSteps: 3),
+            ProgressiveStepIndicator(
+              currentStep: _currentStep,
+              totalSteps: 3,
+            ),
 
             const SizedBox(height: 24),
 
             Expanded(
               child: IndexedStack(
                 index: _currentStep,
-                children: [_personalInfoStep(), _addressStep(), _reviewStep()],
+                children: [
+                  _personalInfoStep(),
+                  _addressStep(),
+                  _reviewStep(),
+                ],
               ),
             ),
 
             Padding(
-              padding: const EdgeInsets.all(24),
-              child: MainButton(
-                label: _currentStep == 2 ? 'Save Profile' : 'Next',
-                showIcons: false,
-                onPressed: _handlePrimaryAction,
-              ),
-            ),
+  padding: const EdgeInsets.all(24),
+  child: MainButton(
+    label: _currentStep == 2 ? 'Save Profile' : 'Next',
+    showIcons: false,
+    onPressed: _handlePrimaryAction,
+  ),
+),
+
           ],
         ),
       ),
     );
   }
-
+  
   void _handlePrimaryAction() {
-    if (_currentStep < 2) {
-      _nextStep();
-      return;
-    }
-
-    // STEP 3: SAVE PROFILE
-    _saveProfileAndContinue();
+  if (_currentStep < 2) {
+    _nextStep();
+    return;
   }
 
-  void _saveProfileAndContinue() {
-    // TODO: add validation here if needed
+  // STEP 3: SAVE PROFILE
+  _saveProfileAndContinue();
+}
 
-    // TODO: persist data (local / firebase / api)
+void _saveProfileAndContinue() {
+  // TODO: add validation here if needed
 
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (_) => const WelcomeScreen()),
-    );
-  }
+  // TODO: persist data (local / firebase / api)
+
+  Navigator.pushReplacement(
+    context,
+    MaterialPageRoute(
+      builder: (_) => const WelcomeScreen(),
+    ),
+  );
+}
+
 
   // ===== HEADERS =====
   Widget _stepHeader() {
@@ -173,10 +185,16 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
           ),
           const SizedBox(height: 12),
 
-          AppInputField(hintText: 'Middle Name', controller: _middleName),
+          AppInputField(
+            hintText: 'Middle Name',
+            controller: _middleName,
+          ),
           const SizedBox(height: 12),
 
-          AppInputField(hintText: 'Extension Name', controller: _extensionName),
+          AppInputField(
+            hintText: 'Extension Name',
+            controller: _extensionName,
+          ),
           const SizedBox(height: 12),
 
           AppInputField(
@@ -225,7 +243,10 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
           AppInputField(hintText: 'Province', controller: _province),
           const SizedBox(height: 12),
 
-          AppInputField(hintText: 'City / Municipality', controller: _city),
+          AppInputField(
+            hintText: 'City / Municipality',
+            controller: _city,
+          ),
           const SizedBox(height: 12),
 
           AppInputField(hintText: 'Barangay', controller: _barangay),

@@ -22,7 +22,10 @@ class AdminDashboard extends StatelessWidget {
               SizedBox(height: 12),
               Text(
                 'Logged in as: Admin',
-                style: TextStyle(fontSize: 16, color: AppColors.textSecondary),
+                style: TextStyle(
+                  fontSize: 16,
+                  color: AppColors.textSecondary,
+                ),
               ),
             ],
           ),
