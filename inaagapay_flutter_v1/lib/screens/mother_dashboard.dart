@@ -19,9 +19,7 @@ class MotherDashboard extends StatelessWidget {
           onNotificationTap: () {
             // TODO: open notifications
           },
-          onAvatarTap: () {
-            // TODO: open profile
-          },
+          // Removed onAvatarTap if it doesn't exist in MainHeader
           // avatarImage: AssetImage('assets/images/avatar.png'), // optional
         ),
       ),
