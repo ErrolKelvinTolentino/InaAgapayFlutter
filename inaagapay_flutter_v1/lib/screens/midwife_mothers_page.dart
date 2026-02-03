@@ -4,7 +4,10 @@ import 'package:http/http.dart' as http;
 
 import '../theme/app_colors.dart';
 import '../services/auth_storage.dart';
-
+import '../widgets/main_header.dart';
+import '../widgets/small_description.dart';
+import '../widgets/app_input_field.dart';
+import '../widgets/floating_add_child_button.dart';
 import 'mother_profile_page.dart';
 import 'add_mother_flow.dart';
 
@@ -16,10 +19,12 @@ class MidwifeMothersPage extends StatefulWidget {
 }
 
 class _MidwifeMothersPageState extends State<MidwifeMothersPage> {
-  Future<List<Map<String, dynamic>>>? _future;
-  final TextEditingController _search = TextEditingController();
+  late Future<List<Map<String, dynamic>>> _future;
+  final TextEditingController _searchController = TextEditingController();
   String _riskFilter = 'all';
   String _sort = 'name';
+  List<Map<String, dynamic>> _allMothers = [];
+  List<Map<String, dynamic>> _filteredMothers = [];
 
   @override
   void initState() {
@@ -29,14 +34,14 @@ class _MidwifeMothersPageState extends State<MidwifeMothersPage> {
 
   @override
   void dispose() {
-    _search.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
-  void _load() {
-    _future = fetchMothers();
-    if (!mounted) return;
-    setState(() {});
+  Future<void> _load() async {
+    setState(() {
+      _future = fetchMothers();
+    });
   }
 
   Future<List<Map<String, dynamic>>> fetchMothers() async {
@@ -59,11 +64,13 @@ class _MidwifeMothersPageState extends State<MidwifeMothersPage> {
     }
 
     final List list = decoded['data'] ?? [];
-    return list.cast<Map<String, dynamic>>();
+    _allMothers = list.cast<Map<String, dynamic>>();
+    _filteredMothers = _applyFilters(_allMothers);
+    return _allMothers;
   }
 
   List<Map<String, dynamic>> _applyFilters(List<Map<String, dynamic>> list) {
-    final query = _search.text.trim().toLowerCase();
+    final query = _searchController.text.trim().toLowerCase();
     List<Map<String, dynamic>> filtered = list.where((m) {
       final matchesSearch = query.isEmpty
           ? true
@@ -129,7 +136,28 @@ class _MidwifeMothersPageState extends State<MidwifeMothersPage> {
     return filtered;
   }
 
-  Color _riskColor(String? level) {
+  /// ================= CALCULATE PREGNANCY WEEKS =================
+  String calculatePregnancyWeeks(String? lastMenstrualDate) {
+    if (lastMenstrualDate == null || lastMenstrualDate.isEmpty) {
+      return 'Unknown weeks';
+    }
+
+    try {
+      final lmp = DateTime.parse(lastMenstrualDate);
+      final now = DateTime.now();
+      final difference = now.difference(lmp);
+      final weeks = (difference.inDays / 7).floor();
+      
+      if (weeks < 0) return '0 weeks';
+      if (weeks >= 40) return '40+ weeks';
+      return '$weeks weeks pregnant';
+    } catch (e) {
+      return 'Unknown weeks';
+    }
+  }
+
+  /// ================= GET RISK COLOR =================
+  Color _getRiskColor(String? level) {
     switch ((level ?? '').toLowerCase()) {
       case 'high':
         return AppColors.error;
@@ -140,160 +168,147 @@ class _MidwifeMothersPageState extends State<MidwifeMothersPage> {
     }
   }
 
-  Widget _riskChip(String? level) {
-    final color = _riskColor(level);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.12),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.4)),
-      ),
-      child: Text(
-        (level ?? 'unknown').toString().toUpperCase(),
-        style: TextStyle(color: color, fontWeight: FontWeight.bold),
-      ),
-    );
+  void _applyFiltersAndSort() {
+    setState(() {
+      _filteredMothers = _applyFilters(_allMothers);
+    });
   }
 
-  Widget _listItem(Map<String, dynamic> m) {
-    final int motherId = int.tryParse(m['mother_id']?.toString() ?? '') ?? 0;
-    final String fullName = [
-      m['first_name'],
-      m['middle_name'],
-      m['last_name'],
-      m['extension_name'],
-    ].where((e) => e != null && e.toString().trim().isNotEmpty).join(' ');
-
-    final edd = m['expected_date_of_delivery']?.toString();
-    final location = [
-      m['barangay'],
-      m['city_municipality'],
-    ].where((e) => e != null && e.toString().trim().isNotEmpty).join(', ');
-
-    return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: ListTile(
-        contentPadding: const EdgeInsets.all(12),
-        leading: CircleAvatar(
-          backgroundColor: AppColors.bgSecondary,
-          child: const Icon(Icons.person, color: AppColors.brandText),
-        ),
-        title: Text(
-          fullName.isNotEmpty ? fullName : 'Unnamed Mother',
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (location.isNotEmpty)
-              Text(
-                location,
-                style: const TextStyle(color: AppColors.textSecondary),
-              ),
-            const SizedBox(height: 6),
-            Row(
-              children: [
-                _riskChip(m['pregnancy_risk_level']),
-                const SizedBox(width: 8),
-                if (edd != null && edd.isNotEmpty)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.bgSecondary,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.borderPrimary),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.calendar_today,
-                          size: 14,
-                          color: AppColors.textSecondary,
-                        ),
-                        const SizedBox(width: 6),
-                        Text('EDD: $edd'),
-                      ],
-                    ),
-                  ),
-              ],
-            ),
-          ],
-        ),
-        trailing: const Icon(Icons.chevron_right),
-        onTap: () async {
-          await Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => MotherProfilePage(motherId: motherId),
-            ),
-          );
-          if (mounted) {
-            _load();
-          }
-        },
+  void _openMotherProfile(Map<String, dynamic> mother) async {
+    final motherId = int.tryParse(mother['mother_id']?.toString() ?? '') ?? 0;
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => MotherProfilePage(motherId: motherId),
       ),
     );
+    if (mounted) {
+      _load();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
-      appBar: AppBar(
-        title: const Text('Patients / Mothers'),
-        backgroundColor: AppColors.bgPrimary,
-        elevation: 0,
+      
+      /// 🔝 HEADER
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(72),
+        child: MainHeader(
+          title: 'MOTHERS',
+        ),
       ),
-      body: RefreshIndicator(
-        onRefresh: () async => _load(),
-        child: FutureBuilder<List<Map<String, dynamic>>>(
-          future: _future,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            }
 
-            if (snapshot.hasError) {
-              return Center(
-                child: Text(
-                  snapshot.error.toString(),
-                  style: const TextStyle(color: Colors.red),
-                ),
-              );
-            }
+      /// 🔽 BODY
+      body: SafeArea(
+        child: RefreshIndicator(
+          onRefresh: _load,
+          child: FutureBuilder<List<Map<String, dynamic>>>(
+            future: _future,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
 
-            final mothers = _applyFilters(snapshot.data ?? []);
-
-            return Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(12),
+              if (snapshot.hasError) {
+                return Center(
                   child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      TextField(
-                        controller: _search,
-                        decoration: InputDecoration(
-                          prefixIcon: const Icon(Icons.search),
-                          hintText: 'Search name or location',
-                          filled: true,
-                          fillColor: Colors.white,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide.none,
-                          ),
-                        ),
-                        onChanged: (_) => setState(() {}),
+                      const Icon(Icons.error_outline, color: Colors.red, size: 48),
+                      const SizedBox(height: 16),
+                      Text(
+                        snapshot.error.toString(),
+                        style: const TextStyle(color: Colors.red),
+                        textAlign: TextAlign.center,
                       ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          DropdownButton<String>(
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: _load,
+                        child: const Text('Retry'),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              return SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    /// 🧸 TOP INFO CARD
+                    Container(
+                      height: 96,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(16),
+                        image: const DecorationImage(
+                          image: AssetImage('assets/images/pinkbg.png'),
+                          fit: BoxFit.cover,
+                          opacity: 0.5,
+                        ),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 16,
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: RichText(
+                                text: TextSpan(
+                                  children: [
+                                    const TextSpan(
+                                      text: 'There are\n',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: AppColors.textPrimary,
+                                        height: 1.4,
+                                      ),
+                                    ),
+                                    TextSpan(
+                                      text: '${_filteredMothers.length} Mothers!',
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppColors.brandText,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            Image.asset(
+                              'assets/images/pregnant1.png',
+                              height: 72,
+                              width: 72,
+                              fit: BoxFit.contain,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+
+                    /// 🔍 SEARCH
+                    AppInputField(
+                      hintText: 'Search Mother',
+                      controller: _searchController,
+                      trailingIcon: Icons.search,
+                      onTrailingTap: () {},
+                      onChanged: (_) => _applyFiltersAndSort(),
+                    ),
+                    const SizedBox(height: 8),
+
+                    /// FILTER & SORT ROW
+                    Row(
+                      children: [
+                        Expanded(
+                          child: DropdownButton<String>(
                             value: _riskFilter,
+                            isExpanded: true,
                             items: const [
                               DropdownMenuItem(
                                 value: 'all',
@@ -301,23 +316,30 @@ class _MidwifeMothersPageState extends State<MidwifeMothersPage> {
                               ),
                               DropdownMenuItem(
                                 value: 'low',
-                                child: Text('Low'),
+                                child: Text('Low risk'),
                               ),
                               DropdownMenuItem(
                                 value: 'medium',
-                                child: Text('Medium'),
+                                child: Text('Medium risk'),
                               ),
                               DropdownMenuItem(
                                 value: 'high',
-                                child: Text('High'),
+                                child: Text('High risk'),
                               ),
                             ],
-                            onChanged: (v) =>
-                                setState(() => _riskFilter = v ?? 'all'),
+                            onChanged: (v) {
+                              setState(() {
+                                _riskFilter = v ?? 'all';
+                                _applyFiltersAndSort();
+                              });
+                            },
                           ),
-                          const SizedBox(width: 12),
-                          DropdownButton<String>(
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: DropdownButton<String>(
                             value: _sort,
+                            isExpanded: true,
                             items: const [
                               DropdownMenuItem(
                                 value: 'name',
@@ -332,36 +354,63 @@ class _MidwifeMothersPageState extends State<MidwifeMothersPage> {
                                 child: Text('Sort: EDD'),
                               ),
                             ],
-                            onChanged: (v) =>
-                                setState(() => _sort = v ?? 'name'),
+                            onChanged: (v) {
+                              setState(() {
+                                _sort = v ?? 'name';
+                                _applyFiltersAndSort();
+                              });
+                            },
                           ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: mothers.isEmpty
-                      ? const Center(child: Text('No mothers found'))
-                      : ListView.separated(
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          itemCount: mothers.length,
-                          separatorBuilder: (_, __) =>
-                              const SizedBox(height: 8),
-                          itemBuilder: (context, index) =>
-                              _listItem(mothers[index]),
                         ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+
+                    const SmallDescription(
+                      text: 'Tap a mother to view health records',
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 20),
+
+                    /// 🤰 MOTHER LIST
+                    if (_filteredMothers.isEmpty)
+                      Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(32.0),
+                          child: Text(
+                            _searchController.text.isNotEmpty || _riskFilter != 'all'
+                                ? 'No mothers match your search'
+                                : 'No mothers found',
+                            style: const TextStyle(
+                              color: Colors.black54,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ),
+                      )
+                    else
+                      Column(
+                        children: _filteredMothers.map((mother) {
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: MotherCard(
+                              mother: mother,
+                              onTap: () => _openMotherProfile(mother),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    const SizedBox(height: 24),
+                  ],
                 ),
-              ],
-            );
-          },
+              );
+            },
+          ),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        heroTag: 'add-mother-fab',
-        backgroundColor: AppColors.brandPrimary,
-        foregroundColor: Colors.white,
-        child: const Icon(Icons.add),
+
+      /// ➕ ADD MOTHER (FLOATING)
+      floatingActionButton: FloatingAddChildButton(
         onPressed: () async {
           final added = await Navigator.push(
             context,
@@ -369,6 +418,164 @@ class _MidwifeMothersPageState extends State<MidwifeMothersPage> {
           );
           if (added == true) _load();
         },
+      ),
+    );
+  }
+}
+
+/// 🧩 MOTHER CARD (matches design)
+class MotherCard extends StatelessWidget {
+  final Map<String, dynamic> mother;
+  final VoidCallback onTap;
+
+  const MotherCard({
+    super.key,
+    required this.mother,
+    required this.onTap,
+  });
+
+  String getFullName() {
+    return [
+      mother['first_name'],
+      mother['middle_name'],
+      mother['last_name'],
+      mother['extension_name'],
+    ].where((e) => e != null && e.toString().trim().isNotEmpty).join(' ');
+  }
+
+  String getPregnancyText() {
+    final weeks = calculatePregnancyWeeks(mother['last_menstrual_date']);
+    final edd = mother['expected_date_of_delivery']?.toString();
+    if (edd != null && edd.isNotEmpty) {
+      return '$weeks • EDD: $edd';
+    }
+    return weeks;
+  }
+
+  String calculatePregnancyWeeks(String? lastMenstrualDate) {
+    if (lastMenstrualDate == null || lastMenstrualDate.isEmpty) {
+      return 'Unknown weeks';
+    }
+
+    try {
+      final lmp = DateTime.parse(lastMenstrualDate);
+      final now = DateTime.now();
+      final difference = now.difference(lmp);
+      final weeks = (difference.inDays / 7).floor();
+      
+      if (weeks < 0) return '0 weeks';
+      if (weeks >= 40) return '40+ weeks';
+      return '$weeks weeks pregnant';
+    } catch (e) {
+      return 'Unknown weeks';
+    }
+  }
+
+  Color _getRiskColor(String? level) {
+    switch ((level ?? '').toLowerCase()) {
+      case 'high':
+        return AppColors.error;
+      case 'medium':
+        return AppColors.warning;
+      default:
+        return AppColors.success;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final riskLevel = mother['pregnancy_risk_level']?.toString() ?? 'low';
+    final riskColor = _getRiskColor(riskLevel);
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 12,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            // Profile avatar with risk indicator
+            Stack(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppColors.brandPrimary,
+                  ),
+                ),
+                Positioned(
+                  bottom: 0,
+                  right: 0,
+                  child: Container(
+                    width: 12,
+                    height: 12,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: riskColor,
+                      border: Border.all(color: Colors.white, width: 2),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    getFullName(),
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    getPregnancyText(),
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  // Risk level badge
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: riskColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: riskColor.withOpacity(0.3)),
+                    ),
+                    child: Text(
+                      '${riskLevel.toUpperCase()} RISK',
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: riskColor,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right, color: AppColors.brandPrimary),
+          ],
+        ),
       ),
     );
   }
