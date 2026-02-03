@@ -19,10 +19,10 @@ class _MidwifeShellState extends State<MidwifeShell> {
   int _currentIndex = 0;
 
   final List<Widget> _pages = [
-    const MidwifeDashboard(),     // 0
-    const MidwifeMothersPage(),   // 1 ✅ NOW MATCHES
-    const MidwifeChildrenPage(),  // 2
-    const MidwifeSchedulesPage(), // 3
+    const MidwifeDashboard(),
+    const MidwifeMothersPage(),
+    const MidwifeChildrenPage(),
+    const MidwifeSchedulesPage(),
   ];
 
   @override
@@ -37,13 +37,10 @@ class _MidwifeShellState extends State<MidwifeShell> {
         ),
       ),
 
-      bottomNavigationBar: MidwifeBottomNavigation(
-        currentIndex: _currentIndex,
-        onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
+      // 🔻 Bottom Nav - Remove onTap parameter
+      bottomNavigationBar: const MidwifeBottomNavigation(
+        currentIndex: 0,
+        // Remove onTap parameter
       ),
     );
   }
