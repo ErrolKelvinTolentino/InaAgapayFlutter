@@ -9,10 +9,7 @@ import '../services/auth_storage.dart';
 class ChildGrowthAIPage extends StatefulWidget {
   final int childId;
 
-  const ChildGrowthAIPage({
-    super.key,
-    required this.childId,
-  });
+  const ChildGrowthAIPage({super.key, required this.childId});
 
   @override
   State<ChildGrowthAIPage> createState() => _ChildGrowthAIPageState();
@@ -26,11 +23,23 @@ class _ChildGrowthAIPageState extends State<ChildGrowthAIPage> {
 
   Map<String, dynamic>? aiParsed;
   String disclaimer = '';
+  bool editing = false;
+  final TextEditingController _statusCtrl = TextEditingController();
+  final TextEditingController _remarksCtrl = TextEditingController();
+  final TextEditingController _recommendationCtrl = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _loadData();
+  }
+
+  @override
+  void dispose() {
+    _statusCtrl.dispose();
+    _remarksCtrl.dispose();
+    _recommendationCtrl.dispose();
+    super.dispose();
   }
 
   Future<void> _loadData() async {
@@ -59,8 +68,9 @@ class _ChildGrowthAIPageState extends State<ChildGrowthAIPage> {
 
       // ================= SORT OLDEST → NEWEST =================
       filteredRecords.sort(
-        (a, b) => DateTime.parse(a['created_at'])
-            .compareTo(DateTime.parse(b['created_at'])),
+        (a, b) => DateTime.parse(
+          a['created_at'],
+        ).compareTo(DateTime.parse(b['created_at'])),
       );
 
       // ================= DEFAULT AI STATE =================
@@ -88,10 +98,12 @@ class _ChildGrowthAIPageState extends State<ChildGrowthAIPage> {
           },
           body: jsonEncode({
             'records': filteredRecords
-                .map((r) => {
-                      'height': r['child_height'],
-                      'weight': r['child_weight'],
-                    })
+                .map(
+                  (r) => {
+                    'height': r['child_height'],
+                    'weight': r['child_weight'],
+                  },
+                )
                 .toList(),
           }),
         );
@@ -111,16 +123,14 @@ class _ChildGrowthAIPageState extends State<ChildGrowthAIPage> {
           } catch (_) {
             aiParsed = {
               'status': 'AI Response Error',
-              'remarks':
-                  'The AI returned an unexpected response format.',
+              'remarks': 'The AI returned an unexpected response format.',
               'recommendation': '',
             };
           }
         } else {
           aiParsed = {
             'status': 'AI Unavailable',
-            'remarks':
-                'The AI service did not return a response.',
+            'remarks': 'The AI service did not return a response.',
             'recommendation': '',
           };
         }
@@ -134,7 +144,28 @@ class _ChildGrowthAIPageState extends State<ChildGrowthAIPage> {
       };
     }
 
+    _syncControllersFromAi();
     setState(() => loading = false);
+  }
+
+  void _syncControllersFromAi() {
+    _statusCtrl.text = aiParsed?['status']?.toString() ?? '';
+    _remarksCtrl.text = aiParsed?['remarks']?.toString() ?? '';
+    _recommendationCtrl.text = aiParsed?['recommendation']?.toString() ?? '';
+  }
+
+  void _saveEdits() {
+    setState(() {
+      aiParsed = {
+        'status': _statusCtrl.text.trim(),
+        'remarks': _remarksCtrl.text.trim(),
+        'recommendation': _recommendationCtrl.text.trim(),
+      };
+      editing = false;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('AI insights updated locally.')),
+    );
   }
 
   @override
@@ -149,19 +180,17 @@ class _ChildGrowthAIPageState extends State<ChildGrowthAIPage> {
       body: loading
           ? const Center(child: CircularProgressIndicator())
           : filteredRecords.isEmpty
-              ? const Center(
-                  child: Text('No post-infancy growth data available'),
-                )
-              : SingleChildScrollView(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    children: [
-                      _growthChart(),
-                      const SizedBox(height: 16),
-                      _aiResultCard(),
-                    ],
-                  ),
-                ),
+          ? const Center(child: Text('No post-infancy growth data available'))
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  _growthChart(),
+                  const SizedBox(height: 16),
+                  _aiResultCard(),
+                ],
+              ),
+            ),
     );
   }
 
@@ -238,21 +267,75 @@ class _ChildGrowthAIPageState extends State<ChildGrowthAIPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            aiParsed?['status'] ?? '',
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: AppColors.brandPrimary,
-            ),
+          Row(
+            children: [
+              ElevatedButton.icon(
+                icon: Icon(editing ? Icons.save : Icons.edit),
+                label: Text(editing ? 'Save Edits' : 'Edit Insights'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.brandPrimary,
+                  foregroundColor: Colors.white,
+                ),
+                onPressed: editing
+                    ? _saveEdits
+                    : () => setState(() => editing = true),
+              ),
+              if (editing) ...[
+                const SizedBox(width: 8),
+                TextButton(
+                  onPressed: () {
+                    setState(() {
+                      editing = false;
+                      _syncControllersFromAi();
+                    });
+                  },
+                  child: const Text('Cancel'),
+                ),
+              ],
+            ],
           ),
+          const SizedBox(height: 12),
+          editing
+              ? TextField(
+                  controller: _statusCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Status',
+                    border: OutlineInputBorder(),
+                  ),
+                )
+              : Text(
+                  aiParsed?['status'] ?? '',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.brandPrimary,
+                  ),
+                ),
           const SizedBox(height: 8),
-          Text(aiParsed?['remarks'] ?? ''),
+          editing
+              ? TextField(
+                  controller: _remarksCtrl,
+                  maxLines: 3,
+                  decoration: const InputDecoration(
+                    labelText: 'Remarks',
+                    border: OutlineInputBorder(),
+                  ),
+                )
+              : Text(aiParsed?['remarks'] ?? ''),
           const SizedBox(height: 8),
-          Text(
-            aiParsed?['recommendation'] ?? '',
-            style: const TextStyle(fontStyle: FontStyle.italic),
-          ),
+          editing
+              ? TextField(
+                  controller: _recommendationCtrl,
+                  maxLines: 3,
+                  decoration: const InputDecoration(
+                    labelText: 'Recommendation',
+                    border: OutlineInputBorder(),
+                  ),
+                )
+              : Text(
+                  aiParsed?['recommendation'] ?? '',
+                  style: const TextStyle(fontStyle: FontStyle.italic),
+                ),
           if (disclaimer.isNotEmpty) ...[
             const SizedBox(height: 12),
             Text(

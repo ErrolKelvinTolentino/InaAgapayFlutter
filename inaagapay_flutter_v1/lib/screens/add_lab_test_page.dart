@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:image_picker/image_picker.dart';
@@ -27,13 +28,18 @@ class _AddLabTestPageState extends State<AddLabTestPage> {
   static const int _totalSteps = 3;
   final ImagePicker _picker = ImagePicker();
   XFile? _imageFile;
+  static const List<String> _labProfessions = [
+    'Medical Technologist',
+    'Pathologist',
+    'Nurse',
+  ];
 
   final _typeCtrl = TextEditingController();
   final _locationCtrl = TextEditingController();
   final _remarksCtrl = TextEditingController();
   final _workerNameCtrl = TextEditingController();
   final _institutionCtrl = TextEditingController();
-  final _professionCtrl = TextEditingController();
+  String? _profession;
 
   @override
   void initState() {
@@ -48,7 +54,6 @@ class _AddLabTestPageState extends State<AddLabTestPage> {
     _remarksCtrl.dispose();
     _workerNameCtrl.dispose();
     _institutionCtrl.dispose();
-    _professionCtrl.dispose();
     super.dispose();
   }
 
@@ -96,13 +101,20 @@ class _AddLabTestPageState extends State<AddLabTestPage> {
         'remarks': _remarksCtrl.text,
         'health_worker_name': _workerNameCtrl.text,
         'health_worker_institution': _institutionCtrl.text,
-        'health_worker_profession': _professionCtrl.text,
+        'health_worker_profession': _profession ?? '',
       });
 
       if (_imageFile != null) {
-        request.files.add(
-          await http.MultipartFile.fromPath('lab_test_image', _imageFile!.path),
-        );
+        try {
+          request.files.add(
+            await http.MultipartFile.fromPath(
+              'lab_test_image',
+              _imageFile!.path,
+            ),
+          );
+        } catch (e) {
+          throw Exception('Unable to attach image: $e');
+        }
       }
 
       final streamed = await request.send();
@@ -114,14 +126,10 @@ class _AddLabTestPageState extends State<AddLabTestPage> {
         Navigator.pop(context, true);
         return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(decoded['message'] ?? 'Save failed')),
-      );
+      _showSnack(decoded['message'] ?? 'Save failed');
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Save failed: $e')));
+      _showSnack('Save failed: $e');
     } finally {
       if (mounted) {
         setState(() => _submitting = false);
@@ -173,13 +181,19 @@ class _AddLabTestPageState extends State<AddLabTestPage> {
   }
 
   Future<void> _pickImage() async {
-    final picked = await _picker.pickImage(
-      source: ImageSource.gallery,
-      imageQuality: 85,
-      maxWidth: 1600,
-    );
-    if (picked != null) {
-      setState(() => _imageFile = picked);
+    try {
+      final picked = await _picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 85,
+        maxWidth: 1600,
+      );
+      if (picked != null && mounted) {
+        setState(() => _imageFile = picked);
+      }
+    } on PlatformException catch (e) {
+      _showSnack('Permission needed to pick an image ($e)');
+    } catch (e) {
+      _showSnack('Could not pick image: $e');
     }
   }
 
@@ -240,6 +254,13 @@ class _AddLabTestPageState extends State<AddLabTestPage> {
         ),
       ],
     );
+  }
+
+  void _showSnack(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   Widget _controls({bool showSubmit = false}) {
@@ -329,7 +350,17 @@ class _AddLabTestPageState extends State<AddLabTestPage> {
               controller: _institutionCtrl,
             ),
             const SizedBox(height: 12),
-            AppInputField(hintText: 'Profession', controller: _professionCtrl),
+            DropdownButtonFormField<String>(
+              value: _profession,
+              decoration: const InputDecoration(
+                labelText: 'Profession',
+                border: OutlineInputBorder(),
+              ),
+              items: _labProfessions
+                  .map((p) => DropdownMenuItem(value: p, child: Text(p)))
+                  .toList(),
+              onChanged: (v) => setState(() => _profession = v),
+            ),
             const SizedBox(height: 20),
             _controls(),
           ],

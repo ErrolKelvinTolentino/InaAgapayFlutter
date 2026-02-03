@@ -52,46 +52,32 @@ class _MotherProfilePageState extends State<MotherProfilePage>
 
     final res = await http.get(
       Uri.parse(
-        'https://inaagapay.alwaysdata.net/api/midwife/mother_profile.php'
-        '?mother_id=${widget.motherId}',
+        'https://inaagapay.alwaysdata.net/api/midwife/mother_profile.php?mother_id=${widget.motherId}',
       ),
       headers: {'Authorization': 'Bearer $token', 'Accept': 'application/json'},
     );
 
     final decoded = jsonDecode(res.body);
-
-    if (decoded['success'] != true) {
-      throw Exception(decoded['message'] ?? 'Failed to load profile');
+    if (decoded['success'] == true &&
+        decoded['mother'] is Map<String, dynamic>) {
+      return Map<String, dynamic>.from(decoded['mother'] as Map);
     }
 
-    return decoded['mother'];
+    throw Exception(decoded['message'] ?? 'Failed to load profile');
   }
 
   Future<void> _refresh() async {
-    if (!mounted) return;
-    final next = fetchMotherProfile();
+    final future = fetchMotherProfile();
     setState(() {
-      _future = next;
+      _future = future;
     });
-    try {
-      await next;
-    } catch (_) {
-      // Swallow refresh errors to avoid crashing the refresh indicator.
-    }
+    await future;
   }
-
-  // ================= UI =================
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.bgPrimary,
-
-      appBar: AppBar(
-        title: const Text('Mother Profile'),
-        backgroundColor: AppColors.bgPrimary,
-        elevation: 0,
-      ),
+      appBar: AppBar(backgroundColor: AppColors.bgPrimary, elevation: 0),
 
       body: FutureBuilder<Map<String, dynamic>>(
         future: _future,
@@ -1384,9 +1370,7 @@ class _MotherProfilePageState extends State<MotherProfilePage>
                                                     ),
                                               ),
                                             );
-                                            if (added == true) {
-                                              await _refresh();
-                                            }
+                                            if (added == true) await _refresh();
                                           },
                                           icon: const Icon(Icons.monitor_heart),
                                           label: const Text('Add Ultrasound'),
@@ -1401,9 +1385,7 @@ class _MotherProfilePageState extends State<MotherProfilePage>
                                                 ),
                                               ),
                                             );
-                                            if (added == true) {
-                                              await _refresh();
-                                            }
+                                            if (added == true) await _refresh();
                                           },
                                           icon: const Icon(Icons.science),
                                           label: const Text('Add Lab Test'),
@@ -1652,6 +1634,9 @@ class _MotherProfilePageState extends State<MotherProfilePage>
                                           })
                                           .toList();
 
+                                      final totalCount = children.length;
+                                      final showingCount = filtered.length;
+
                                       if (_childSort == 'name') {
                                         filtered.sort((a, b) {
                                           final na =
@@ -1678,55 +1663,114 @@ class _MotherProfilePageState extends State<MotherProfilePage>
                                       }
 
                                       return Column(
-                                        children: filtered.map((c) {
-                                          final name =
-                                              [
-                                                    c['first_name'],
-                                                    c['middle_name'],
-                                                    c['last_name'],
-                                                    c['extension_name'],
-                                                  ]
-                                                  .where(
-                                                    (e) =>
-                                                        e != null &&
-                                                        e
-                                                            .toString()
-                                                            .trim()
-                                                            .isNotEmpty,
-                                                  )
-                                                  .join(' ');
-                                          return ListTile(
-                                            contentPadding: EdgeInsets.zero,
-                                            leading: const Icon(
-                                              Icons.child_care,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Showing $showingCount of $totalCount',
+                                            style: const TextStyle(
+                                              color: AppColors.textSecondary,
                                             ),
-                                            title: Text(
-                                              name.isEmpty ? 'Unnamed' : name,
-                                            ),
-                                            subtitle: Text(
-                                              fmtDate(c['added_at']) ?? '—',
-                                            ),
-                                            trailing: const Icon(
-                                              Icons.chevron_right,
-                                            ),
-                                            onTap: () {
-                                              final id = int.tryParse(
-                                                c['child_id']?.toString() ?? '',
-                                              );
-                                              if (id != null) {
-                                                Navigator.push(
-                                                  context,
-                                                  MaterialPageRoute(
-                                                    builder: (_) =>
-                                                        ChildProfilePage(
-                                                          childId: id,
-                                                        ),
+                                          ),
+                                          const SizedBox(height: 8),
+                                          ...filtered.map((c) {
+                                            final name =
+                                                [
+                                                      c['first_name'],
+                                                      c['middle_name'],
+                                                      c['last_name'],
+                                                      c['extension_name'],
+                                                    ]
+                                                    .where(
+                                                      (e) =>
+                                                          e != null &&
+                                                          e
+                                                              .toString()
+                                                              .trim()
+                                                              .isNotEmpty,
+                                                    )
+                                                    .join(' ');
+
+                                            final subtitle = [
+                                              if (fmtDate(c['added_at']) !=
+                                                  null)
+                                                'Added: ${fmtDate(c['added_at'])}',
+                                              if ((c['sex'] ?? '')
+                                                  .toString()
+                                                  .isNotEmpty)
+                                                'Sex: ${c['sex']}',
+                                            ].where((e) => e.isNotEmpty).join(' · ');
+
+                                            return Container(
+                                              margin: const EdgeInsets.only(
+                                                bottom: 8,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: Colors.white,
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
+                                                border: Border.all(
+                                                  color:
+                                                      AppColors.borderPrimary,
+                                                ),
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: Colors.black
+                                                        .withOpacity(0.03),
+                                                    blurRadius: 8,
+                                                    offset: const Offset(0, 4),
                                                   ),
-                                                );
-                                              }
-                                            },
-                                          );
-                                        }).toList(),
+                                                ],
+                                              ),
+                                              child: ListTile(
+                                                leading: const CircleAvatar(
+                                                  backgroundColor:
+                                                      AppColors.bgSecondary,
+                                                  child: Icon(
+                                                    Icons.child_care,
+                                                    color:
+                                                        AppColors.brandPrimary,
+                                                  ),
+                                                ),
+                                                title: Text(
+                                                  name.isEmpty
+                                                      ? 'Unnamed'
+                                                      : name,
+                                                  style: const TextStyle(
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
+                                                ),
+                                                subtitle: Text(
+                                                  subtitle.isEmpty
+                                                      ? '—'
+                                                      : subtitle,
+                                                ),
+                                                trailing: const Icon(
+                                                  Icons.chevron_right,
+                                                  color:
+                                                      AppColors.textSecondary,
+                                                ),
+                                                onTap: () {
+                                                  final id = int.tryParse(
+                                                    c['child_id']?.toString() ??
+                                                        '',
+                                                  );
+                                                  if (id != null) {
+                                                    Navigator.push(
+                                                      context,
+                                                      MaterialPageRoute(
+                                                        builder: (_) =>
+                                                            ChildProfilePage(
+                                                              childId: id,
+                                                            ),
+                                                      ),
+                                                    );
+                                                  }
+                                                },
+                                              ),
+                                            );
+                                          }),
+                                        ],
                                       );
                                     },
                                   ),
@@ -2163,12 +2207,6 @@ class _MotherProfilePageState extends State<MotherProfilePage>
                                                       ),
                                                     ),
                                                     MapEntry(
-                                                      'TD Vaccine Dose',
-                                                      fmtValue(
-                                                        c['td_vaccine_dose'],
-                                                      ),
-                                                    ),
-                                                    MapEntry(
                                                       'Edema',
                                                       fmtValue(c['edema']),
                                                     ),
@@ -2576,12 +2614,6 @@ class _MotherProfilePageState extends State<MotherProfilePage>
                                                           'Fetal Heart Tone',
                                                           fmtValue(
                                                             c['fetal_heart_tone'],
-                                                          ),
-                                                        ),
-                                                        MapEntry(
-                                                          'TD Vaccine Dose',
-                                                          fmtValue(
-                                                            c['td_vaccine_dose'],
                                                           ),
                                                         ),
                                                         MapEntry(

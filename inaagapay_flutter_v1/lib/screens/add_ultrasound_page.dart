@@ -27,12 +27,17 @@ class _AddUltrasoundPageState extends State<AddUltrasoundPage> {
   static const int _totalSteps = 3;
   final ImagePicker _picker = ImagePicker();
   XFile? _imageFile;
+  static const List<String> _ultrasoundProfessions = [
+    'Radiologist',
+    'Sonographer',
+    'OB-GYN',
+  ];
 
   final _locationCtrl = TextEditingController();
   final _remarksCtrl = TextEditingController();
   final _workerNameCtrl = TextEditingController();
   final _institutionCtrl = TextEditingController();
-  final _professionCtrl = TextEditingController();
+  String? _profession;
 
   @override
   void initState() {
@@ -46,7 +51,6 @@ class _AddUltrasoundPageState extends State<AddUltrasoundPage> {
     _remarksCtrl.dispose();
     _workerNameCtrl.dispose();
     _institutionCtrl.dispose();
-    _professionCtrl.dispose();
     super.dispose();
   }
 
@@ -92,7 +96,7 @@ class _AddUltrasoundPageState extends State<AddUltrasoundPage> {
         'remarks': _remarksCtrl.text,
         'health_worker_name': _workerNameCtrl.text,
         'health_worker_institution': _institutionCtrl.text,
-        'health_worker_profession': _professionCtrl.text,
+        'health_worker_profession': _profession ?? '',
       });
 
       if (_imageFile != null) {
@@ -320,7 +324,17 @@ class _AddUltrasoundPageState extends State<AddUltrasoundPage> {
               controller: _institutionCtrl,
             ),
             const SizedBox(height: 12),
-            AppInputField(hintText: 'Profession', controller: _professionCtrl),
+            DropdownButtonFormField<String>(
+              value: _profession,
+              decoration: const InputDecoration(
+                labelText: 'Profession',
+                border: OutlineInputBorder(),
+              ),
+              items: _ultrasoundProfessions
+                  .map((p) => DropdownMenuItem(value: p, child: Text(p)))
+                  .toList(),
+              onChanged: (v) => setState(() => _profession = v),
+            ),
             const SizedBox(height: 20),
             _controls(),
           ],

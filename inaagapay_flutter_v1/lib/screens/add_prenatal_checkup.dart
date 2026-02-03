@@ -40,6 +40,7 @@ class _AddPrenatalCheckupScreenState extends State<AddPrenatalCheckupScreen> {
   final TextEditingController _fetalTone = TextEditingController();
   final TextEditingController _remarks = TextEditingController();
   DateTime? _nextSchedule;
+  String _nextScheduleOption = 'none';
 
   int step = 0;
   static const int totalSteps = 5;
@@ -114,6 +115,44 @@ class _AddPrenatalCheckupScreenState extends State<AddPrenatalCheckupScreen> {
     });
   }
 
+  void _applySchedule(DateTime date) {
+    final normalized = DateTime(date.year, date.month, date.day);
+    setState(() {
+      _nextSchedule = normalized;
+      prenatal.nextSchedule = normalized;
+    });
+  }
+
+  Future<void> _setNextScheduleChoice(String choice) async {
+    setState(() => _nextScheduleOption = choice);
+    final now = DateTime.now();
+    switch (choice) {
+      case 'tomorrow':
+        _applySchedule(now.add(const Duration(days: 1)));
+        break;
+      case 'next_week':
+        _applySchedule(now.add(const Duration(days: 7)));
+        break;
+      case 'next_month':
+        _applySchedule(DateTime(now.year, now.month + 1, now.day));
+        break;
+      case 'custom':
+        final picked = await showDatePicker(
+          context: context,
+          initialDate: _nextSchedule ?? now,
+          firstDate: now.subtract(const Duration(days: 1)),
+          lastDate: now.add(const Duration(days: 365)),
+        );
+        if (picked != null) _applySchedule(picked);
+        break;
+      default:
+        setState(() {
+          _nextSchedule = null;
+          prenatal.nextSchedule = null;
+        });
+    }
+  }
+
   bool _validateStep() {
     String? message;
     switch (step) {
@@ -173,6 +212,9 @@ class _AddPrenatalCheckupScreenState extends State<AddPrenatalCheckupScreen> {
 
       final decoded = jsonDecode(res.body);
       if (decoded['success'] == true) {
+        // Also push the next scheduled checkup to the schedules view if set.
+        await _createScheduleIfNeeded(token);
+
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -191,6 +233,44 @@ class _AddPrenatalCheckupScreenState extends State<AddPrenatalCheckupScreen> {
       }
     } finally {
       if (mounted) setState(() => submitting = false);
+    }
+  }
+
+  Future<void> _createScheduleIfNeeded(String token) async {
+    if (_nextSchedule == null) return;
+
+    try {
+      final res = await http.post(
+        Uri.parse(
+          'https://inaagapay.alwaysdata.net/api/midwife/add_checkup_schedule.php',
+        ),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Accept': 'application/json',
+        },
+        body: {
+          'mother_id': widget.motherId.toString(),
+          'scheduled_date': DateFormat('yyyy-MM-dd').format(_nextSchedule!),
+          'notes': _remarks.text.trim().isEmpty
+              ? 'Auto-created from prenatal checkup'
+              : _remarks.text.trim(),
+        },
+      );
+
+      final decoded = jsonDecode(res.body);
+      if (decoded['success'] != true && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(decoded['message'] ?? 'Failed to add schedule entry'),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Schedule not saved: $e')));
+      }
     }
   }
 
@@ -435,26 +515,38 @@ class _AddPrenatalCheckupScreenState extends State<AddPrenatalCheckupScreen> {
         ListTile(
           contentPadding: EdgeInsets.zero,
           title: const Text('Next scheduled checkup'),
-          subtitle: Text(
-            _nextSchedule == null
-                ? 'Pick a date'
-                : DateFormat('MMM d, yyyy').format(_nextSchedule!),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              DropdownButtonFormField<String>(
+                value: _nextScheduleOption,
+                items: const [
+                  DropdownMenuItem(
+                    value: 'none',
+                    child: Text('No schedule set'),
+                  ),
+                  DropdownMenuItem(value: 'tomorrow', child: Text('Tomorrow')),
+                  DropdownMenuItem(
+                    value: 'next_week',
+                    child: Text('Next week'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'next_month',
+                    child: Text('Next month'),
+                  ),
+                  DropdownMenuItem(value: 'custom', child: Text('Custom date')),
+                ],
+                onChanged: (v) => _setNextScheduleChoice(v ?? 'none'),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                _nextSchedule == null
+                    ? 'No schedule selected'
+                    : 'Scheduled: ${DateFormat('MMM d, yyyy').format(_nextSchedule!)}',
+                style: const TextStyle(color: AppColors.textSecondary),
+              ),
+            ],
           ),
-          trailing: const Icon(Icons.calendar_today),
-          onTap: () async {
-            final picked = await showDatePicker(
-              context: context,
-              initialDate: _nextSchedule ?? DateTime.now(),
-              firstDate: DateTime.now().subtract(const Duration(days: 1)),
-              lastDate: DateTime.now().add(const Duration(days: 365)),
-            );
-            if (picked != null) {
-              setState(() {
-                _nextSchedule = picked;
-                prenatal.nextSchedule = picked;
-              });
-            }
-          },
         ),
         const SizedBox(height: 8),
         TextField(
@@ -761,6 +853,7 @@ class _AddPrenatalCheckupScreenState extends State<AddPrenatalCheckupScreen> {
     final bpDia = int.tryParse(_dia.text);
     final edema = prenatal.edema;
     final fetalBeat = int.tryParse(_fetalBeat.text);
+    final weight = double.tryParse(_weight.text);
 
     int score = _baselineScore();
     final reasons = <String>[];
@@ -769,9 +862,38 @@ class _AddPrenatalCheckupScreenState extends State<AddPrenatalCheckupScreen> {
       reasons.add('Current risk: ${_baselineRisk.toUpperCase()}');
     }
 
-    if (bpSys != null && bpSys >= 140 || bpDia != null && bpDia >= 90) {
+    final severeBp =
+        (bpSys != null && bpSys >= 160) || (bpDia != null && bpDia >= 110);
+    final elevatedBp =
+        (bpSys != null && bpSys >= 140) || (bpDia != null && bpDia >= 90);
+    final warningBp =
+        (bpSys != null && bpSys >= 130) || (bpDia != null && bpDia >= 85);
+
+    if (severeBp) {
+      score += 4;
+      reasons.add('Severely elevated BP');
+    } else if (elevatedBp) {
       score += 3;
       reasons.add('High blood pressure');
+    } else if (warningBp) {
+      score += 2;
+      reasons.add('Borderline blood pressure');
+    }
+
+    if (weight != null) {
+      if (weight < 45) {
+        score += 3;
+        reasons.add('Low maternal weight (<45 kg)');
+      } else if (weight < 50) {
+        score += 2;
+        reasons.add('Borderline weight (<50 kg)');
+      } else if (weight > 90) {
+        score += 3;
+        reasons.add('High maternal weight (>90 kg)');
+      } else if (weight > 80) {
+        score += 2;
+        reasons.add('Elevated weight (>80 kg)');
+      }
     }
 
     if (edema == 'mild') {
