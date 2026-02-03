@@ -5,10 +5,10 @@ header('Content-Type: application/json');
 
 $data = json_decode(file_get_contents("php://input"), true);
 
-$email = $data['email'] ?? '';
+$email = trim($data['email'] ?? '');
 $password = $data['password'] ?? '';
 
-if (empty($email) || empty($password)) {
+if ($email === '' || $password === '') {
     echo json_encode([
         'success' => false,
         'message' => 'Email and password are required'
@@ -16,8 +16,16 @@ if (empty($email) || empty($password)) {
     exit;
 }
 
+/**
+ * FETCH ACCOUNT
+ */
 $stmt = $conn->prepare("
-    SELECT account_id, password_hash, account_type, is_verified, status
+    SELECT 
+        account_id,
+        password_hash,
+        account_type,
+        is_verified,
+        status
     FROM accounts
     WHERE email_address = ?
     LIMIT 1
@@ -36,6 +44,9 @@ if ($result->num_rows !== 1) {
 
 $user = $result->fetch_assoc();
 
+/**
+ * BASIC CHECKS
+ */
 if (!$user['is_verified']) {
     echo json_encode([
         'success' => false,
@@ -60,10 +71,11 @@ if (!password_verify($password, $user['password_hash'])) {
     exit;
 }
 
-// 🔐 TOKEN GENERATION
+/**
+ * TOKEN
+ */
 $token = bin2hex(random_bytes(32));
 
-// ✅ STORE LOGIN STATE (THIS IS THE IMPORTANT PART)
 $update = $conn->prepare("
     UPDATE accounts
     SET last_login_token = ?,
@@ -73,13 +85,37 @@ $update = $conn->prepare("
 $update->bind_param("si", $token, $user['account_id']);
 $update->execute();
 
-// 🎉 RESPONSE
+/**
+ * BASE USER RESPONSE (SAFE FOR ALL ROLES)
+ */
+$responseUser = [
+    'id'   => (int) $user['account_id'],
+    'role' => $user['account_type'],
+];
+
+/**
+ * MOTHER-ONLY: CHECK PROFILE COMPLETION
+ */
+if ($user['account_type'] === 'mother') {
+    $stmt = $conn->prepare("
+        SELECT mother_id
+        FROM mothers
+        WHERE account_id = ?
+        LIMIT 1
+    ");
+    $stmt->bind_param("i", $user['account_id']);
+    $stmt->execute();
+    $mother = $stmt->get_result()->fetch_assoc();
+
+    $responseUser['profile_complete'] = $mother ? true : false;
+}
+
+/**
+ * FINAL RESPONSE
+ */
 echo json_encode([
     'success' => true,
     'message' => 'Login successful',
-    'token' => $token,
-    'user' => [
-        'id' => $user['account_id'],
-        'role' => $user['account_type'],
-    ]
+    'token'   => $token,
+    'user'    => $responseUser
 ]);

@@ -221,15 +221,6 @@ try {
     $lmp = fmtDate($input['last_menstrual_period'] ?? null);
     $edd = fmtDate($input['expected_date_of_delivery'] ?? null);
     expect(!empty($motherId), 'mother_id is required');
-    expect(!empty($lmp), 'last_menstrual_period is required');
-    expect(!empty($edd), 'expected_date_of_delivery is required');
-
-    $daysDiff = (new DateTime($lmp))->diff(new DateTime($edd))->days;
-    expect($daysDiff >= 259 && $daysDiff <= 294, 'EDD must be 37–42 weeks from LMP');
-
-    $today = new DateTime('today');
-    expect(new DateTime($lmp) <= $today, 'LMP cannot be in the future');
-    expect(new DateTime($edd) >= $today, 'EDD cannot be in the past');
 
     // midwife context
     $ctx = $conn->prepare("SELECT m.midwife_id, m.assigned_bhc_id FROM midwives m WHERE m.account_id = ? LIMIT 1");

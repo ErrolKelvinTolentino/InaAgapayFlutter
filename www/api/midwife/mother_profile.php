@@ -375,15 +375,10 @@ $mother['children'] = $children;
 $mother['current_pregnancy'] = $currentPregnancy;
 $mother['past_pregnancies'] = $pastPregnancies;
 
-// Surface latest risk on mother root for quick access when ongoing
+// Surface latest risk on mother root for quick access
 if ($currentPregnancy && isset($currentPregnancy['risk'])) {
     $mother['pregnancy_risk_level'] = $currentPregnancy['risk']['level'];
     $mother['pregnancy_risk'] = $currentPregnancy['risk'];
-} else {
-    // Clear any stale pregnancy-level fields when no ongoing pregnancy
-    $mother['pregnancy_risk_level'] = null;
-    $mother['pregnancy_risk'] = null;
-    $mother['pregnancy_id'] = null;
 }
 
 echo json_encode([

@@ -1,4 +1,8 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+
+import '../services/auth_storage.dart'; // 👈 IMPORTANT
 import 'add_child_step2.dart';
 import 'add_child_step3.dart';
 
@@ -13,6 +17,9 @@ class _AddChildStep1ParentState extends State<AddChildStep1Parent> {
   bool manualEntry = false;
   Map<String, dynamic>? selectedMother;
 
+  bool mothersLoaded = false;
+  List<Map<String, dynamic>> mothers = [];
+
   // ================= NON-REGISTERED MOTHER CONTROLLERS =================
   final motherFirstNameCtrl = TextEditingController();
   final motherLastNameCtrl = TextEditingController();
@@ -20,12 +27,42 @@ class _AddChildStep1ParentState extends State<AddChildStep1Parent> {
   final motherExtensionCtrl = TextEditingController();
   final motherPhoneCtrl = TextEditingController();
 
-  // ================= MOCK REGISTERED MOTHERS (API LATER) =================
-  final List<Map<String, dynamic>> mothers = [
-    {'mother_id': 1, 'name': 'Maria Santos'},
-    {'mother_id': 2, 'name': 'Ana Cruz'},
-    {'mother_id': 3, 'name': 'Juana Dela Cruz'},
-  ];
+  @override
+  void initState() {
+    super.initState();
+    fetchMothers();
+  }
+
+  Future<void> fetchMothers() async {
+    try {
+      final token = await AuthStorage.getToken(); // 👈 REQUIRED
+
+      final res = await http.get(
+        Uri.parse(
+          'https://inaagapay.alwaysdata.net/api/midwife/search_mothers.php',
+        ),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Accept': 'application/json',
+        },
+      );
+
+      final decoded = jsonDecode(res.body);
+
+      if (decoded['success'] == true) {
+        setState(() {
+          mothers = List<Map<String, dynamic>>.from(decoded['data']);
+          mothersLoaded = true;
+        });
+      } else {
+        // API responded but denied
+        setState(() => mothersLoaded = true);
+      }
+    } catch (e) {
+      // Network / parsing error
+      setState(() => mothersLoaded = true);
+    }
+  }
 
   @override
   void dispose() {
@@ -47,40 +84,40 @@ class _AddChildStep1ParentState extends State<AddChildStep1Parent> {
           children: [
             const Text(
               'Parent Information',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
 
             // ================= REGISTERED MOTHER =================
             if (!manualEntry) ...[
-              Autocomplete<Map<String, dynamic>>(
-                displayStringForOption: (o) => o['name'],
-                optionsBuilder: (value) {
-                  if (value.text.isEmpty) return mothers;
-                  return mothers.where(
-                    (m) => m['name']
-                        .toLowerCase()
-                        .contains(value.text.toLowerCase()),
-                  );
-                },
-                onSelected: (mother) {
-                  setState(() => selectedMother = mother);
-                },
-                fieldViewBuilder:
-                    (context, controller, focusNode, _) {
-                  return TextField(
-                    controller: controller,
-                    focusNode: focusNode,
-                    decoration: const InputDecoration(
-                      hintText: 'Search Mother',
-                      prefixIcon: Icon(Icons.search),
-                    ),
-                  );
-                },
-              ),
+              if (!mothersLoaded)
+                const Center(child: CircularProgressIndicator())
+              else
+                Autocomplete<Map<String, dynamic>>(
+                  displayStringForOption: (o) => o['name'],
+                  optionsBuilder: (value) {
+                    if (value.text.isEmpty) return mothers;
+                    return mothers.where(
+                      (m) => m['name']
+                          .toLowerCase()
+                          .contains(value.text.toLowerCase()),
+                    );
+                  },
+                  onSelected: (mother) {
+                    setState(() => selectedMother = mother);
+                  },
+                  fieldViewBuilder:
+                      (context, controller, focusNode, _) {
+                    return TextField(
+                      controller: controller,
+                      focusNode: focusNode,
+                      decoration: const InputDecoration(
+                        hintText: 'Search Mother',
+                        prefixIcon: Icon(Icons.search),
+                      ),
+                    );
+                  },
+                ),
 
               const SizedBox(height: 20),
 
