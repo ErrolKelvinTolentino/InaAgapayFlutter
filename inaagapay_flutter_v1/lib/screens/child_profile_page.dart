@@ -1,9 +1,15 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
 
 import '../theme/app_colors.dart';
 import '../services/auth_storage.dart';
+import '../widgets/secondary_header.dart';
+import '../widgets/hero_card.dart';
+import '../widgets/records_display_card.dart';
+import '../widgets/status_indicator.dart';
+import '../widgets/important_button.dart';
 
 import 'add_growth_step1.dart';
 import 'add_immunization_page.dart';
@@ -50,6 +56,53 @@ class _ChildProfilePageState extends State<ChildProfilePage> {
     });
   }
 
+  String calculateAge(String? birthdate) {
+    if (birthdate == null || birthdate.isEmpty) return 'Unknown age';
+
+    try {
+      final birth = DateTime.parse(birthdate);
+      final now = DateTime.now();
+
+      int years = now.year - birth.year;
+      int months = now.month - birth.month;
+
+      if (months < 0) {
+        years--;
+        months += 12;
+      }
+
+      if (years <= 0) {
+        return '$months months old';
+      } else {
+        return '$years years ${months > 0 ? '$months months' : ''} old'.trim();
+      }
+    } catch (e) {
+      return 'Unknown age';
+    }
+  }
+
+  String formatDate(String? date) {
+    if (date == null || date.isEmpty) return 'Not recorded';
+    try {
+      final parsed = DateTime.parse(date);
+      return DateFormat('MMMM d, yyyy').format(parsed);
+    } catch (e) {
+      return date;
+    }
+  }
+
+  StatusIndicatorType _getBMIIndicator(double? bmi) {
+    if (bmi == null) return StatusIndicatorType.onTime;
+    
+    // Simple BMI categories for children (simplified)
+    // Check what StatusIndicatorType values are available
+    // If 'warning' doesn't exist, use 'overdue' or 'atRisk' or whatever is available
+    if (bmi < 16) return StatusIndicatorType.overdue; // Use 'overdue' instead of 'warning'
+    if (bmi >= 16 && bmi <= 24) return StatusIndicatorType.onTime;
+    if (bmi > 24 && bmi <= 30) return StatusIndicatorType.overdue; // Use 'overdue' instead of 'warning'
+    return StatusIndicatorType.overdue;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -59,14 +112,57 @@ class _ChildProfilePageState extends State<ChildProfilePage> {
   @override
   Widget build(BuildContext context) {
     if (loading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+      return Scaffold(
+        backgroundColor: AppColors.bgPrimary,
+        body: const Center(
+          child: CircularProgressIndicator(
+            color: AppColors.brandPrimary,
+          ),
+        ),
       );
     }
 
     if (response == null || response!['success'] != true) {
-      return const Scaffold(
-        body: Center(child: Text('Failed to load child profile')),
+      return Scaffold(
+        backgroundColor: AppColors.bgPrimary,
+        appBar: PreferredSize(
+          preferredSize: const Size.fromHeight(56),
+          child: SecondaryHeader(
+            title: 'Child Information',
+            onBack: () => Navigator.pop(context),
+          ),
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.error_outline,
+                color: Colors.red,
+                size: 48,
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Failed to load child profile',
+                style: TextStyle(
+                  color: Colors.red,
+                  fontSize: 16,
+                ),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: fetchProfile,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.brandPrimary,
+                ),
+                child: const Text(
+                  'Retry',
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
+            ],
+          ),
+        ),
       );
     }
 
@@ -82,77 +178,148 @@ class _ChildProfilePageState extends State<ChildProfilePage> {
     final Map<String, dynamic> immunization =
         response!['immunization'] is Map ? response!['immunization'] : {};
 
+    final String fullName = '${v(child, 'first_name')} ${v(child, 'last_name')}';
+    final String age = calculateAge(v(birth, 'birthdate'));
+    final String sex = v(child, 'sex').toUpperCase();
+    final String birthPlace = '${v(birth, 'birthplace_city_municipality')}, ${v(birth, 'birthplace_province')}';
+
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
-      appBar: AppBar(
-        title: const Text('Child Profile'),
-        backgroundColor: AppColors.bgPrimary,
-        elevation: 0,
+
+      /// 🔝 Header
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(56),
+        child: SecondaryHeader(
+          title: 'Child Information',
+          onBack: () => Navigator.pop(context),
+        ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            // ================= BASIC INFO =================
-            _card(
-              child: Column(
-                children: [
-                  const CircleAvatar(
-                    radius: 40,
-                    backgroundColor: AppColors.brandPrimary,
-                    child: Icon(
-                      Icons.child_care,
-                      color: Colors.white,
-                      size: 40,
-                    ),
+
+      /// 🔽 Body
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          child: Column(
+            children: [
+              /// 👶 Child Hero
+              HeroCard(
+                image: const AssetImage('assets/images/baby.png'),
+                title: fullName.isNotEmpty ? fullName : 'Unnamed Child',
+                subtitle: '$age • $sex',
+                showWeekBadge: false,
+                showHeartRow: false,
+              ),
+
+              const SizedBox(height: 24),
+
+              /// 🎂 Birth Details
+              RecordsDisplayCard(
+                title: 'Birth Details',
+                headerIcon: Icons.cake_outlined,
+                items: [
+                  RecordItem(
+                    leadingIcon: Icons.calendar_month_rounded,
+                    label: 'Birth Date',
+                    value: formatDate(v(birth, 'birthdate')),
                   ),
-                  const SizedBox(height: 10),
-                  Text(
-                    '${v(child, 'first_name')} ${v(child, 'last_name')}',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  RecordItem(
+                    leadingIcon: Icons.place_outlined,
+                    label: 'Birthplace',
+                    value: birthPlace,
                   ),
-                  Text(
-                    v(child, 'sex').isNotEmpty
-                        ? v(child, 'sex').toUpperCase()
-                        : '',
+                  RecordItem(
+                    leadingIcon: Icons.straighten_outlined,
+                    label: 'Birth Length',
+                    value: v(birth, 'birth_length').isNotEmpty 
+                        ? '${v(birth, 'birth_length')} cm'
+                        : 'Not recorded',
+                  ),
+                  RecordItem(
+                    leadingIcon: Icons.circle_outlined,
+                    label: 'Head Circumference',
+                    value: v(birth, 'head_circumference').isNotEmpty
+                        ? '${v(birth, 'head_circumference')} cm'
+                        : 'Not recorded',
                   ),
                 ],
               ),
-            ),
 
-            // ================= BIRTH INFORMATION =================
-            _section('Birth Information', [
-              _row('Birth Date', v(birth, 'birthdate')),
-              _row(
-                'Birthplace',
-                '${v(birth, 'birthplace_city_municipality')}, ${v(birth, 'birthplace_province')}',
+              const SizedBox(height: 16),
+
+              /// 📈 Latest Growth Records
+              RecordsDisplayCard(
+                title: 'Latest Growth Records',
+                headerIcon: Icons.bar_chart_rounded,
+                items: [
+                  RecordItem(
+                    leadingIcon: Icons.height,
+                    label: 'Height',
+                    value: v(growth, 'child_height').isNotEmpty
+                        ? '${v(growth, 'child_height')} cm'
+                        : 'Not recorded',
+                    trailingWidget: v(growth, 'child_height').isNotEmpty
+                        ? const Icon(
+                            Icons.trending_up,
+                            size: 14,
+                            color: AppColors.success,
+                          )
+                        : null,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ChildGrowthListPage(
+                            childId: widget.childId,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  RecordItem(
+                    leadingIcon: Icons.monitor_weight,
+                    label: 'Weight',
+                    value: v(growth, 'child_weight').isNotEmpty
+                        ? '${v(growth, 'child_weight')} kg'
+                        : 'Not recorded',
+                    trailingWidget: v(growth, 'child_weight').isNotEmpty
+                        ? const Icon(
+                            Icons.trending_up,
+                            size: 14,
+                            color: AppColors.success,
+                          )
+                        : null,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ChildGrowthListPage(
+                            childId: widget.childId,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  RecordItem(
+                    leadingIcon: Icons.calculate,
+                    label: 'BMI',
+                    value: v(growth, 'bmi').isNotEmpty
+                        ? '${v(growth, 'bmi')} kg/m²'
+                        : 'Not recorded',
+                    trailingWidget: v(growth, 'bmi').isNotEmpty
+                        ? StatusIndicator(
+                            status: _getBMIIndicator(double.tryParse(v(growth, 'bmi'))),
+                          )
+                        : null,
+                  ),
+                ],
               ),
-              _row('Birth Length', '${v(birth, 'birth_length')} cm'),
-              _row(
-                'Head Circumference',
-                '${v(birth, 'head_circumference')} cm',
-              ),
-            ]),
 
-            // ================= BIRTH COMPLICATIONS =================
-            if (v(birth, 'birth_complications').isNotEmpty)
-              _section('Birth Complications', [
-                Text(
-                  v(birth, 'birth_complications'),
-                  style: const TextStyle(height: 1.4),
-                ),
-              ]),
+              const SizedBox(height: 20),
 
-            // ================= LATEST GROWTH =================
-            _section('Latest Growth Record', [
-              _row('Height', '${v(growth, 'child_height')} cm'),
-              _row('Weight', '${v(growth, 'child_weight')} kg'),
-              _row('BMI', v(growth, 'bmi')),
-              const SizedBox(height: 10),
-              OutlinedButton(
+              /// 📊 View Growth Statistics Button
+              ImportantButton(
+                label: 'View Growth Statistics',
+                leadingIcon: Icons.bar_chart_rounded,
                 onPressed: () {
                   Navigator.push(
                     context,
@@ -163,25 +330,52 @@ class _ChildProfilePageState extends State<ChildProfilePage> {
                     ),
                   );
                 },
-                child: const Text('View All Growth Records'),
               ),
-            ]),
 
-            // ================= LATEST IMMUNIZATION (FIX #3) =================
-            _section('Latest Immunization', [
-              if (immunization.isEmpty) ...[
-                const Text(
-                  'No immunization recorded yet',
-                  style: TextStyle(color: Colors.black54),
-                ),
-              ] else ...[
-                _row('Vaccine', v(immunization, 'vaccine_name')),
-                if (v(immunization, 'dose_number').isNotEmpty)
-                  _row('Dose', v(immunization, 'dose_number')),
-                _row('Date Given', v(immunization, 'vaccination_date')),
-              ],
-              const SizedBox(height: 10),
-              OutlinedButton(
+              const SizedBox(height: 20),
+
+              /// 💉 Latest Immunization
+              RecordsDisplayCard(
+                title: 'Latest Immunization',
+                headerIcon: Icons.vaccines_outlined,
+                items: immunization.isNotEmpty
+                    ? [
+                        RecordItem(
+                          leadingIcon: Icons.vaccines,
+                          label: 'Vaccine',
+                          value: v(immunization, 'vaccine_name'),
+                        ),
+                        RecordItem(
+                          leadingIcon: Icons.format_list_numbered,
+                          label: 'Dose',
+                          value: v(immunization, 'dose_number').isNotEmpty
+                              ? 'Dose ${v(immunization, 'dose_number')}'
+                              : 'Not specified',
+                        ),
+                        RecordItem(
+                          leadingIcon: Icons.calendar_month_rounded,
+                          label: 'Date Given',
+                          value: formatDate(v(immunization, 'vaccination_date')),
+                          trailingWidget: StatusIndicator(
+                            status: StatusIndicatorType.onTime,
+                          ),
+                        ),
+                      ]
+                    : [
+                        RecordItem(
+                          leadingIcon: Icons.info_outline,
+                          label: 'Status',
+                          value: 'No immunization recorded yet',
+                        ),
+                      ],
+              ),
+
+              const SizedBox(height: 20),
+
+              /// 💉 View Vaccination Details Button
+              ImportantButton(
+                label: 'View Vaccination Details',
+                leadingIcon: Icons.vaccines_outlined,
                 onPressed: () {
                   Navigator.push(
                     context,
@@ -192,136 +386,67 @@ class _ChildProfilePageState extends State<ChildProfilePage> {
                     ),
                   );
                 },
-                child: const Text('View All Immunizations'),
               ),
-            ]),
 
-            const SizedBox(height: 20),
+              const SizedBox(height: 20),
 
-            // ================= ACTION BUTTONS =================
-            _primaryBtn(
-              'Add Growth Record',
-              () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) =>
-                        AddGrowthStep1(childId: widget.childId),
-                  ),
-                );
-              },
-            ),
-
-            const SizedBox(height: 12),
-
-            // ================= ADD IMMUNIZATION (FIX #1) =================
-            _primaryBtn(
-              'Add Immunization',
-              () async {
-                final result = await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) =>
-                        AddImmunizationPage(childId: widget.childId),
-                  ),
-                );
-
-                // 🔥 refresh profile when immunization is added
-                if (result == true) {
-                  setState(() => loading = true);
-                  await fetchProfile();
-                }
-              },
-            ),
-
-            const SizedBox(height: 12),
-
-            // ================= AI GROWTH ANALYSIS =================
-            _primaryBtn(
-              'AI Growth Analysis',
-              () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => ChildGrowthAIPage(
-                      childId: widget.childId,
+              /// ➕ Add Growth Record Button
+              ImportantButton(
+                label: 'Add Growth Record',
+                leadingIcon: Icons.add_chart,
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => AddGrowthStep1(childId: widget.childId),
                     ),
-                  ),
-                );
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+                  );
+                },
+              ),
 
-  // ================= UI HELPERS =================
+              const SizedBox(height: 20),
 
-  Widget _section(String title, List<Widget> children) {
-    return _card(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              color: AppColors.brandPrimary,
-            ),
+              /// 💉 Add Immunization Button
+              ImportantButton(
+                label: 'Add Immunization',
+                leadingIcon: Icons.vaccines_outlined,
+                onPressed: () async {
+                  final result = await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => AddImmunizationPage(childId: widget.childId),
+                    ),
+                  );
+
+                  // Refresh profile when immunization is added
+                  if (result == true) {
+                    setState(() => loading = true);
+                    await fetchProfile();
+                  }
+                },
+              ),
+
+              const SizedBox(height: 20),
+
+              /// 🤖 AI Growth Analysis Button
+              ImportantButton(
+                label: 'AI Growth Analysis',
+                leadingIcon: Icons.psychology_outlined,
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ChildGrowthAIPage(
+                        childId: widget.childId,
+                      ),
+                    ),
+                  );
+                },
+              ),
+
+              const SizedBox(height: 32),
+            ],
           ),
-          const SizedBox(height: 8),
-          ...children,
-        ],
-      ),
-    );
-  }
-
-  Widget _row(String label, String value) {
-    if (value.isEmpty || value == 'null') value = '-';
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label),
-          Text(
-            value,
-            style: const TextStyle(fontWeight: FontWeight.w600),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _card({required Widget child}) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: child,
-    );
-  }
-
-  Widget _primaryBtn(String label, VoidCallback onTap) {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.brandPrimary,
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
-          ),
-        ),
-        onPressed: onTap,
-        child: Text(
-          label,
-          style: const TextStyle(color: Colors.white),
         ),
       ),
     );

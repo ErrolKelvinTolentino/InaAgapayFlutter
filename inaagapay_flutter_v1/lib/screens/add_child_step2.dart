@@ -2,7 +2,12 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
+import '../theme/app_colors.dart';
 import '../services/auth_storage.dart';
+import '../widgets/secondary_header.dart';
+import '../widgets/page_title.dart';
+import '../widgets/main_button.dart';
+import '../widgets/small_description.dart';
 import 'add_child_step3.dart';
 
 class AddChildStep2 extends StatefulWidget {
@@ -37,6 +42,11 @@ class _AddChildStep2State extends State<AddChildStep2> {
   final provinceCtrl = TextEditingController();
 
   bool isSaving = false;
+
+  bool get isFormValid =>
+      barangayCtrl.text.isNotEmpty &&
+      cityCtrl.text.isNotEmpty &&
+      provinceCtrl.text.isNotEmpty;
 
   @override
   void dispose() {
@@ -106,6 +116,8 @@ class _AddChildStep2State extends State<AddChildStep2> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(decoded['message'] ?? 'Failed to add mother'),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
         ),
       );
     }
@@ -114,59 +126,241 @@ class _AddChildStep2State extends State<AddChildStep2> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Add Child')),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
-          child: ListView(
-            children: [
-              const Text(
-                'Mother Address Information',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 12),
+      backgroundColor: AppColors.bgPrimary,
+      
+      /// 🔝 HEADER
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(56),
+        child: SecondaryHeader(
+          title: 'Add Child',
+          onBack: () => Navigator.pop(context),
+        ),
+      ),
 
-              TextFormField(
-                controller: houseCtrl,
-                decoration:
-                    const InputDecoration(labelText: 'House Number'),
-              ),
-              TextFormField(
-                controller: streetCtrl,
-                decoration: const InputDecoration(labelText: 'Street'),
-              ),
-              TextFormField(
-                controller: barangayCtrl,
-                decoration:
-                    const InputDecoration(labelText: 'Barangay'),
-                validator: (v) =>
-                    v == null || v.isEmpty ? 'Required' : null,
-              ),
-              TextFormField(
-                controller: cityCtrl,
-                decoration:
-                    const InputDecoration(labelText: 'City / Municipality'),
-                validator: (v) =>
-                    v == null || v.isEmpty ? 'Required' : null,
-              ),
-              TextFormField(
-                controller: provinceCtrl,
-                decoration:
-                    const InputDecoration(labelText: 'Province'),
-                validator: (v) =>
-                    v == null || v.isEmpty ? 'Required' : null,
-              ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                /// 🧬 SECTION TITLE
+                Center(
+                  child: PageTitle(
+                    title: 'Mother Address',
+                    leadingIcon: Icons.home_outlined,
+                    trailingIcon: Icons.check_circle,
+                  ),
+                ),
 
-              const SizedBox(height: 20),
+                const SizedBox(height: 16),
 
-              ElevatedButton(
-                onPressed: isSaving ? null : _submit,
-                child: isSaving
-                    ? const CircularProgressIndicator(color: Colors.white)
-                    : const Text('Next'),
-              ),
-            ],
+                /// 📝 DESCRIPTION
+                const SmallDescription(
+                  text: 'Enter the mother\'s complete address',
+                  textAlign: TextAlign.center,
+                ),
+
+                const SizedBox(height: 24),
+
+                /// 🏠 ADDRESS FORM
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      // House Number
+                      TextFormField(
+                        controller: houseCtrl,
+                        style: const TextStyle(color: Colors.black, fontSize: 16),
+                        decoration: InputDecoration(
+                          labelText: 'House Number (Optional)',
+                          labelStyle: TextStyle(color: AppColors.textSecondary),
+                          filled: true,
+                          fillColor: Colors.white,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: AppColors.borderPrimary),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: AppColors.borderPrimary),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: AppColors.brandPrimary, width: 2),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Street
+                      TextFormField(
+                        controller: streetCtrl,
+                        style: const TextStyle(color: Colors.black, fontSize: 16),
+                        decoration: InputDecoration(
+                          labelText: 'Street (Optional)',
+                          labelStyle: TextStyle(color: AppColors.textSecondary),
+                          filled: true,
+                          fillColor: Colors.white,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: AppColors.borderPrimary),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: AppColors.borderPrimary),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: AppColors.brandPrimary, width: 2),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Barangay with validation
+                      TextFormField(
+                        controller: barangayCtrl,
+                        style: const TextStyle(color: Colors.black, fontSize: 16),
+                        decoration: InputDecoration(
+                          labelText: 'Barangay',
+                          labelStyle: TextStyle(color: AppColors.textSecondary),
+                          filled: true,
+                          fillColor: Colors.white,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: AppColors.borderPrimary),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: AppColors.borderPrimary),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: AppColors.brandPrimary, width: 2),
+                          ),
+                        ),
+                        validator: (value) => value == null || value.isEmpty ? 'Barangay is required' : null,
+                      ),
+                      const SizedBox(height: 16),
+
+                      // City with validation
+                      TextFormField(
+                        controller: cityCtrl,
+                        style: const TextStyle(color: Colors.black, fontSize: 16),
+                        decoration: InputDecoration(
+                          labelText: 'City / Municipality',
+                          labelStyle: TextStyle(color: AppColors.textSecondary),
+                          filled: true,
+                          fillColor: Colors.white,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: AppColors.borderPrimary),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: AppColors.borderPrimary),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: AppColors.brandPrimary, width: 2),
+                          ),
+                        ),
+                        validator: (value) => value == null || value.isEmpty ? 'City is required' : null,
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Province with validation
+                      TextFormField(
+                        controller: provinceCtrl,
+                        style: const TextStyle(color: Colors.black, fontSize: 16),
+                        decoration: InputDecoration(
+                          labelText: 'Province',
+                          labelStyle: TextStyle(color: AppColors.textSecondary),
+                          filled: true,
+                          fillColor: Colors.white,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: AppColors.borderPrimary),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: AppColors.borderPrimary),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: AppColors.brandPrimary, width: 2),
+                          ),
+                        ),
+                        validator: (value) => value == null || value.isEmpty ? 'Province is required' : null,
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 32),
+
+                /// ➕ CONTINUE BUTTON
+                if (isSaving)
+                  Center(
+                    child: Column(
+                      children: [
+                        CircularProgressIndicator(color: AppColors.brandPrimary),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Saving mother information...',
+                          style: TextStyle(color: AppColors.textSecondary),
+                        ),
+                      ],
+                    ),
+                  )
+                else
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.pop(context),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            side: BorderSide(color: AppColors.brandPrimary),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: Text(
+                            'Back',
+                            style: TextStyle(
+                              color: AppColors.brandPrimary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: MainButton(
+                          label: 'Continue',
+                          onPressed: isFormValid ? _submit : null,
+                        ),
+                      ),
+                    ],
+                  ),
+
+                const SizedBox(height: 16),
+              ],
+            ),
           ),
         ),
       ),
