@@ -86,7 +86,7 @@ $update->bind_param("si", $token, $user['account_id']);
 $update->execute();
 
 /**
- * BASE USER RESPONSE (SAFE FOR ALL ROLES)
+ * BASE USER RESPONSE
  */
 $responseUser = [
     'id'   => (int) $user['account_id'],
@@ -94,7 +94,7 @@ $responseUser = [
 ];
 
 /**
- * MOTHER-ONLY: CHECK PROFILE COMPLETION
+ * MOTHER-ONLY DATA
  */
 if ($user['account_type'] === 'mother') {
     $stmt = $conn->prepare("
@@ -108,6 +108,11 @@ if ($user['account_type'] === 'mother') {
     $mother = $stmt->get_result()->fetch_assoc();
 
     $responseUser['profile_complete'] = $mother ? true : false;
+
+    // 🔥🔥🔥 THIS IS THE CRITICAL LINE 🔥🔥🔥
+    if ($mother) {
+        $responseUser['mother_id'] = (int) $mother['mother_id'];
+    }
 }
 
 /**

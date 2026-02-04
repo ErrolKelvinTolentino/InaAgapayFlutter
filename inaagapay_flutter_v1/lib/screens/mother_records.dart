@@ -2,20 +2,53 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../widgets/main_header.dart';
 import '../widgets/main_bottom_navigation.dart';
+import '../services/api_service.dart';
+import '../services/auth_storage.dart';
+
 import 'mother_prenatal_stack.dart';
 import 'mother_ultrasound_stack.dart';
 import 'mother_lab_stack.dart';
 import 'pregnancy_details.dart';
 
-class MotherRecordsPage extends StatelessWidget {
+class MotherRecordsPage extends StatefulWidget {
   const MotherRecordsPage({super.key});
+
+  @override
+  State<MotherRecordsPage> createState() => _MotherRecordsPageState();
+}
+
+class _MotherRecordsPageState extends State<MotherRecordsPage> {
+  late Future<Map<String, dynamic>> _recordsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _recordsFuture = _loadRecordSummary();
+  }
+
+  Future<Map<String, dynamic>> _loadRecordSummary() async {
+    final token = await AuthStorage.getToken();
+    if (token == null) {
+      throw Exception('Not authenticated');
+    }
+
+    final res = await ApiService.get(
+      'mother/records_summary.php',
+      token: token,
+    );
+
+    if (res['success'] != true) {
+      throw Exception('Failed to load record summary');
+    }
+
+    return res;
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
 
-      // 🔝 HEADER
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(60),
         child: MainHeader(
@@ -25,143 +58,169 @@ class MotherRecordsPage extends StatelessWidget {
         ),
       ),
 
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 120),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            // 🎀 HERO / SUMMARY
-            Container(
-              height: 96,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                image: const DecorationImage(
-                  image: AssetImage('assets/images/pinkbg.png'),
-                  fit: BoxFit.cover,
-                  opacity: 0.5,
-                ),
+      body: FutureBuilder<Map<String, dynamic>>(
+        future: _recordsFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (!snapshot.hasData || snapshot.hasError) {
+            return const Center(
+              child: Text(
+                'Unable to load records',
+                style: TextStyle(color: AppColors.error),
               ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 16,
-                ),
-                child: Row(
-                  children: [
-                    // 📝 Text
-                    Expanded(
-                      child: RichText(
-                        text: TextSpan(
-                          children: [
-                            const TextSpan(
-                              text: 'You have\n',
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: AppColors.textPrimary,
-                                height: 1.4,
-                              ),
+            );
+          }
+
+          final data = snapshot.data!;
+
+          final int prenatalCount = data['prenatal_count'] ?? 0;
+          final int ultrasoundCount = data['ultrasound_count'] ?? 0;
+          final int labCount = data['lab_count'] ?? 0;
+          final int pregnancyCount = data['pregnancy_count'] ?? 0;
+
+          final int totalRecords =
+              prenatalCount + ultrasoundCount + labCount + pregnancyCount;
+
+          return SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 120),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                // 🎀 HERO / SUMMARY
+                Container(
+                  height: 96,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    image: const DecorationImage(
+                      image: AssetImage('assets/images/pinkbg.png'),
+                      fit: BoxFit.cover,
+                      opacity: 0.5,
+                    ),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 16,
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: RichText(
+                            text: TextSpan(
+                              children: [
+                                const TextSpan(
+                                  text: 'You have\n',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: AppColors.textPrimary,
+                                    height: 1.4,
+                                  ),
+                                ),
+                                TextSpan(
+                                  text: '$totalRecords Stored Records!',
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.brandText,
+                                  ),
+                                ),
+                              ],
                             ),
-                            TextSpan(
-                              text: 'XX Stored Records!',
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.brandText,
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
-                      ),
+                        Image.asset(
+                          'assets/images/records.png',
+                          height: 72,
+                          width: 72,
+                          fit: BoxFit.contain,
+                        ),
+                      ],
                     ),
-
-                    // 👶 Image
-                    Image.asset(
-                      'assets/images/records.png',
-                      height: 72,
-                      width: 72,
-                      fit: BoxFit.contain,
-                    ),
-                  ],
+                  ),
                 ),
-              ),
+
+                const SizedBox(height: 12),
+
+                const Text(
+                  'All your pregnancy records in one place',
+                  style:
+                      TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                ),
+
+                const SizedBox(height: 20),
+
+                _RecordCategoryCard(
+                  title: 'Prenatal Check-ups',
+                  countText: '$prenatalCount file(s)',
+                  icon: Icons.medical_services_rounded,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => MotherPrenatalStack(),
+                      ),
+                    );
+                  },
+                ),
+
+                const SizedBox(height: 12),
+
+                _RecordCategoryCard(
+                  title: 'Ultrasound Records',
+                  countText: '$ultrasoundCount file(s)',
+                  icon: Icons.monitor_heart_rounded,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const MotherUltrasoundStack(),
+                      ),
+                    );
+                  },
+                ),
+
+                const SizedBox(height: 12),
+
+                _RecordCategoryCard(
+                  title: 'Laboratory Test Results',
+                  countText: '$labCount file(s)',
+                  icon: Icons.science_rounded,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const MotherLabStack(),
+                      ),
+                    );
+                  },
+                ),
+
+                const SizedBox(height: 12),
+
+                _RecordCategoryCard(
+                  title: 'Pregnancy History',
+                  countText: '$pregnancyCount file(s)',
+                  icon: Icons.history_rounded,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => PregnancyDetailsPage(),
+                      ),
+                    );
+                  },
+                ),
+              ],
             ),
-
-            const SizedBox(height: 12),
-
-            const Text(
-              'All your pregnancy records in one place',
-              style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
-            ),
-
-            const SizedBox(height: 20),
-
-            // 📁 RECORD LIST
-            _RecordCategoryCard(
-              title: 'Prenatal Check-ups',
-              countText: '1 file',
-              icon: Icons.medical_services_rounded,
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => MotherPrenatalStack()),
-                );
-              },
-            ),
-
-            const SizedBox(height: 12),
-
-            _RecordCategoryCard(
-              title: 'Ultrasound Records',
-              countText: '1 file',
-              icon: Icons.monitor_heart_rounded,
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const MotherUltrasoundStack(),
-                  ),
-                );
-              },
-            ),
-
-            const SizedBox(height: 12),
-
-            _RecordCategoryCard(
-              title: 'Laboratory Test Results',
-              countText: '1 file',
-              icon: Icons.science_rounded,
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const MotherLabStack(),
-                  ),
-                );
-              },
-            ),
-
-            const SizedBox(height: 12),
-
-            _RecordCategoryCard(
-              title: 'Pregnancy History',
-              countText: '1 file',
-              icon: Icons.history_rounded,
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => PregnancyDetailsPage(),
-                  ),
-                );
-              },
-            ),
-          ],
-        ),
+          );
+        },
       ),
 
-      // 🔻 Bottom Nav
       bottomNavigationBar: const MainBottomNavigation(
-        currentIndex: 3, // Children tab
+        currentIndex: 3,
       ),
     );
   }
@@ -218,7 +277,6 @@ class _RecordCategoryCardState extends State<_RecordCategoryCard> {
             ),
             child: Row(
               children: [
-                // 📄 ICON
                 Container(
                   width: 44,
                   height: 44,
@@ -228,10 +286,7 @@ class _RecordCategoryCardState extends State<_RecordCategoryCard> {
                   ),
                   child: Icon(widget.icon, color: AppColors.brandPrimary),
                 ),
-
                 const SizedBox(width: 14),
-
-                // 🧾 TEXT
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -255,7 +310,6 @@ class _RecordCategoryCardState extends State<_RecordCategoryCard> {
                     ],
                   ),
                 ),
-
                 const Icon(
                   Icons.chevron_right_rounded,
                   size: 26,

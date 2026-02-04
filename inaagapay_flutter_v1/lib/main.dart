@@ -22,6 +22,14 @@ import 'screens/mother_ultrasound_stack.dart';
 import 'screens/mother_lab_stack.dart';
 import 'screens/pregnancy_details.dart';
 import 'screens/mother_records.dart';
+import 'screens/mother_more_info_page.dart';
+
+
+// 📝 JOURNAL
+import 'screens/journal_list_page.dart';
+
+// 📘 MORE INFO (NEW)
+import 'screens/mother_more_info_page.dart';
 
 // ================= DASHBOARDS / SHELLS ===================
 import 'screens/mother_dashboard.dart';
@@ -56,7 +64,9 @@ class MyApp extends StatelessWidget {
         if (snapshot.connectionState != ConnectionState.done) {
           return const MaterialApp(
             debugShowCheckedModeBanner: false,
-            home: Scaffold(body: Center(child: CircularProgressIndicator())),
+            home: Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            ),
           );
         }
 
@@ -66,7 +76,7 @@ class MyApp extends StatelessWidget {
           darkTheme: AppTheme.darkTheme,
           themeMode: ThemeMode.system,
 
-          // ✅ FIX: guarantee a widget (no null, no const error)
+          // ✅ guarantee a widget
           home: snapshot.data ?? const LoginScreen(),
 
           routes: {
@@ -87,14 +97,19 @@ class MyApp extends StatelessWidget {
             '/complete-profile': (context) => const CompleteProfileScreen(),
             '/welcome': (context) => const WelcomeScreen(),
 
-            // ============== MOTHER FEATURES ==============
-            '/mother-dashboard': (context) => const MotherDashboard(),
-            '/mother-children': (context) => MotherChildrenPage(),
-            '/mother-records': (context) => MotherRecordsPage(),
-            '/mother-prenatal-stack': (context) => MotherPrenatalStack(),
-            '/mother-ultrasound-stack': (context) => MotherUltrasoundStack(),
-            '/mother-lab-stack': (context) => MotherLabStack(),
-            '/mother-pregnancy': (context) => PregnancyDetailsPage(),
+            // ============== MOTHER FEATURES =========
+'/mother-dashboard': (context) => const MotherDashboard(),
+'/mother-journal': (context) => JournalListPage(),
+'/mother-more-info': (context) => MotherMoreInfoPage(),
+'/mother-children': (context) => MotherChildrenPage(),
+'/mother-records': (context) => MotherRecordsPage(),
+'/mother-prenatal-stack': (context) => MotherPrenatalStack(),
+'/mother-ultrasound-stack': (context) => MotherUltrasoundStack(),
+'/mother-lab-stack': (context) => MotherLabStack(),
+'/mother-pregnancy': (context) => PregnancyDetailsPage(),
+'/mother-more-info': (context) => MotherMoreInfoPage(),
+
+
 
             // ============== DASHBOARDS ===============
             '/midwife-dashboard': (context) => const MidwifeShell(),

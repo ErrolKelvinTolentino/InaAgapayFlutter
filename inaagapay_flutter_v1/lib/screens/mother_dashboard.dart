@@ -248,8 +248,9 @@ class MotherDashboard extends StatelessWidget {
                     showIcons: true,
                     leadingIcon: Icons.info_outline,
                     onPressed: () {
-                      // TODO: Implement more info navigation
-                    },
+  Navigator.pushNamed(context, '/mother-more-info');
+},
+
                   ),
 
                   const SizedBox(height: 12),

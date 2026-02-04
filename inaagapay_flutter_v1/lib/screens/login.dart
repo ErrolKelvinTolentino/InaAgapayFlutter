@@ -62,6 +62,11 @@ class _LoginScreenState extends State<LoginScreen> {
 
         final user = response.user;
 
+        // 🔥🔥🔥 REQUIRED FIX: SAVE MOTHER ID 🔥🔥🔥
+        if (user?['mother_id'] != null) {
+          await AuthStorage.saveMotherId(user!['mother_id']);
+        }
+
         // Check if profile is complete (from brent-ver-mother)
         final bool profileComplete = user?['profile_complete'] == true;
 

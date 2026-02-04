@@ -21,6 +21,14 @@ class MainBottomNavigation extends StatelessWidget {
         );
         break;
 
+      case 1:
+        // 📝 JOURNAL PAGE (NOW WORKING)
+        Navigator.pushReplacementNamed(
+          context,
+          '/mother-journal',
+        );
+        break;
+
       case 2:
         Navigator.pushReplacementNamed(
           context,
@@ -28,9 +36,6 @@ class MainBottomNavigation extends StatelessWidget {
         );
         break;
 
-      // 🚧 Journal & Records (routes later)
-      case 1:
-      break;
       case 3:
         Navigator.pushReplacementNamed(
           context,
@@ -134,7 +139,6 @@ class _NavItem extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 6),
-
           if (isActive)
             Container(
               width: 6,

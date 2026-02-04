@@ -62,7 +62,7 @@ _StatusStyle _statusStyle(StatusIndicatorType status) {
 
     case StatusIndicatorType.onTime:
       return _StatusStyle(
-        label: 'On Time',
+        label: 'Taken',
         backgroundColor: AppColors.success,
         icon: Icons.schedule_rounded,
       );
