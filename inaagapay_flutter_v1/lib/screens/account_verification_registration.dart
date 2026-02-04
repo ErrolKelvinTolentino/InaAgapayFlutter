@@ -7,6 +7,7 @@ import '../widgets/validation_message.dart';
 import '../widgets/clickable_text.dart';
 import '../widgets/dialog_box.dart';
 import '../widgets/page_title.dart';
+import '../services/register_service.dart';
 
 class AccountVerificationRegistration extends StatefulWidget {
   const AccountVerificationRegistration({super.key});
@@ -25,16 +26,25 @@ class _AccountVerificationRegistrationState
 
   String _code = '';
   bool _hasError = false;
+  String _errorMessage = 'Incorrect or expired code. Please try again.';
   bool _loading = false;
 
-  late String _email;
+  String _email = '';
+  bool _linkedExisting = false;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
 
     // Extract email from route arguments
-    _email = ModalRoute.of(context)!.settings.arguments as String;
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is Map) {
+      _email = (args['email'] as String?) ?? '';
+      _linkedExisting = args['linkedExisting'] == true;
+    } else if (args is String) {
+      _email = args;
+      _linkedExisting = false;
+    }
 
     // Start the countdown timer
     _startTimer();
@@ -59,17 +69,38 @@ class _AccountVerificationRegistrationState
     return '$minutes:$seconds';
   }
 
-  void _verifyCode() {
-    // ❌ Invalid code
-    if (_code != '123456' && _code != '654321') {
+  Future<void> _verifyCode() async {
+    if (_email.isEmpty) {
       setState(() {
         _hasError = true;
+        _errorMessage = 'Missing email. Please restart registration.';
       });
       return;
     }
 
-    // 🧪 Existing account linked
-    if (_code == '654321') {
+    setState(() {
+      _loading = true;
+      _hasError = false;
+      _errorMessage = 'Incorrect or expired code. Please try again.';
+    });
+
+    final result = await RegisterService.verifyCode(email: _email, code: _code);
+
+    if (!mounted) return;
+
+    if (!result.success) {
+      setState(() {
+        _loading = false;
+        _hasError = true;
+        _errorMessage = result.message;
+      });
+      return;
+    }
+
+    setState(() => _loading = false);
+
+    // Choose dialog based on linking or new verification
+    if (_linkedExisting) {
       showDialog(
         context: context,
         barrierDismissible: false,
@@ -79,6 +110,7 @@ class _AccountVerificationRegistrationState
           buttonText: 'Continue',
           type: DialogType.success,
           onPressed: () {
+            Navigator.pop(context);
             Navigator.pushNamedAndRemoveUntil(
               context,
               '/mother-dashboard',
@@ -87,27 +119,26 @@ class _AccountVerificationRegistrationState
           },
         ),
       );
-      return;
+    } else {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => DialogBox(
+          title: 'Account Verified!',
+          subtitle: result.message,
+          buttonText: 'Continue',
+          type: DialogType.success,
+          onPressed: () {
+            Navigator.pop(context);
+            Navigator.pushNamedAndRemoveUntil(
+              context,
+              '/login',
+              (route) => false,
+            );
+          },
+        ),
+      );
     }
-
-    // ✅ New account verified
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => DialogBox(
-        title: 'Account Verified!',
-        buttonText: 'Continue',
-        type: DialogType.success,
-        onPressed: () {
-          Navigator.pop(context);
-          Navigator.pushNamedAndRemoveUntil(
-            context,
-            '/login',
-            (route) => false,
-          );
-        },
-      ),
-    );
   }
 
   void _resendCode() {
@@ -187,10 +218,10 @@ class _AccountVerificationRegistrationState
               ),
 
               if (_hasError)
-                const Padding(
-                  padding: EdgeInsets.only(top: 12),
+                Padding(
+                  padding: const EdgeInsets.only(top: 12),
                   child: ValidationMessage(
-                    message: 'Incorrect or expired code. Please try again.',
+                    message: _errorMessage,
                     type: ValidationType.error,
                   ),
                 ),

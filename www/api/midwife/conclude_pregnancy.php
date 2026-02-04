@@ -32,7 +32,7 @@ try {
     expect(is_array($input), 'Invalid JSON payload');
 
     $pregnancyId = $input['pregnancy_id'] ?? null;
-    $outcome = $input['outcome'] ?? null; // live_birth, stillbirth, miscarriage, abortion, ectopic
+    $outcome = $input['outcome'] ?? null; // livebirth, stillbirth, miscarriage, abortion, ectopic
     $outcomeDate = fmtDate($input['outcome_date'] ?? null);
     $deliveryDate = fmtDate($input['delivery_date'] ?? null);
     $deliveryMethod = $input['delivery_method'] ?? null;
@@ -42,12 +42,6 @@ try {
 
     expect(!empty($pregnancyId), 'pregnancy_id is required');
     expect(!empty($outcome), 'outcome is required');
-
-    // normalize outcome values
-    $outcome = strtolower(trim((string) $outcome));
-    if ($outcome === 'livebirth' || $outcome === 'live birth') {
-        $outcome = 'live_birth';
-    }
 
     // midwife context
     $ctx = $conn->prepare("SELECT m.midwife_id, m.assigned_bhc_id FROM midwives m WHERE m.account_id = ? LIMIT 1");
@@ -68,7 +62,7 @@ try {
     expect((int) $pregRow['mother_bhc_id'] === $midwifeBhcId, 'Pregnancy is not assigned to your BHC');
 
     // Resolve dates
-    if (in_array($outcome, ['live_birth', 'stillbirth'], true)) {
+    if (in_array($outcome, ['livebirth', 'stillbirth'], true)) {
         expect(!empty($deliveryDate), 'delivery_date is required for delivery outcomes');
         $outcomeDate = $deliveryDate; // align outcome date with delivery
     } else {
@@ -78,7 +72,7 @@ try {
     $conn->begin_transaction();
 
     // Insert/update delivery when applicable
-    if (in_array($outcome, ['live_birth', 'stillbirth'], true)) {
+    if (in_array($outcome, ['livebirth', 'stillbirth'], true)) {
         $delStmt = $conn->prepare(
             "INSERT INTO deliveries (pregnancy_id, delivery_date, is_delivery_date_estimated, place_of_delivery, delivery_method) " .
             "VALUES (?, ?, ?, ?, ?) " .
