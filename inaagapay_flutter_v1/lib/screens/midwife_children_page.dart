@@ -165,7 +165,11 @@ class _MidwifeChildrenPageState extends State<MidwifeChildrenPage> {
             .toString()
             .toLowerCase();
         final bhc = _normalizeBhc(
-          child['bhc_name'] ?? child['barangay'] ?? child['assigned_bhc'] ?? '',
+          child['assigned_bhc_name'] ?? // mother's assigned BHC
+              child['bhc_name'] ??
+              child['barangay'] ??
+              child['assigned_bhc'] ??
+              '',
         );
         final matchesBhc = _bhcFilter == 'All BHCs'
             ? true
