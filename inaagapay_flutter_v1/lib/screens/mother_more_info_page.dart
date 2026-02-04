@@ -6,9 +6,61 @@ import '../widgets/main_bottom_navigation.dart';
 import '../widgets/headline.dart';
 import '../widgets/long_info_box.dart';
 import '../widgets/main_button.dart';
+import '../services/api_service.dart';
+import '../services/auth_storage.dart';
 
-class MotherMoreInfoPage extends StatelessWidget {
-  MotherMoreInfoPage({super.key});
+class MotherMoreInfoPage extends StatefulWidget {
+  const MotherMoreInfoPage({super.key});
+
+  @override
+  State<MotherMoreInfoPage> createState() => _MotherMoreInfoPageState();
+}
+
+class _MotherMoreInfoPageState extends State<MotherMoreInfoPage> {
+  bool _loadingMedications = true;
+  List<dynamic> _medications = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMedicationPlan();
+  }
+
+  Future<void> _loadMedicationPlan() async {
+    try {
+      final token = await AuthStorage.getToken();
+      if (token == null || token.isEmpty) {
+        setState(() => _loadingMedications = false);
+        return;
+      }
+
+      final res = await ApiService.get(
+        'mother/mother_medication_plan.php',
+        token: token,
+      );
+
+      if (res['success'] == true && res['medications'] is List) {
+        setState(() {
+          _medications = res['medications'];
+          _loadingMedications = false;
+        });
+      } else {
+        setState(() => _loadingMedications = false);
+      }
+    } catch (_) {
+      setState(() => _loadingMedications = false);
+    }
+  }
+
+  String _formatDate(String? value) {
+    if (value == null || value.isEmpty) return '—';
+    try {
+      final d = DateTime.parse(value);
+      return '${d.month}/${d.day}/${d.year}';
+    } catch (_) {
+      return value;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -137,9 +189,65 @@ class MotherMoreInfoPage extends StatelessWidget {
                 ],
               ),
 
+              // ================= MEDICATION PLAN =================
+              const SizedBox(height: 24),
+
+              const Text(
+                'Medication Plan 💊',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+
+              const SizedBox(height: 12),
+
+              if (_loadingMedications)
+                const Center(child: CircularProgressIndicator()),
+
+              if (!_loadingMedications && _medications.isEmpty)
+                const Text(
+                  'No prescribed medications available.',
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 14,
+                  ),
+                ),
+
+              if (!_loadingMedications)
+                ..._medications.map((med) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: LongInfoBox(
+                      icon: Icons.medication_rounded,
+                      text: [
+                        TextSpan(
+                          text:
+                              '${med['mother_medication_name'] ?? 'Medication'}\n',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        TextSpan(
+                          text:
+                              'Frequency: ${med['frequency'] ?? '—'}\n'
+                              'Quantity: ${med['quantity'] ?? '—'}\n'
+                              'Start: ${_formatDate(med['start_date'])}\n'
+                              'End: ${_formatDate(med['end_date'])}\n'
+                              'Status: ${med['status'] ?? '—'}',
+                          style:
+                              const TextStyle(color: AppColors.textSecondary),
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+
               const SizedBox(height: 32),
 
-              // ✅ EXIT BUTTON
+              // ✅ EXIT BUTTON (UNCHANGED)
               MainButton(
                 label: 'Exit',
                 showIcons: true,

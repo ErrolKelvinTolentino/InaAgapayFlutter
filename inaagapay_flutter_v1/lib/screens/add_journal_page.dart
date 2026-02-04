@@ -7,7 +7,7 @@ import '../services/journal_service.dart';
 import '../services/auth_storage.dart';
 
 class AddJournalPage extends StatefulWidget {
-  AddJournalPage({super.key});
+  const AddJournalPage({super.key});
 
   @override
   State<AddJournalPage> createState() => _AddJournalPageState();
@@ -80,10 +80,25 @@ class _AddJournalPageState extends State<AddJournalPage> {
 
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(72),
-        child: MainHeader(
-          title: 'NEW JOURNAL',
-          onNotificationTap: () {},
-          onAvatarTap: () {},
+        child: Stack(
+          children: [
+            MainHeader(
+              title: 'NEW JOURNAL',
+              onNotificationTap: () {},
+              onAvatarTap: () {},
+            ),
+
+            // ✅ BACK BUTTON (MANUAL)
+            Positioned(
+              left: 8,
+              top: 12,
+              child: IconButton(
+                icon: const Icon(Icons.arrow_back_ios_new_rounded),
+                color: AppColors.textPrimary,
+                onPressed: () => Navigator.pop(context),
+              ),
+            ),
+          ],
         ),
       ),
 
