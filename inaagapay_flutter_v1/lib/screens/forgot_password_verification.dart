@@ -28,6 +28,7 @@ class _ForgotPasswordVerificationScreenState
 
   String _code = '';
   bool _hasError = false;
+  bool _isVerifying = false;
 
   @override
   void didChangeDependencies() {
@@ -56,32 +57,55 @@ class _ForgotPasswordVerificationScreenState
   }
 
   Future<void> _verifyCode() async {
-    final success = await ForgotPasswordService.verifyCode(
-      email,
-      _code,
-    );
+    if (_isVerifying) return;
 
-    setState(() => _hasError = !success);
+    setState(() {
+      _isVerifying = true;
+      _hasError = false;
+    });
 
-    if (!success || !mounted) return;
+    try {
+      final success = await ForgotPasswordService.verifyCode(email, _code);
 
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => DialogBox(
-        title: 'Code Verified',
-        buttonText: 'Continue',
-        type: DialogType.success,
-        onPressed: () {
-          Navigator.pop(context);
-          Navigator.pushReplacementNamed(
-            context,
-            '/change-forgot-password',
-            arguments: email,
-          );
-        },
-      ),
-    );
+      if (!success) {
+        setState(() {
+          _hasError = true;
+          _isVerifying = false;
+        });
+        return;
+      }
+
+      // Store parent context before any async operations
+      final parentContext = context;
+
+      // Use a small delay to ensure state updates complete
+      await Future.delayed(const Duration(milliseconds: 100));
+
+      if (!mounted) return;
+
+      showDialog(
+        context: parentContext,
+        barrierDismissible: false,
+        builder: (_) => DialogBox(
+          title: 'Code Verified',
+          buttonText: 'Continue',
+          type: DialogType.success,
+          onPressed: () {
+            Navigator.of(parentContext, rootNavigator: true).pop();
+            Navigator.pushReplacementNamed(
+              parentContext,
+              '/change-forgot-password',
+              arguments: email,
+            );
+          },
+        ),
+      );
+    } catch (e) {
+      setState(() {
+        _hasError = true;
+        _isVerifying = false;
+      });
+    }
   }
 
   void _resendCode() {
@@ -117,10 +141,7 @@ class _ForgotPasswordVerificationScreenState
               const Text(
                 'Enter the 6-digit code sent to your email',
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: AppColors.textSecondary,
-                ),
+                style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
               ),
 
               const SizedBox(height: 28),
@@ -149,9 +170,11 @@ class _ForgotPasswordVerificationScreenState
               const SizedBox(height: 32),
 
               MainButton(
-                label: 'Verify',
+                label: _isVerifying ? 'Verifying...' : 'Verify',
                 showIcons: false,
-                onPressed: _code.length == 6 ? _verifyCode : null,
+                onPressed: _code.length == 6 && !_isVerifying
+                    ? _verifyCode
+                    : null,
               ),
 
               const SizedBox(height: 16),
@@ -159,13 +182,15 @@ class _ForgotPasswordVerificationScreenState
               SecondaryButton(
                 label: 'Back to Login',
                 showIcons: false,
-                onPressed: () {
-                  Navigator.pushNamedAndRemoveUntil(
-                    context,
-                    '/login',
-                    (route) => false,
-                  );
-                },
+                onPressed: _isVerifying
+                    ? () {}
+                    : () {
+                        Navigator.pushNamedAndRemoveUntil(
+                          context,
+                          '/login',
+                          (route) => false,
+                        );
+                      },
               ),
 
               const SizedBox(height: 16),
@@ -173,13 +198,15 @@ class _ForgotPasswordVerificationScreenState
               _secondsRemaining == 0
                   ? ClickableText(
                       text: 'Resend Code',
-                      onTap: _resendCode,
+                      onTap: _isVerifying ? () {} : _resendCode,
                     )
                   : Text(
                       'Resend Code in $_formattedTime',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 13,
-                        color: AppColors.textSecondary,
+                        color: _isVerifying
+                            ? AppColors.textSecondary.withOpacity(0.5)
+                            : AppColors.textSecondary,
                       ),
                     ),
 

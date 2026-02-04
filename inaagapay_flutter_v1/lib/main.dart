@@ -14,7 +14,14 @@ import 'screens/change_forgot_password.dart';
 import 'screens/complete_profile.dart';
 import 'screens/welcome_screen.dart';
 import 'screens/congrats_page.dart';
-import 'screens/due_date_setter.dart';
+import 'screens/due_date_setter.dart'; // gives access to DueDateMode
+import 'screens/mother_children_page.dart';
+import 'screens/mother_child_stack.dart';
+import 'screens/mother_prenatal_stack.dart';
+import 'screens/mother_ultrasound_stack.dart';
+import 'screens/mother_lab_stack.dart';
+import 'screens/pregnancy_details.dart';
+import 'screens/mother_records.dart';
 
 // ================= DASHBOARDS / SHELLS ===================
 import 'screens/mother_dashboard.dart';
@@ -49,15 +56,12 @@ class MyApp extends StatelessWidget {
         if (snapshot.connectionState != ConnectionState.done) {
           return const MaterialApp(
             debugShowCheckedModeBanner: false,
-            home: Scaffold(
-              body: Center(child: CircularProgressIndicator()),
-            ),
+            home: Scaffold(body: Center(child: CircularProgressIndicator())),
           );
         }
 
         return MaterialApp(
           debugShowCheckedModeBanner: false,
-
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,
           themeMode: ThemeMode.system,
@@ -80,17 +84,21 @@ class MyApp extends StatelessWidget {
                 const ChangeForgotPasswordScreen(),
 
             // ============== ONBOARDING ==============
-            '/complete-profile': (context) =>
-                const CompleteProfileScreen(),
+            '/complete-profile': (context) => const CompleteProfileScreen(),
             '/welcome': (context) => const WelcomeScreen(),
 
+            // ============== MOTHER FEATURES ==============
+            '/mother-dashboard': (context) => const MotherDashboard(),
+            '/mother-children': (context) => MotherChildrenPage(),
+            '/mother-records': (context) => MotherRecordsPage(),
+            '/mother-prenatal-stack': (context) => MotherPrenatalStack(),
+            '/mother-ultrasound-stack': (context) => MotherUltrasoundStack(),
+            '/mother-lab-stack': (context) => MotherLabStack(),
+            '/mother-pregnancy': (context) => PregnancyDetailsPage(),
+
             // ============== DASHBOARDS ===============
-            '/mother_dashboard': (context) =>
-                const MotherDashboard(),
-            '/midwife_dashboard': (context) =>
-                const MidwifeShell(),
-            '/admin_dashboard': (context) =>
-                const AdminDashboard(),
+            '/midwife-dashboard': (context) => const MidwifeShell(),
+            '/admin-dashboard': (context) => const AdminDashboard(),
           },
 
           onGenerateRoute: (settings) {

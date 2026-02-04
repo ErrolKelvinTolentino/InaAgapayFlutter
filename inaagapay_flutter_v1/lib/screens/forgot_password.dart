@@ -12,8 +12,7 @@ class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
 
   @override
-  State<ForgotPasswordScreen> createState() =>
-      _ForgotPasswordScreenState();
+  State<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
 }
 
 class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
@@ -45,12 +44,16 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       barrierDismissible: false,
       builder: (_) => DialogBox(
         title: 'Verification Code Sent',
+        subtitle: 'A 6-digit verification code has been sent to your email.',
         buttonText: 'Continue',
-        type: DialogType.info,
+        type: DialogType.success,
         onPressed: () => Navigator.pop(context),
       ),
     );
 
+    if (!mounted) return;
+
+    // ✅ Pass email to next screen for verification
     Navigator.pushNamed(
       context,
       '/forgot-password-verify',
@@ -86,10 +89,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               const Text(
                 'Enter your email to reset your password',
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: AppColors.textSecondary,
-                ),
+                style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
               ),
 
               const SizedBox(height: 24),

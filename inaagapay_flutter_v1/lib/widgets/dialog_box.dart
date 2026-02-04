@@ -27,7 +27,6 @@ class DialogBox extends StatelessWidget {
         return AppColors.warning;
       case DialogType.error:
         return AppColors.error;
-      case DialogType.info:
       default:
         return AppColors.brandPrimary;
     }
@@ -41,7 +40,6 @@ class DialogBox extends StatelessWidget {
         return Icons.close;
       case DialogType.success:
       case DialogType.info:
-      default:
         return Icons.check;
     }
   }

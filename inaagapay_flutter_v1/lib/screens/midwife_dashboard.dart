@@ -54,7 +54,9 @@ class _MidwifeDashboardState extends State<MidwifeDashboard> {
     if (token == null) throw Exception('Not authenticated');
 
     final res = await http.get(
-      Uri.parse('https://inaagapay.alwaysdata.net/api/midwife/dashboard_stats.php'),
+      Uri.parse(
+        'https://inaagapay.alwaysdata.net/api/midwife/dashboard_stats.php',
+      ),
       headers: {'Authorization': 'Bearer $token', 'Accept': 'application/json'},
     );
 
@@ -94,7 +96,7 @@ class _MidwifeDashboardState extends State<MidwifeDashboard> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
-      
+
       body: Column(
         children: [
           /// 🔝 HEADER
@@ -110,7 +112,8 @@ class _MidwifeDashboardState extends State<MidwifeDashboard> {
               child: FutureBuilder<GreetingModel>(
                 future: _greetingFuture,
                 builder: (context, greetingSnapshot) {
-                  if (greetingSnapshot.connectionState == ConnectionState.waiting) {
+                  if (greetingSnapshot.connectionState ==
+                      ConnectionState.waiting) {
                     return const Center(child: CircularProgressIndicator());
                   }
 
@@ -119,7 +122,11 @@ class _MidwifeDashboardState extends State<MidwifeDashboard> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(Icons.error_outline, color: Colors.red, size: 48),
+                          const Icon(
+                            Icons.error_outline,
+                            color: Colors.red,
+                            size: 48,
+                          ),
                           const SizedBox(height: 16),
                           Text(
                             'Error: ${greetingSnapshot.error}',
@@ -141,7 +148,8 @@ class _MidwifeDashboardState extends State<MidwifeDashboard> {
                   return FutureBuilder<DashboardData>(
                     future: _dashboardFuture,
                     builder: (context, dashboardSnapshot) {
-                      if (dashboardSnapshot.connectionState == ConnectionState.waiting) {
+                      if (dashboardSnapshot.connectionState ==
+                          ConnectionState.waiting) {
                         return const Center(child: CircularProgressIndicator());
                       }
 
@@ -150,7 +158,11 @@ class _MidwifeDashboardState extends State<MidwifeDashboard> {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              const Icon(Icons.error_outline, color: Colors.red, size: 48),
+                              const Icon(
+                                Icons.error_outline,
+                                color: Colors.red,
+                                size: 48,
+                              ),
                               const SizedBox(height: 16),
                               Text(
                                 'Error: ${dashboardSnapshot.error}',
@@ -177,9 +189,13 @@ class _MidwifeDashboardState extends State<MidwifeDashboard> {
 
                             /// 👋 HERO
                             HeroCard(
-                              image: const AssetImage('assets/images/midwife.png'),
-                              title: 'Welcome, ${greeting.firstName ?? 'Midwife'}! 🌸',
-                              subtitle: 'Barangay ${greeting.bhcName ?? 'Health Center'} Midwife',
+                              image: const AssetImage(
+                                'assets/images/midwife.png',
+                              ),
+                              title:
+                                  'Welcome, ${greeting.firstName ?? 'Midwife'}! 🌸',
+                              subtitle:
+                                  'Barangay ${greeting.bhcName ?? 'Health Center'} Midwife',
                               showWeekBadge: false,
                               showHeartRow: false,
                             ),
@@ -280,7 +296,8 @@ class _MidwifeDashboardState extends State<MidwifeDashboard> {
                               startingValue: '3 visits',
                               latestLabel: 'Highest',
                               latestValue: '9 visits',
-                              insightText: 'Tuesday had the most prenatal visits this week!',
+                              insightText:
+                                  'Tuesday had the most prenatal visits this week!',
                             ),
                             const SizedBox(height: 32),
                           ],
@@ -377,8 +394,9 @@ class DashboardData {
     required this.thirdTrimester,
     List<double>? bhcVisitValues,
     List<String>? bhcVisitDays,
-  })  : bhcVisitValues = bhcVisitValues ?? [5, 7, 6, 8, 9, 4, 3],
-        bhcVisitDays = bhcVisitDays ?? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  }) : bhcVisitValues = bhcVisitValues ?? [5, 7, 6, 8, 9, 4, 3],
+       bhcVisitDays =
+           bhcVisitDays ?? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
   factory DashboardData.fromJson(Map<String, dynamic> json) {
     int safe(dynamic v) => int.tryParse(v?.toString() ?? '0') ?? 0;

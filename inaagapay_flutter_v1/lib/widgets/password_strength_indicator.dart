@@ -25,7 +25,6 @@ class PasswordStrengthIndicator extends StatelessWidget {
         color = AppColors.warning;
         icon = Icons.radio_button_unchecked;
         break;
-      case PasswordStrength.weak:
       default:
         label = 'Weak';
         color = AppColors.error;

@@ -8,40 +8,41 @@ class SecondaryHeader extends StatelessWidget {
   const SecondaryHeader({
     super.key,
     required this.title,
-    this.onBack, // 👈 optional
+    this.onBack,
   });
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 56,
-      child: Row(
-        children: [
-          // 👈 Back button ONLY if onBack is provided
-          if (onBack != null)
-            IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new),
-              color: AppColors.brandPrimary,
-              onPressed: onBack,
-            )
-          else
-            const SizedBox(width: 48), // keeps title centered
-
-          Expanded(
-            child: Text(
-              title,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
+    return SafeArea( // ✅ SAME FIX
+      bottom: false,
+      child: SizedBox(
+        height: 56,
+        child: Row(
+          children: [
+            if (onBack != null)
+              IconButton(
+                icon: const Icon(Icons.arrow_back_ios_new),
                 color: AppColors.brandPrimary,
+                onPressed: onBack,
+              )
+            else
+              const SizedBox(width: 48),
+
+            Expanded(
+              child: Text(
+                title,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.brandPrimary,
+                ),
               ),
             ),
-          ),
 
-          // right spacer to balance layout
-          const SizedBox(width: 48),
-        ],
+            const SizedBox(width: 48),
+          ],
+        ),
       ),
     );
   }

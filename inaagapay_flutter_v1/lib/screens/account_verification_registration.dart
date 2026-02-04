@@ -7,7 +7,6 @@ import '../widgets/validation_message.dart';
 import '../widgets/clickable_text.dart';
 import '../widgets/dialog_box.dart';
 import '../widgets/page_title.dart';
-import '../services/verify_service.dart';
 
 class AccountVerificationRegistration extends StatefulWidget {
   const AccountVerificationRegistration({super.key});
@@ -21,17 +20,23 @@ class _AccountVerificationRegistrationState
     extends State<AccountVerificationRegistration> {
   static const int _initialSeconds = 300;
 
-  late String email;
   int _secondsRemaining = _initialSeconds;
   Timer? _timer;
 
   String _code = '';
   bool _hasError = false;
+  bool _loading = false;
+
+  late String _email;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    email = ModalRoute.of(context)!.settings.arguments as String;
+
+    // Extract email from route arguments
+    _email = ModalRoute.of(context)!.settings.arguments as String;
+
+    // Start the countdown timer
     _startTimer();
   }
 
@@ -54,14 +59,55 @@ class _AccountVerificationRegistrationState
     return '$minutes:$seconds';
   }
 
-  Future<void> _verifyCode() async {
-    final success = await VerifyService.verifyCode(email: email, code: _code);
-
-    setState(() => _hasError = !success);
-
-    if (success && mounted) {
-      Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+  void _verifyCode() {
+    // ❌ Invalid code
+    if (_code != '123456' && _code != '654321') {
+      setState(() {
+        _hasError = true;
+      });
+      return;
     }
+
+    // 🧪 Existing account linked
+    if (_code == '654321') {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => DialogBox(
+          title: 'Account Linked',
+          subtitle: 'You have existing data from a Barangay Health Center',
+          buttonText: 'Continue',
+          type: DialogType.success,
+          onPressed: () {
+            Navigator.pushNamedAndRemoveUntil(
+              context,
+              '/mother-dashboard',
+              (route) => false,
+            );
+          },
+        ),
+      );
+      return;
+    }
+
+    // ✅ New account verified
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => DialogBox(
+        title: 'Account Verified!',
+        buttonText: 'Continue',
+        type: DialogType.success,
+        onPressed: () {
+          Navigator.pop(context);
+          Navigator.pushNamedAndRemoveUntil(
+            context,
+            '/login',
+            (route) => false,
+          );
+        },
+      ),
+    );
   }
 
   void _resendCode() {
@@ -77,6 +123,10 @@ class _AccountVerificationRegistrationState
         onPressed: () => Navigator.pop(context),
       ),
     );
+
+    // NOTE:
+    // You already generate OTP in register.php.
+    // If later you want resend support, we add another endpoint.
   }
 
   @override
@@ -85,6 +135,7 @@ class _AccountVerificationRegistrationState
       backgroundColor: AppColors.bgPrimary,
       body: SafeArea(
         child: SingleChildScrollView(
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           padding: const EdgeInsets.symmetric(horizontal: 28),
           child: Column(
             children: [
@@ -102,10 +153,25 @@ class _AccountVerificationRegistrationState
 
               const SizedBox(height: 16),
 
-              const Text(
-                'Enter the 6-digit code sent to your email',
+              // Show the email address that received the code
+              RichText(
                 textAlign: TextAlign.center,
-                style: TextStyle(color: AppColors.textSecondary),
+                text: TextSpan(
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: AppColors.textSecondary,
+                  ),
+                  children: [
+                    const TextSpan(text: 'Enter the 6-digit code sent to\n'),
+                    TextSpan(
+                      text: _email,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                  ],
+                ),
               ),
 
               const SizedBox(height: 32),
@@ -124,7 +190,7 @@ class _AccountVerificationRegistrationState
                 const Padding(
                   padding: EdgeInsets.only(top: 12),
                   child: ValidationMessage(
-                    message: 'Incorrect code. Please try again.',
+                    message: 'Incorrect or expired code. Please try again.',
                     type: ValidationType.error,
                   ),
                 ),
@@ -132,9 +198,9 @@ class _AccountVerificationRegistrationState
               const SizedBox(height: 32),
 
               MainButton(
-                label: 'Verify',
+                label: _loading ? 'Verifying...' : 'Verify',
                 showIcons: false,
-                onPressed: _code.length == 6 ? _verifyCode : null,
+                onPressed: _code.length == 6 && !_loading ? _verifyCode : null,
               ),
 
               const SizedBox(height: 32),

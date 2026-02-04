@@ -4,7 +4,8 @@ import '../widgets/app_input_field.dart';
 import '../widgets/main_button.dart';
 import '../widgets/clickable_text.dart';
 import '../services/auth_service.dart';
-import '../services/auth_storage.dart'; // ✅ ADD THIS
+import '../services/auth_storage.dart';
+import '../utils/session.dart'; // For backward compatibility
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -19,6 +20,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
   bool _obscurePassword = true;
   bool _isLoading = false;
+  bool _hasError = false;
+  String _errorMessage = '';
 
   @override
   void dispose() {
@@ -29,47 +32,84 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _handleLogin() async {
     if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill in all fields')),
-      );
+      setState(() {
+        _hasError = true;
+        _errorMessage = 'Please fill in all fields';
+      });
       return;
     }
 
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _hasError = false;
+      _errorMessage = '';
+    });
 
-    final response = await AuthService.login(
-      email: _emailController.text.trim(),
-      password: _passwordController.text,
-    );
+    try {
+      final response = await AuthService.login(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+      );
 
-    setState(() => _isLoading = false);
+      setState(() => _isLoading = false);
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    if (response.success) {
-      // 🔐 SAVE TOKEN (NEW)
-      if (response.token != null) {
+      if (response.success && response.token != null) {
+        // 🔐 SAVE TOKEN (multiple ways for compatibility)
         await AuthStorage.saveToken(response.token!);
-      }
+        Session.token = response.token!; // For backward compatibility
 
-      final user = response.user;
+        final user = response.user;
 
-      // ✅ ROLE-BASED NAVIGATION (UNCHANGED)
-      if (user?['role'] == 'mother') {
-        Navigator.pushReplacementNamed(context, '/mother_dashboard');
-      } else if (user?['role'] == 'midwife') {
-        Navigator.pushReplacementNamed(context, '/midwife_dashboard');
-      } else if (user?['role'] == 'admin') {
-        Navigator.pushReplacementNamed(context, '/admin_dashboard');
+        // Check if profile is complete (from brent-ver-mother)
+        final bool profileComplete = user?['profile_complete'] == true;
+
+        // ✅ ROLE-BASED NAVIGATION WITH PROFILE COMPLETION CHECK
+        if (user?['role'] == 'mother') {
+          if (profileComplete) {
+            Navigator.pushNamedAndRemoveUntil(
+              context,
+              '/mother-dashboard',
+              (route) => false,
+            );
+          } else {
+            Navigator.pushNamedAndRemoveUntil(
+              context,
+              '/complete-profile',
+              (route) => false,
+            );
+          }
+        } else if (user?['role'] == 'midwife') {
+          Navigator.pushNamedAndRemoveUntil(
+            context,
+            '/midwife-dashboard',
+            (route) => false,
+          );
+        } else if (user?['role'] == 'admin') {
+          Navigator.pushNamedAndRemoveUntil(
+            context,
+            '/admin-dashboard',
+            (route) => false,
+          );
+        } else {
+          setState(() {
+            _hasError = true;
+            _errorMessage = 'Unknown user role';
+          });
+        }
       } else {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Unknown user role')));
+        setState(() {
+          _hasError = true;
+          _errorMessage = response.message;
+        });
       }
-    } else {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(response.message)));
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+        _hasError = true;
+        _errorMessage = 'Network error. Please try again.';
+      });
     }
   }
 
@@ -85,14 +125,21 @@ class _LoginScreenState extends State<LoginScreen> {
             children: [
               const SizedBox(height: 40),
 
+              // App Logo
               Image.asset('assets/images/logo.png', height: 146),
 
               const SizedBox(height: 20),
 
-              Image.asset('assets/images/inaagapay_name.png', width: 282),
+              // App Name
+              Image.asset(
+                'assets/images/inaagapay_name.png',
+                width: 282,
+                fit: BoxFit.contain,
+              ),
 
               const SizedBox(height: 8),
 
+              // Tagline
               const Text(
                 'Supporting you through every step',
                 textAlign: TextAlign.center,
@@ -101,15 +148,25 @@ class _LoginScreenState extends State<LoginScreen> {
 
               const SizedBox(height: 56),
 
+              // Email Field
               AppInputField(
                 hintText: 'Email Address',
                 controller: _emailController,
                 keyboardType: TextInputType.emailAddress,
                 leadingIcon: Icons.email_outlined,
+                onChanged: (_) {
+                  if (_hasError) {
+                    setState(() {
+                      _hasError = false;
+                      _errorMessage = '';
+                    });
+                  }
+                },
               ),
 
               const SizedBox(height: 20),
 
+              // Password Field
               AppInputField(
                 hintText: 'Password',
                 controller: _passwordController,
@@ -123,10 +180,29 @@ class _LoginScreenState extends State<LoginScreen> {
                     _obscurePassword = !_obscurePassword;
                   });
                 },
+                onChanged: (_) {
+                  if (_hasError) {
+                    setState(() {
+                      _hasError = false;
+                      _errorMessage = '';
+                    });
+                  }
+                },
               ),
+
+              // Error Message
+              if (_hasError) ...[
+                const SizedBox(height: 12),
+                Text(
+                  _errorMessage,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 13, color: AppColors.error),
+                ),
+              ],
 
               const SizedBox(height: 20),
 
+              // Forgot Password Link
               Align(
                 alignment: Alignment.centerRight,
                 child: ClickableText(
@@ -139,6 +215,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
               const SizedBox(height: 56),
 
+              // Sign In Button
               MainButton(
                 label: _isLoading ? 'Signing in...' : 'Sign in',
                 showIcons: false,
@@ -147,6 +224,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
               const SizedBox(height: 32),
 
+              // Register Link
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [

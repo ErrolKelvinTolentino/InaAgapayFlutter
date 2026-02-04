@@ -25,7 +25,6 @@ class ValidationMessage extends StatelessWidget {
         return AppColors.success;
       case ValidationType.info:
         return AppColors.textSecondary;
-      case ValidationType.error:
       default:
         return AppColors.error;
     }
@@ -37,7 +36,6 @@ class ValidationMessage extends StatelessWidget {
         return Icons.check_circle;
       case ValidationType.info:
         return Icons.info_outline;
-      case ValidationType.error:
       default:
         return Icons.cancel;
     }

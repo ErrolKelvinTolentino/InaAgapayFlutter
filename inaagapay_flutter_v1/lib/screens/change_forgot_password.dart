@@ -17,8 +17,7 @@ class ChangeForgotPasswordScreen extends StatefulWidget {
       _ChangeForgotPasswordScreenState();
 }
 
-class _ChangeForgotPasswordScreenState
-    extends State<ChangeForgotPasswordScreen>
+class _ChangeForgotPasswordScreenState extends State<ChangeForgotPasswordScreen>
     with SingleTickerProviderStateMixin {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
@@ -42,17 +41,15 @@ class _ChangeForgotPasswordScreenState
       duration: const Duration(milliseconds: 400),
     );
 
-    _shakeAnimation = TweenSequence<double>([
-      TweenSequenceItem(tween: Tween(begin: 0, end: -8), weight: 1),
-      TweenSequenceItem(tween: Tween(begin: -8, end: 8), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: 8, end: -8), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: -8, end: 0), weight: 1),
-    ]).animate(
-      CurvedAnimation(
-        parent: _shakeController,
-        curve: Curves.easeInOut,
-      ),
-    );
+    _shakeAnimation =
+        TweenSequence<double>([
+          TweenSequenceItem(tween: Tween(begin: 0, end: -8), weight: 1),
+          TweenSequenceItem(tween: Tween(begin: -8, end: 8), weight: 2),
+          TweenSequenceItem(tween: Tween(begin: 8, end: -8), weight: 2),
+          TweenSequenceItem(tween: Tween(begin: -8, end: 0), weight: 1),
+        ]).animate(
+          CurvedAnimation(parent: _shakeController, curve: Curves.easeInOut),
+        );
   }
 
   @override
@@ -81,12 +78,10 @@ class _ChangeForgotPasswordScreenState
       _passwordController.text == _confirmPasswordController.text;
 
   bool get _passwordsDoNotMatch =>
-      _confirmPasswordController.text.isNotEmpty &&
-      !_passwordsMatch;
+      _confirmPasswordController.text.isNotEmpty && !_passwordsMatch;
 
   bool get _canSubmit =>
-      _calculateStrength(_passwordController.text) ==
-          PasswordStrength.strong &&
+      _calculateStrength(_passwordController.text) == PasswordStrength.strong &&
       _passwordsMatch;
 
   // ✅ FINAL submit handler (NO SILENT FAILS)
@@ -96,8 +91,7 @@ class _ChangeForgotPasswordScreenState
       return;
     }
 
-    final email =
-        ModalRoute.of(context)!.settings.arguments as String;
+    final email = ModalRoute.of(context)!.settings.arguments as String;
 
     setState(() => _isLoading = true);
 
@@ -112,9 +106,7 @@ class _ChangeForgotPasswordScreenState
 
     if (!success) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Failed to update password'),
-        ),
+        const SnackBar(content: Text('Failed to update password')),
       );
       return;
     }
@@ -132,11 +124,7 @@ class _ChangeForgotPasswordScreenState
     );
 
     // ✅ Redirect to login
-    Navigator.pushNamedAndRemoveUntil(
-      context,
-      '/login',
-      (route) => false,
-    );
+    Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
   }
 
   @override
@@ -172,8 +160,9 @@ class _ChangeForgotPasswordScreenState
                 controller: _passwordController,
                 obscureText: _obscurePassword,
                 leadingIcon: Icons.lock_outline,
-                trailingIcon:
-                    _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                trailingIcon: _obscurePassword
+                    ? Icons.visibility_off
+                    : Icons.visibility,
                 onTrailingTap: () {
                   setState(() {
                     _obscurePassword = !_obscurePassword;
@@ -183,9 +172,12 @@ class _ChangeForgotPasswordScreenState
 
               const SizedBox(height: 8),
 
-              Align(
-                alignment: Alignment.centerRight,
-                child: PasswordStrengthIndicator(strength: strength),
+              Padding(
+                padding: const EdgeInsets.only(right: 20),
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: PasswordStrengthIndicator(strength: strength),
+                ),
               ),
 
               const SizedBox(height: 12),
@@ -205,43 +197,84 @@ class _ChangeForgotPasswordScreenState
                     child: child,
                   );
                 },
-                child: AppInputField(
-                  hintText: 'Confirm New Password',
-                  controller: _confirmPasswordController,
-                  obscureText: _obscureConfirmPassword,
-                  leadingIcon: Icons.lock_outline,
-                  trailingIcon: _obscureConfirmPassword
-                      ? Icons.visibility_off
-                      : Icons.visibility,
-                  onTrailingTap: () {
-                    setState(() {
-                      _obscureConfirmPassword =
-                          !_obscureConfirmPassword;
-                    });
-                  },
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    AppInputField(
+                      hintText: 'Confirm New Password',
+                      controller: _confirmPasswordController,
+                      obscureText: _obscureConfirmPassword,
+                      leadingIcon: Icons.lock_outline,
+                      trailingIcon: _obscureConfirmPassword
+                          ? Icons.visibility_off
+                          : Icons.visibility,
+                      onTrailingTap: () {
+                        setState(() {
+                          _obscureConfirmPassword = !_obscureConfirmPassword;
+                        });
+                      },
+                    ),
+
+                    const SizedBox(height: 8),
+
+                    Padding(
+                      padding: const EdgeInsets.only(left: 20),
+                      child: Builder(
+                        builder: (_) {
+                          if (_passwordsDoNotMatch) {
+                            return Row(
+                              children: const [
+                                Icon(
+                                  Icons.cancel,
+                                  size: 16,
+                                  color: AppColors.error,
+                                ),
+                                SizedBox(width: 6),
+                                Text(
+                                  'Passwords do not match',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: AppColors.error,
+                                  ),
+                                ),
+                              ],
+                            );
+                          }
+
+                          if (_passwordsMatch) {
+                            return Row(
+                              children: const [
+                                Icon(
+                                  Icons.check_circle,
+                                  size: 16,
+                                  color: AppColors.success,
+                                ),
+                                SizedBox(width: 6),
+                                Text(
+                                  'Passwords match',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: AppColors.success,
+                                  ),
+                                ),
+                              ],
+                            );
+                          }
+
+                          return const SizedBox.shrink();
+                        },
+                      ),
+                    ),
+                  ],
                 ),
               ),
-
-              if (_passwordsDoNotMatch)
-                const Padding(
-                  padding: EdgeInsets.only(top: 8),
-                  child: Text(
-                    'Passwords do not match',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: AppColors.error,
-                    ),
-                  ),
-                ),
 
               const SizedBox(height: 32),
 
               MainButton(
-                label:
-                    _isLoading ? 'Updating...' : 'Change Password',
+                label: _isLoading ? 'Updating...' : 'Change Password',
                 showIcons: false,
-                onPressed:
-                    _isLoading ? null : _handleChangePassword,
+                onPressed: _isLoading ? null : _handleChangePassword,
               ),
 
               const SizedBox(height: 16),
