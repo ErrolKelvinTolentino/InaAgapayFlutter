@@ -39,6 +39,9 @@ class _AddPrenatalCheckupScreenState extends State<AddPrenatalCheckupScreen> {
   final TextEditingController _fetalBeat = TextEditingController();
   final TextEditingController _fetalTone = TextEditingController();
   final TextEditingController _remarks = TextEditingController();
+  final TextEditingController _ferrousQty = TextEditingController();
+  final TextEditingController _calciumQty = TextEditingController();
+
   DateTime? _nextSchedule;
 
   int step = 0;
@@ -47,11 +50,6 @@ class _AddPrenatalCheckupScreenState extends State<AddPrenatalCheckupScreen> {
   double? aogWeeks;
   String _baselineRisk = 'low';
   bool _riskLoading = true;
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-=======
-=======
->>>>>>> Stashed changes
   static const List<String> _tdOptions = [
     'TD 1',
     'TD 2',
@@ -62,13 +60,13 @@ class _AddPrenatalCheckupScreenState extends State<AddPrenatalCheckupScreen> {
   List<String> _takenTdDoses = [];
   bool _tdLoading = true;
   String? _selectedTdDose;
->>>>>>> Stashed changes
 
   @override
   void initState() {
     super.initState();
     _prefill();
     _loadBaselineRisk();
+    _loadTakenTdDoses();
   }
 
   @override
@@ -79,6 +77,8 @@ class _AddPrenatalCheckupScreenState extends State<AddPrenatalCheckupScreen> {
     _fetalBeat.dispose();
     _fetalTone.dispose();
     _remarks.dispose();
+    _ferrousQty.dispose();
+    _calciumQty.dispose();
     super.dispose();
   }
 
@@ -117,6 +117,69 @@ class _AddPrenatalCheckupScreenState extends State<AddPrenatalCheckupScreen> {
     } catch (_) {
       if (mounted) setState(() => _riskLoading = false);
     }
+  }
+
+  Future<void> _loadTakenTdDoses() async {
+    try {
+      final token = await AuthStorage.getToken();
+      if (token == null) throw Exception('Not authenticated');
+
+      final res = await http.get(
+        Uri.parse(
+          'https://inaagapay.alwaysdata.net/api/midwife/get_td_history.php?pregnancy_id=${widget.pregnancyId}',
+        ),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Accept': 'application/json',
+        },
+      );
+
+      if (res.statusCode == 200) {
+        final decoded = jsonDecode(res.body);
+        if (decoded['success'] == true) {
+          final history = decoded['td_history'] as List<dynamic>?;
+          setState(() {
+            _takenTdDoses = _extractTakenTdDoses(history);
+            _tdLoading = false;
+          });
+        } else {
+          setState(() => _tdLoading = false);
+        }
+      } else {
+        setState(() => _tdLoading = false);
+      }
+    } catch (e) {
+      if (mounted) setState(() => _tdLoading = false);
+    }
+  }
+
+  List<String> _extractTakenTdDoses(List<dynamic>? history) {
+    if (history == null) return [];
+    final taken = <String>{};
+    for (final entry in history) {
+      final dose = (entry as Map<String, dynamic>?)?['td_vaccine_dose']
+          ?.toString();
+      if (dose != null && dose.trim().isNotEmpty) {
+        final normalized = _normalizeTdDose(dose);
+        final matched = _tdOptions.firstWhere(
+          (opt) => _normalizeTdDose(opt) == normalized,
+          orElse: () => dose.trim().toUpperCase(),
+        );
+        taken.add(matched);
+      }
+    }
+    return taken.toList()..sort();
+  }
+
+  List<String> get _availableTdDoses {
+    final taken = _takenTdDoses.map(_normalizeTdDose).toSet();
+    return _tdOptions
+        .where((d) => !taken.contains(_normalizeTdDose(d)))
+        .toList();
+  }
+
+  String _normalizeTdDose(String dose) {
+    return dose.replaceAll(RegExp(r'\s+'), '').toUpperCase();
   }
 
   void _recomputeAog() {
@@ -442,28 +505,6 @@ class _AddPrenatalCheckupScreenState extends State<AddPrenatalCheckupScreen> {
           );
         }),
         const SizedBox(height: 12),
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-        _controls(),
-      ],
-    );
-  }
-
-  Widget _remarksStep() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        ListTile(
-          contentPadding: EdgeInsets.zero,
-          title: const Text('Next scheduled checkup'),
-          subtitle: Text(
-            _nextSchedule == null
-                ? 'Pick a date'
-                : DateFormat('MMM d, yyyy').format(_nextSchedule!),
-          ),
-=======
-=======
->>>>>>> Stashed changes
         const Text(
           'Given Medications (fixed)',
           style: TextStyle(fontWeight: FontWeight.w600),
@@ -539,27 +580,12 @@ class _AddPrenatalCheckupScreenState extends State<AddPrenatalCheckupScreen> {
                 ? 'Set next prenatal schedule (optional)'
                 : 'Next schedule: ${DateFormat('MMM d, yyyy').format(_nextSchedule!)}',
           ),
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
           trailing: const Icon(Icons.calendar_today),
           onTap: () async {
             final picked = await showDatePicker(
               context: context,
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-              initialDate:
-                  _nextSchedule ?? DateTime.now().add(const Duration(days: 30)),
-              firstDate: DateTime.now().add(const Duration(days: 1)),
-=======
               initialDate: _nextSchedule ?? DateTime.now(),
               firstDate: DateTime.now(),
->>>>>>> Stashed changes
-=======
-              initialDate: _nextSchedule ?? DateTime.now(),
-              firstDate: DateTime.now(),
->>>>>>> Stashed changes
               lastDate: DateTime.now().add(const Duration(days: 365)),
             );
             if (picked != null) {
@@ -829,38 +855,6 @@ class _AddPrenatalCheckupScreenState extends State<AddPrenatalCheckupScreen> {
     }
   }
 
-<<<<<<< Updated upstream
-=======
-  List<String> _extractTakenTdDoses(List<dynamic>? history) {
-    if (history == null) return [];
-    final taken = <String>{};
-    for (final entry in history) {
-      final dose = (entry as Map<String, dynamic>?)?['td_vaccine_dose']
-          ?.toString();
-      if (dose != null && dose.trim().isNotEmpty) {
-        final normalized = _normalizeTdDose(dose);
-        final matched = _tdOptions.firstWhere(
-          (opt) => _normalizeTdDose(opt) == normalized,
-          orElse: () => dose.trim().toUpperCase(),
-        );
-        taken.add(matched);
-      }
-    }
-    return taken.toList()..sort();
-  }
-
-  List<String> get _availableTdDoses {
-    final taken = _takenTdDoses.map(_normalizeTdDose).toSet();
-    return _tdOptions
-        .where((d) => !taken.contains(_normalizeTdDose(d)))
-        .toList();
-  }
-
-  String _normalizeTdDose(String dose) {
-    return dose.replaceAll(RegExp(r'\s+'), '').toUpperCase();
-  }
-
->>>>>>> Stashed changes
   Widget _riskCard() {
     final result = _computeLocalRisk();
     final level = result.$1;
