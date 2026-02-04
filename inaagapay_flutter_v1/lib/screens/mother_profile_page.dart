@@ -74,6 +74,373 @@ class _MotherProfilePageState extends State<MotherProfilePage>
     await future;
   }
 
+  // Helper methods
+  double? _toDouble(dynamic v) {
+    if (v == null) return null;
+    if (v is double) return v;
+    if (v is int) return v.toDouble();
+    return double.tryParse(v.toString());
+  }
+
+  DateTime? _parseDate(dynamic v) {
+    if (v == null) return null;
+    return DateTime.tryParse(v.toString());
+  }
+
+  DateTime? _parseDateTime(dynamic v) {
+    if (v == null) return null;
+    final raw = v.toString().trim();
+    if (raw.isEmpty) return null;
+    return DateTime.tryParse(raw);
+  }
+
+  String? _fmtDate(dynamic v) {
+    if (v == null) return null;
+    final parsed = DateTime.tryParse(v.toString());
+    if (parsed == null) return v.toString();
+    return DateFormat('MMM d, yyyy').format(parsed);
+  }
+
+  String? _fmtDateTime(dynamic v) {
+    final parsed = _parseDateTime(v);
+    if (parsed == null) return v?.toString();
+    return DateFormat('MMM d, yyyy h:mm a').format(parsed);
+  }
+
+  String _fmtValue(dynamic v) {
+    if (v == null) return '—';
+    final value = v.toString().trim();
+    return value.isEmpty ? '—' : value;
+  }
+
+  String _shortDate(dynamic v) {
+    final parsed = _parseDateTime(v) ?? _parseDate(v);
+    if (parsed == null) return '—';
+    return DateFormat('MMM d').format(parsed);
+  }
+
+  // AI Analysis Helper Functions
+  String _generatePrenatalAIInsights(Map<String, dynamic> checkup) {
+    final analysis = StringBuffer();
+    analysis.write('🤖 AI Analysis:\n\n');
+
+    // Blood Pressure Analysis
+    final bpSys = _toDouble(checkup['blood_pressure_systolic']);
+    final bpDia = _toDouble(checkup['blood_pressure_diastolic']);
+    if (bpSys != null && bpDia != null) {
+      if (bpSys >= 140 || bpDia >= 90) {
+        analysis.write('⚠️ **Elevated Blood Pressure** detected. '
+            'Consider monitoring for preeclampsia symptoms.\n\n');
+      } else if (bpSys < 90 || bpDia < 60) {
+        analysis.write('📉 **Low Blood Pressure** noted. '
+            'Ensure adequate hydration and gradual position changes.\n\n');
+      } else {
+        analysis.write('✅ **Blood Pressure** is within normal pregnancy range.\n\n');
+      }
+    }
+
+    // Weight Analysis
+    final weight = _toDouble(checkup['checkup_weight']);
+    if (weight != null) {
+      analysis.write('⚖️ **Weight tracking**: ');
+      final prevWeight = _toDouble(checkup['previous_weight']);
+      if (prevWeight != null) {
+        final diff = weight - prevWeight;
+        if (diff > 2) {
+          analysis.write('Rapid weight gain noted. Monitor for edema.\n\n');
+        } else if (diff < -1) {
+          analysis.write('Weight loss detected. Ensure adequate nutrition.\n\n');
+        } else {
+          analysis.write('Steady weight progression.\n\n');
+        }
+      } else {
+        analysis.write('Baseline weight recorded.\n\n');
+      }
+    }
+
+    // Edema Analysis
+    final edema = checkup['edema']?.toString().toLowerCase();
+    if (edema != null && edema != 'none') {
+      analysis.write('💧 **Edema ${edema.toUpperCase()}**: '
+          'Monitor for worsening symptoms. Elevate feet when resting.\n\n');
+    }
+
+    // TD Vaccine Analysis
+    final tdDose = checkup['td_vaccine_dose']?.toString();
+    if (tdDose != null && tdDose.isNotEmpty) {
+      analysis.write('💉 **TD Vaccine ${tdDose.toUpperCase()}** administered. '
+          'Provides protection against tetanus and diphtheria.\n\n');
+    }
+
+    // General Recommendations
+    analysis.write('📋 **Recommendations**:\n');
+    analysis.write('• Continue regular prenatal visits\n');
+    analysis.write('• Monitor fetal movements daily\n');
+    analysis.write('• Report any unusual symptoms immediately\n');
+    analysis.write('• Maintain balanced nutrition and hydration\n');
+
+    final aog = _toDouble(checkup['age_of_gestation']);
+    if (aog != null && aog >= 28) {
+      analysis.write('• Practice kick counts regularly\n');
+    }
+
+    return analysis.toString();
+  }
+
+  String _generateUltrasoundAIInsights(Map<String, dynamic> ultrasound) {
+    final analysis = StringBuffer();
+    analysis.write('🤖 Ultrasound AI Insights:\n\n');
+
+    final remarks = ultrasound['remarks']?.toString().toLowerCase() ?? '';
+    final date = _fmtDate(ultrasound['ultrasound_date']) ?? 'Unknown date';
+
+    analysis.write('Based on ultrasound conducted on $date');
+
+    final location = ultrasound['ultrasound_location'];
+    if (location != null && location.toString().isNotEmpty) {
+      analysis.write(' at $location');
+    }
+
+    final healthWorker = ultrasound['health_worker_name'];
+    if (healthWorker != null && healthWorker.toString().isNotEmpty) {
+      analysis.write(' by $healthWorker');
+    }
+
+    analysis.write(':\n\n');
+
+    // Analyze remarks
+    if (remarks.contains('normal') ||
+        remarks.contains('healthy') ||
+        remarks.contains('good') ||
+        remarks.contains('appropriate') ||
+        remarks.contains('within normal limits')) {
+      analysis.write('✅ **Normal Findings**: Ultrasound appears normal with healthy fetal development. '
+          'All measurements and observations are within expected ranges.\n\n');
+    } else if (remarks.contains('follow') ||
+        remarks.contains('monitor') ||
+        remarks.contains('repeat') ||
+        remarks.contains('re-evaluate')) {
+      analysis.write('📊 **Follow-up Recommended**: Some findings require additional observation '
+          'or repeat ultrasound. This is a common precautionary measure.\n\n');
+    } else if (remarks.contains('concern') ||
+        remarks.contains('abnormal') ||
+        remarks.contains('further') ||
+        remarks.contains('investigation')) {
+      analysis.write('🔍 **Further Evaluation Needed**: Results indicate findings that may require '
+          'additional evaluation. Discuss with healthcare provider for appropriate guidance.\n\n');
+    } else if (remarks.contains('growth') ||
+        remarks.contains('measurement') ||
+        remarks.contains('size')) {
+      analysis.write('📏 **Growth Assessment**: Fetal growth and measurements noted. '
+          'Regular monitoring will help ensure continued healthy development.\n\n');
+    } else if (remarks.contains('position') ||
+        remarks.contains('presentation') ||
+        remarks.contains('placenta')) {
+      analysis.write('📍 **Position Assessment**: Fetal position and placental location noted. '
+          'Important factors for pregnancy progression and delivery planning.\n\n');
+    } else {
+      analysis.write('📋 **Diagnostic Information**: The ultrasound provides important diagnostic '
+          'information about your pregnancy progression.\n\n');
+    }
+
+    // Key Recommendations
+    analysis.write('💡 **Key Recommendations**:\n');
+    analysis.write('• Discuss findings with your healthcare provider\n');
+    analysis.write('• Continue all scheduled prenatal appointments\n');
+    analysis.write('• Report any unusual symptoms immediately\n');
+    analysis.write('• Maintain ultrasound follow-up schedule\n');
+
+    if (remarks.contains('exercise') || remarks.contains('activity')) {
+      analysis.write('• Continue moderate exercise as approved\n');
+    }
+
+    return analysis.toString();
+  }
+
+  String _generateLabTestAIInsights(Map<String, dynamic> labTest) {
+    final analysis = StringBuffer();
+    analysis.write('🤖 Lab Test AI Analysis:\n\n');
+
+    final testType = labTest['lab_test_type']?.toString().toLowerCase() ?? '';
+    final remarks = labTest['remarks']?.toString().toLowerCase() ?? '';
+    final date = _fmtDate(labTest['lab_test_date']) ?? 'Unknown date';
+
+    analysis.write('**${testType.toUpperCase()} Results** from $date:\n\n');
+
+    // Analyze based on test type
+    if (testType.contains('blood') || testType.contains('cbc')) {
+      analysis.write('🩸 **Blood Test Analysis**:\n');
+      if (remarks.contains('normal') || remarks.contains('within range')) {
+        analysis.write('• Blood parameters are within normal pregnancy ranges\n');
+        analysis.write('• No significant abnormalities detected\n');
+      } else if (remarks.contains('low') || remarks.contains('deficient')) {
+        analysis.write('• Some values below optimal range\n');
+        analysis.write('• Consider dietary adjustments or supplements\n');
+      } else if (remarks.contains('high') || remarks.contains('elevated')) {
+        analysis.write('• Elevated values noted\n');
+        analysis.write('• May require follow-up testing\n');
+      }
+      analysis.write('\n');
+    } else if (testType.contains('urine') || testType.contains('uti')) {
+      analysis.write('🧪 **Urine Test Analysis**:\n');
+      if (remarks.contains('normal') || remarks.contains('clear')) {
+        analysis.write('• Urine analysis shows no concerning findings\n');
+        analysis.write('• Good kidney function indicated\n');
+      } else if (remarks.contains('protein') || remarks.contains('albumin')) {
+        analysis.write('• Protein detected - monitor for preeclampsia\n');
+        analysis.write('• Increase water intake and rest\n');
+      } else if (remarks.contains('infection') || remarks.contains('bacteria')) {
+        analysis.write('• Possible urinary tract infection\n');
+        analysis.write('• Consult healthcare provider for treatment\n');
+      }
+      analysis.write('\n');
+    } else if (testType.contains('glucose') || testType.contains('sugar')) {
+      analysis.write('📊 **Glucose Test Analysis**:\n');
+      if (remarks.contains('normal') || remarks.contains('passed')) {
+        analysis.write('• Glucose levels are within normal range\n');
+        analysis.write('• No indication of gestational diabetes\n');
+      } else if (remarks.contains('high') || remarks.contains('elevated')) {
+        analysis.write('• Elevated glucose levels detected\n');
+        analysis.write('• May indicate need for gestational diabetes screening\n');
+        analysis.write('• Monitor diet and consider follow-up testing\n');
+      }
+      analysis.write('\n');
+    }
+
+    // General interpretation
+    if (remarks.contains('normal') ||
+        remarks.contains('negative') ||
+        remarks.contains('clear')) {
+      analysis.write('✅ **Overall Assessment**: Test results are reassuring '
+          'and show no significant abnormalities.\n\n');
+    } else if (remarks.contains('borderline') ||
+        remarks.contains('slightly')) {
+      analysis.write('⚠️ **Borderline Results**: Some values are at the edge '
+          'of normal range. Consider repeat testing if symptoms develop.\n\n');
+    } else if (remarks.contains('abnormal') ||
+        remarks.contains('positive') ||
+        remarks.contains('detected')) {
+      analysis.write('🔍 **Abnormal Findings**: Results indicate areas that '
+          'require medical attention. Follow up with healthcare provider.\n\n');
+    }
+
+    // Health Recommendations
+    analysis.write('🏥 **Health Recommendations**:\n');
+    analysis.write('• Review results with your healthcare provider\n');
+    analysis.write('• Follow any prescribed treatment plans\n');
+    analysis.write('• Schedule follow-up tests as recommended\n');
+    analysis.write('• Maintain healthy lifestyle habits\n');
+
+    return analysis.toString();
+  }
+
+  Widget _buildAIAnalysisSection(String title, String analysis) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(top: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Row(
+            children: [
+              Icon(
+                Icons.psychology_rounded,
+                color: Color(0xFF7E57C2),
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            ],
+          ),
+          
+          const SizedBox(height: 12),
+          
+          // Analysis content
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFFF3E5F5),
+                  Color(0xFFE8EAF6),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: Color(0xFF7E57C2).withOpacity(0.2),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.lightbulb_outline_rounded,
+                      color: Color(0xFF7E57C2),
+                      size: 18,
+                    ),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'AI-Powered Insights',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF5E35B1),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  analysis,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: AppColors.textPrimary,
+                    height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Note: This is an AI-generated analysis for informational purposes only. '
+                  'Always consult with your healthcare provider for medical advice.',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: AppColors.textSecondary,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -156,37 +523,6 @@ class _MotherProfilePageState extends State<MotherProfilePage>
             );
           }
 
-          DateTime? parseDate(dynamic v) {
-            if (v == null) return null;
-            return DateTime.tryParse(v.toString());
-          }
-
-          DateTime? parseDateTime(dynamic v) {
-            if (v == null) return null;
-            final raw = v.toString().trim();
-            if (raw.isEmpty) return null;
-            return DateTime.tryParse(raw);
-          }
-
-          String? fmtDate(dynamic v) {
-            if (v == null) return null;
-            final parsed = DateTime.tryParse(v.toString());
-            if (parsed == null) return v.toString();
-            return DateFormat('MMM d, yyyy').format(parsed);
-          }
-
-          String? fmtDateTime(dynamic v) {
-            final parsed = parseDateTime(v);
-            if (parsed == null) return v?.toString();
-            return DateFormat('MMM d, yyyy h:mm a').format(parsed);
-          }
-
-          String fmtValue(dynamic v) {
-            if (v == null) return '—';
-            final value = v.toString().trim();
-            return value.isEmpty ? '—' : value;
-          }
-
           String formatOutcome(dynamic v) {
             final raw = v?.toString().trim().toLowerCase() ?? '';
             switch (raw) {
@@ -236,26 +572,15 @@ class _MotherProfilePageState extends State<MotherProfilePage>
             return 'https://inaagapay.alwaysdata.net/$cleaned';
           }
 
-          String shortDate(dynamic v) {
-            final parsed = parseDateTime(v) ?? parseDate(v);
-            if (parsed == null) return '—';
-            return DateFormat('MMM d').format(parsed);
-          }
-
-          double? toDouble(dynamic v) {
-            if (v == null) return null;
-            return double.tryParse(v.toString());
-          }
-
           List<Map<String, dynamic>> sortedCheckups(dynamic v) {
             final list = listOrEmpty(
               v,
             ).whereType<Map<String, dynamic>>().toList();
             list.sort((a, b) {
-              final da = parseDateTime(
+              final da = _parseDateTime(
                 a['checkup_datetime'] ?? a['checkup_date'],
               );
-              final db = parseDateTime(
+              final db = _parseDateTime(
                 b['checkup_datetime'] ?? b['checkup_date'],
               );
               if (da == null && db == null) return 0;
@@ -285,8 +610,8 @@ class _MotherProfilePageState extends State<MotherProfilePage>
               v,
             ).whereType<Map<String, dynamic>>().toList();
             list.sort((a, b) {
-              final da = parseDate(a[field]);
-              final db = parseDate(b[field]);
+              final da = _parseDate(a[field]);
+              final db = _parseDate(b[field]);
               if (da == null && db == null) return 0;
               if (da == null) return 1;
               if (db == null) return -1;
@@ -576,7 +901,7 @@ class _MotherProfilePageState extends State<MotherProfilePage>
             );
           }
 
-          Widget detailRow(String label, String value) {
+                    Widget detailRow(String label, String value) {
             return Padding(
               padding: const EdgeInsets.symmetric(vertical: 6),
               child: Row(
@@ -601,6 +926,7 @@ class _MotherProfilePageState extends State<MotherProfilePage>
             IconData icon = Icons.receipt_long,
             String? subtitle,
             String? imageUrl,
+            String? aiAnalysis,
           }) {
             showModalBottomSheet<void>(
               context: context,
@@ -688,6 +1014,17 @@ class _MotherProfilePageState extends State<MotherProfilePage>
                               .toList(),
                         ),
                       ),
+                      if (aiAnalysis != null && aiAnalysis.isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        _buildAIAnalysisSection(
+                          title.contains('Checkup')
+                              ? 'Prenatal Checkup Analysis'
+                              : title.contains('Ultrasound')
+                                  ? 'Ultrasound Analysis'
+                                  : 'Lab Test Analysis',
+                          aiAnalysis,
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -704,7 +1041,7 @@ class _MotherProfilePageState extends State<MotherProfilePage>
           final givenMeds = listOrEmpty(m['given_medications']);
           final children = listOrEmpty(m['children']);
 
-          List<String> _takenTdDosesFromCheckups(List<dynamic> raw) {
+          List<String> takenTdDosesFromCheckups(List<dynamic> raw) {
             final taken = <String>{};
             for (final entry in raw.whereType<Map<String, dynamic>>()) {
               final doseRaw = entry['td_vaccine_dose']?.toString().trim();
@@ -763,7 +1100,7 @@ class _MotherProfilePageState extends State<MotherProfilePage>
                   pregnancyId: int.parse(pregnancyId.toString()),
                   lmp: lmp,
                   motherWeight: null,
-                  takenTdDoses: _takenTdDosesFromCheckups(
+                  takenTdDoses: takenTdDosesFromCheckups(
                     listOrEmpty(currentPreg?['checkups']),
                   ),
                 ),
@@ -805,7 +1142,7 @@ class _MotherProfilePageState extends State<MotherProfilePage>
             double? gestAge;
             final gestAgeController = TextEditingController();
             final placeCtrl = TextEditingController();
-            final lmpDate = parseDate(
+            final lmpDate = _parseDate(
               currentPreg['last_menstrual_period'] ??
                   m['last_menstrual_period'],
             );
@@ -1328,7 +1665,7 @@ class _MotherProfilePageState extends State<MotherProfilePage>
                                 const SizedBox(height: 16),
                                 TabBar(
                                   controller: _tabController,
-                                  tabs: [
+                                  tabs: const [
                                     Tab(text: 'Overview'),
                                     Tab(text: 'Current'),
                                     Tab(text: 'History'),
@@ -1475,7 +1812,7 @@ class _MotherProfilePageState extends State<MotherProfilePage>
                                                 c['condition_name'] ?? '—',
                                               ),
                                               subtitle: Text(
-                                                '${c['status'] ?? 'active'} • ${fmtDate(c['diagnosis_date']) ?? '—'}',
+                                                '${c['status'] ?? 'active'} • ${_fmtDate(c['diagnosis_date']) ?? '—'}',
                                               ),
                                             );
                                           }).toList(),
@@ -1499,7 +1836,7 @@ class _MotherProfilePageState extends State<MotherProfilePage>
                                               dense: true,
                                               title: Text(a['allergen'] ?? '—'),
                                               subtitle: Text(
-                                                '${a['status'] ?? 'active'} • ${fmtDate(a['diagnosis_date']) ?? '—'}',
+                                                '${a['status'] ?? 'active'} • ${_fmtDate(a['diagnosis_date']) ?? '—'}',
                                               ),
                                             );
                                           }).toList(),
@@ -1549,8 +1886,8 @@ class _MotherProfilePageState extends State<MotherProfilePage>
                                       ),
                                     ...motherMeds.map((mPlan) {
                                       final dates = [
-                                        fmtDate(mPlan['start_date']),
-                                        fmtDate(mPlan['end_date']),
+                                        _fmtDate(mPlan['start_date']),
+                                        _fmtDate(mPlan['end_date']),
                                       ].whereType<String>().join(' to ');
                                       return ListTile(
                                         dense: true,
@@ -1603,9 +1940,9 @@ class _MotherProfilePageState extends State<MotherProfilePage>
                                           [
                                             if (g['quantity'] != null)
                                               'Qty: ${g['quantity']}',
-                                            if (fmtDate(g['date_given']) !=
+                                            if (_fmtDate(g['date_given']) !=
                                                 null)
-                                              fmtDate(g['date_given'])!,
+                                              _fmtDate(g['date_given'])!,
                                           ].join(' · '),
                                         ),
                                       );
@@ -1728,9 +2065,9 @@ class _MotherProfilePageState extends State<MotherProfilePage>
                                                     .join(' ');
 
                                             final subtitle = [
-                                              if (fmtDate(c['added_at']) !=
+                                              if (_fmtDate(c['added_at']) !=
                                                   null)
-                                                'Added: ${fmtDate(c['added_at'])}',
+                                                'Added: ${_fmtDate(c['added_at'])}',
                                               if ((c['sex'] ?? '')
                                                   .toString()
                                                   .isNotEmpty)
@@ -1840,18 +2177,18 @@ class _MotherProfilePageState extends State<MotherProfilePage>
                                       final lastCheckup = checkups.isNotEmpty
                                           ? checkups.last
                                           : null;
-                                      final lastCheckupDate = fmtDateTime(
+                                      final lastCheckupDate = _fmtDateTime(
                                         lastCheckup?['checkup_datetime'] ??
                                             lastCheckup?['checkup_date'],
                                       );
-                                      final nextSchedule = fmtDate(
+                                      final nextSchedule = _fmtDate(
                                         lastCheckup?['next_schedule'],
                                       );
 
-                                      final lmp = parseDate(
+                                      final lmp = _parseDate(
                                         currentPreg['last_menstrual_period'],
                                       );
-                                      final edd = parseDate(
+                                      final edd = _parseDate(
                                         currentPreg['expected_date_of_delivery'],
                                       );
                                       final now = DateTime.now();
@@ -1867,7 +2204,7 @@ class _MotherProfilePageState extends State<MotherProfilePage>
                                         final points = <FlSpot>[];
                                         final labels = <String>[];
                                         for (final c in checkups) {
-                                          final w = toDouble(
+                                          final w = _toDouble(
                                             c['checkup_weight'],
                                           );
                                           if (w == null) continue;
@@ -1875,7 +2212,7 @@ class _MotherProfilePageState extends State<MotherProfilePage>
                                             FlSpot(points.length.toDouble(), w),
                                           );
                                           labels.add(
-                                            shortDate(
+                                            _shortDate(
                                               c['checkup_datetime'] ??
                                                   c['checkup_date'],
                                             ),
@@ -1913,10 +2250,10 @@ class _MotherProfilePageState extends State<MotherProfilePage>
                                         final dia = <FlSpot>[];
                                         final labels = <String>[];
                                         for (final c in checkups) {
-                                          final s = toDouble(
+                                          final s = _toDouble(
                                             c['blood_pressure_systolic'],
                                           );
-                                          final d = toDouble(
+                                          final d = _toDouble(
                                             c['blood_pressure_diastolic'],
                                           );
                                           if (s == null || d == null) continue;
@@ -1924,7 +2261,7 @@ class _MotherProfilePageState extends State<MotherProfilePage>
                                           sys.add(FlSpot(x, s));
                                           dia.add(FlSpot(x, d));
                                           labels.add(
-                                            shortDate(
+                                            _shortDate(
                                               c['checkup_datetime'] ??
                                                   c['checkup_date'],
                                             ),
@@ -2103,13 +2440,13 @@ class _MotherProfilePageState extends State<MotherProfilePage>
                                             ),
                                             field(
                                               'LMP',
-                                              fmtDate(
+                                              _fmtDate(
                                                 currentPreg['last_menstrual_period'],
                                               ),
                                             ),
                                             field(
                                               'EDD',
-                                              fmtDate(
+                                              _fmtDate(
                                                 currentPreg['expected_date_of_delivery'],
                                               ),
                                             ),
@@ -2154,28 +2491,28 @@ class _MotherProfilePageState extends State<MotherProfilePage>
                                               currentPreg['checkups'],
                                             ).map((c) {
                                               final date =
-                                                  fmtDateTime(
+                                                  _fmtDateTime(
                                                     c['checkup_datetime'] ??
                                                         c['checkup_date'],
                                                   ) ??
                                                   '—';
-                                              final bpSys = fmtValue(
+                                              final bpSys = _fmtValue(
                                                 c['blood_pressure_systolic'],
                                               );
-                                              final bpDia = fmtValue(
+                                              final bpDia = _fmtValue(
                                                 c['blood_pressure_diastolic'],
                                               );
                                               final bp =
                                                   (bpSys == '—' && bpDia == '—')
                                                   ? null
                                                   : 'BP: $bpSys/$bpDia';
-                                              final aog = fmtValue(
+                                              final aog = _fmtValue(
                                                 c['age_of_gestation'],
                                               );
-                                              final wt = fmtValue(
+                                              final wt = _fmtValue(
                                                 c['checkup_weight'],
                                               );
-                                              final tdDose = fmtValue(
+                                              final tdDose = _fmtValue(
                                                 c['td_vaccine_dose'],
                                               );
                                               final ferrousGiven =
@@ -2209,7 +2546,7 @@ class _MotherProfilePageState extends State<MotherProfilePage>
                                                   'Calcium: $calciumGiven',
                                                 );
 
-                                              final next = fmtDate(
+                                              final next = _fmtDate(
                                                 c['next_schedule'],
                                               );
                                               return recordCard(
@@ -2228,8 +2565,8 @@ class _MotherProfilePageState extends State<MotherProfilePage>
                                                   rows: [
                                                     MapEntry(
                                                       'Checkup Date',
-                                                      fmtValue(
-                                                        fmtDateTime(
+                                                      _fmtValue(
+                                                        _fmtDateTime(
                                                           c['checkup_datetime'] ??
                                                               c['checkup_date'],
                                                         ),
@@ -2237,23 +2574,23 @@ class _MotherProfilePageState extends State<MotherProfilePage>
                                                     ),
                                                     MapEntry(
                                                       'Age of Gestation',
-                                                      fmtValue(
+                                                      _fmtValue(
                                                         c['age_of_gestation'],
                                                       ),
                                                     ),
                                                     MapEntry(
                                                       'Weight (kg)',
-                                                      fmtValue(
+                                                      _fmtValue(
                                                         c['checkup_weight'],
                                                       ),
                                                     ),
                                                     MapEntry(
                                                       'Blood Pressure',
-                                                      '${fmtValue(c['blood_pressure_systolic'])}/${fmtValue(c['blood_pressure_diastolic'])}',
+                                                      '${_fmtValue(c['blood_pressure_systolic'])}/${_fmtValue(c['blood_pressure_diastolic'])}',
                                                     ),
                                                     MapEntry(
                                                       'TD Vaccine Dose',
-                                                      fmtValue(
+                                                      _fmtValue(
                                                         c['td_vaccine_dose'],
                                                       ),
                                                     ),
@@ -2271,39 +2608,40 @@ class _MotherProfilePageState extends State<MotherProfilePage>
                                                     ),
                                                     MapEntry(
                                                       'Fetal Position',
-                                                      fmtValue(
+                                                      _fmtValue(
                                                         c['fetal_position'],
                                                       ),
                                                     ),
                                                     MapEntry(
                                                       'Fetal Heart Beat',
-                                                      fmtValue(
+                                                      _fmtValue(
                                                         c['fetal_heart_beat'],
                                                       ),
                                                     ),
                                                     MapEntry(
                                                       'Fetal Heart Tone',
-                                                      fmtValue(
+                                                      _fmtValue(
                                                         c['fetal_heart_tone'],
                                                       ),
                                                     ),
                                                     MapEntry(
                                                       'Edema',
-                                                      fmtValue(c['edema']),
+                                                      _fmtValue(c['edema']),
                                                     ),
                                                     MapEntry(
                                                       'Remarks',
-                                                      fmtValue(c['remarks']),
+                                                      _fmtValue(c['remarks']),
                                                     ),
                                                     MapEntry(
                                                       'Next Schedule',
-                                                      fmtValue(
-                                                        fmtDate(
+                                                      _fmtValue(
+                                                        _fmtDate(
                                                           c['next_schedule'],
                                                         ),
                                                       ),
                                                     ),
                                                   ],
+                                                  aiAnalysis: _generatePrenatalAIInsights(c),
                                                 ),
                                               );
                                             }),
@@ -2353,7 +2691,7 @@ class _MotherProfilePageState extends State<MotherProfilePage>
                                               _usSort,
                                             ).map((u) {
                                               final date =
-                                                  fmtDate(
+                                                  _fmtDate(
                                                     u['ultrasound_date'],
                                                   ) ??
                                                   '—';
@@ -2361,7 +2699,7 @@ class _MotherProfilePageState extends State<MotherProfilePage>
                                                 u['ultrasound_image'],
                                               );
                                               final tags = <String>[];
-                                              final worker = fmtValue(
+                                              final worker = _fmtValue(
                                                 u['health_worker_name'],
                                               );
                                               if (worker != '—') {
@@ -2373,7 +2711,7 @@ class _MotherProfilePageState extends State<MotherProfilePage>
                                               return recordCard(
                                                 icon: Icons.monitor_heart,
                                                 title: 'Ultrasound • $date',
-                                                subtitle: fmtValue(
+                                                subtitle: _fmtValue(
                                                   u['ultrasound_location'],
                                                 ),
                                                 tags: tags,
@@ -2385,41 +2723,42 @@ class _MotherProfilePageState extends State<MotherProfilePage>
                                                   rows: [
                                                     MapEntry(
                                                       'Date',
-                                                      fmtValue(
-                                                        fmtDate(
+                                                      _fmtValue(
+                                                        _fmtDate(
                                                           u['ultrasound_date'],
                                                         ),
                                                       ),
                                                     ),
                                                     MapEntry(
                                                       'Location',
-                                                      fmtValue(
+                                                      _fmtValue(
                                                         u['ultrasound_location'],
                                                       ),
                                                     ),
                                                     MapEntry(
                                                       'Health Worker',
-                                                      fmtValue(
+                                                      _fmtValue(
                                                         u['health_worker_name'],
                                                       ),
                                                     ),
                                                     MapEntry(
                                                       'Institution',
-                                                      fmtValue(
+                                                      _fmtValue(
                                                         u['health_worker_institution'],
                                                       ),
                                                     ),
                                                     MapEntry(
                                                       'Profession',
-                                                      fmtValue(
+                                                      _fmtValue(
                                                         u['health_worker_profession'],
                                                       ),
                                                     ),
                                                     MapEntry(
                                                       'Remarks',
-                                                      fmtValue(u['remarks']),
+                                                      _fmtValue(u['remarks']),
                                                     ),
                                                   ],
+                                                  aiAnalysis: _generateUltrasoundAIInsights(u),
                                                 ),
                                               );
                                             }),
@@ -2470,13 +2809,13 @@ class _MotherProfilePageState extends State<MotherProfilePage>
                                               _labSort,
                                             ).map((l) {
                                               final date =
-                                                  fmtDate(l['lab_test_date']) ??
+                                                  _fmtDate(l['lab_test_date']) ??
                                                   '—';
                                               final imageUrl = resolveImageUrl(
                                                 l['lab_test_image'],
                                               );
                                               final tags = <String>[];
-                                              final worker = fmtValue(
+                                              final worker = _fmtValue(
                                                 l['health_worker_name'],
                                               );
                                               if (worker != '—') {
@@ -2489,7 +2828,7 @@ class _MotherProfilePageState extends State<MotherProfilePage>
                                                 icon: Icons.science,
                                                 title:
                                                     '${l['lab_test_type'] ?? 'Lab Test'} • $date',
-                                                subtitle: fmtValue(
+                                                subtitle: _fmtValue(
                                                   l['lab_test_location'],
                                                 ),
                                                 tags: tags,
@@ -2501,47 +2840,48 @@ class _MotherProfilePageState extends State<MotherProfilePage>
                                                   rows: [
                                                     MapEntry(
                                                       'Type',
-                                                      fmtValue(
+                                                      _fmtValue(
                                                         l['lab_test_type'],
                                                       ),
                                                     ),
                                                     MapEntry(
                                                       'Date',
-                                                      fmtValue(
-                                                        fmtDate(
+                                                      _fmtValue(
+                                                        _fmtDate(
                                                           l['lab_test_date'],
                                                         ),
                                                       ),
                                                     ),
                                                     MapEntry(
                                                       'Location',
-                                                      fmtValue(
+                                                      _fmtValue(
                                                         l['lab_test_location'],
                                                       ),
                                                     ),
                                                     MapEntry(
                                                       'Health Worker',
-                                                      fmtValue(
+                                                      _fmtValue(
                                                         l['health_worker_name'],
                                                       ),
                                                     ),
                                                     MapEntry(
                                                       'Institution',
-                                                      fmtValue(
+                                                      _fmtValue(
                                                         l['health_worker_institution'],
                                                       ),
                                                     ),
                                                     MapEntry(
                                                       'Profession',
-                                                      fmtValue(
+                                                      _fmtValue(
                                                         l['health_worker_profession'],
                                                       ),
                                                     ),
                                                     MapEntry(
                                                       'Remarks',
-                                                      fmtValue(l['remarks']),
+                                                      _fmtValue(l['remarks']),
                                                     ),
                                                   ],
+                                                  aiAnalysis: _generateLabTestAIInsights(l),
                                                 ),
                                               );
                                             }),
@@ -2574,8 +2914,8 @@ class _MotherProfilePageState extends State<MotherProfilePage>
                                         p['outcome'],
                                       );
                                       final outcomeDate =
-                                          fmtDate(p['outcome_date']) ??
-                                          fmtDate(delivery?['delivery_date']);
+                                          _fmtDate(p['outcome_date']) ??
+                                              _fmtDate(delivery?['delivery_date']);
                                       return infoCard('Pregnancy • $outcomeLabel', [
                                         field('Outcome Date', outcomeDate),
                                         field(
@@ -2613,15 +2953,15 @@ class _MotherProfilePageState extends State<MotherProfilePage>
                                                   c,
                                                 ) {
                                                   final date =
-                                                      fmtDateTime(
+                                                      _fmtDateTime(
                                                         c['checkup_datetime'] ??
                                                             c['checkup_date'],
                                                       ) ??
                                                       '—';
-                                                  final bpSys = fmtValue(
+                                                  final bpSys = _fmtValue(
                                                     c['blood_pressure_systolic'],
                                                   );
-                                                  final bpDia = fmtValue(
+                                                  final bpDia = _fmtValue(
                                                     c['blood_pressure_diastolic'],
                                                   );
                                                   final bp =
@@ -2629,10 +2969,10 @@ class _MotherProfilePageState extends State<MotherProfilePage>
                                                           bpDia == '—')
                                                       ? null
                                                       : 'BP: $bpSys/$bpDia';
-                                                  final aog = fmtValue(
+                                                  final aog = _fmtValue(
                                                     c['age_of_gestation'],
                                                   );
-                                                  final wt = fmtValue(
+                                                  final wt = _fmtValue(
                                                     c['checkup_weight'],
                                                   );
                                                   final tags = <String>[];
@@ -2656,8 +2996,8 @@ class _MotherProfilePageState extends State<MotherProfilePage>
                                                       rows: [
                                                         MapEntry(
                                                           'Checkup Date',
-                                                          fmtValue(
-                                                            fmtDate(
+                                                          _fmtValue(
+                                                            _fmtDate(
                                                               c['checkup_datetime'] ??
                                                                   c['checkup_date'],
                                                             ),
@@ -2665,57 +3005,58 @@ class _MotherProfilePageState extends State<MotherProfilePage>
                                                         ),
                                                         MapEntry(
                                                           'Age of Gestation',
-                                                          fmtValue(
+                                                          _fmtValue(
                                                             c['age_of_gestation'],
                                                           ),
                                                         ),
                                                         MapEntry(
                                                           'Weight (kg)',
-                                                          fmtValue(
+                                                          _fmtValue(
                                                             c['checkup_weight'],
                                                           ),
                                                         ),
                                                         MapEntry(
                                                           'Blood Pressure',
-                                                          '${fmtValue(c['blood_pressure_systolic'])}/${fmtValue(c['blood_pressure_diastolic'])}',
+                                                          '${_fmtValue(c['blood_pressure_systolic'])}/${_fmtValue(c['blood_pressure_diastolic'])}',
                                                         ),
                                                         MapEntry(
                                                           'Fetal Position',
-                                                          fmtValue(
+                                                          _fmtValue(
                                                             c['fetal_position'],
                                                           ),
                                                         ),
                                                         MapEntry(
                                                           'Fetal Heart Beat',
-                                                          fmtValue(
+                                                          _fmtValue(
                                                             c['fetal_heart_beat'],
                                                           ),
                                                         ),
                                                         MapEntry(
                                                           'Fetal Heart Tone',
-                                                          fmtValue(
+                                                          _fmtValue(
                                                             c['fetal_heart_tone'],
                                                           ),
                                                         ),
                                                         MapEntry(
                                                           'Edema',
-                                                          fmtValue(c['edema']),
+                                                          _fmtValue(c['edema']),
                                                         ),
                                                         MapEntry(
                                                           'Remarks',
-                                                          fmtValue(
+                                                          _fmtValue(
                                                             c['remarks'],
                                                           ),
                                                         ),
                                                         MapEntry(
                                                           'Next Schedule',
-                                                          fmtValue(
-                                                            fmtDate(
+                                                          _fmtValue(
+                                                            _fmtDate(
                                                               c['next_schedule'],
                                                             ),
                                                           ),
                                                         ),
                                                       ],
+                                                      aiAnalysis: _generatePrenatalAIInsights(c),
                                                     ),
                                                   );
                                                 }).toList(),
@@ -2743,7 +3084,7 @@ class _MotherProfilePageState extends State<MotherProfilePage>
                                                   p['ultrasounds'],
                                                 ).map((u) {
                                                   final date =
-                                                      fmtDate(
+                                                      _fmtDate(
                                                         u['ultrasound_date'],
                                                       ) ??
                                                       '—';
@@ -2752,7 +3093,7 @@ class _MotherProfilePageState extends State<MotherProfilePage>
                                                         u['ultrasound_image'],
                                                       );
                                                   final tags = <String>[];
-                                                  final worker = fmtValue(
+                                                  final worker = _fmtValue(
                                                     u['health_worker_name'],
                                                   );
                                                   if (worker != '—')
@@ -2763,7 +3104,7 @@ class _MotherProfilePageState extends State<MotherProfilePage>
                                                   return recordCard(
                                                     icon: Icons.monitor_heart,
                                                     title: 'Ultrasound • $date',
-                                                    subtitle: fmtValue(
+                                                    subtitle: _fmtValue(
                                                       u['ultrasound_location'],
                                                     ),
                                                     tags: tags,
@@ -2776,43 +3117,44 @@ class _MotherProfilePageState extends State<MotherProfilePage>
                                                       rows: [
                                                         MapEntry(
                                                           'Date',
-                                                          fmtValue(
-                                                            fmtDate(
+                                                          _fmtValue(
+                                                            _fmtDate(
                                                               u['ultrasound_date'],
                                                             ),
                                                           ),
                                                         ),
                                                         MapEntry(
                                                           'Location',
-                                                          fmtValue(
+                                                          _fmtValue(
                                                             u['ultrasound_location'],
                                                           ),
                                                         ),
                                                         MapEntry(
                                                           'Health Worker',
-                                                          fmtValue(
+                                                          _fmtValue(
                                                             u['health_worker_name'],
                                                           ),
                                                         ),
                                                         MapEntry(
                                                           'Institution',
-                                                          fmtValue(
+                                                          _fmtValue(
                                                             u['health_worker_institution'],
                                                           ),
                                                         ),
                                                         MapEntry(
                                                           'Profession',
-                                                          fmtValue(
+                                                          _fmtValue(
                                                             u['health_worker_profession'],
                                                           ),
                                                         ),
                                                         MapEntry(
                                                           'Remarks',
-                                                          fmtValue(
+                                                          _fmtValue(
                                                             u['remarks'],
                                                           ),
                                                         ),
                                                       ],
+                                                      aiAnalysis: _generateUltrasoundAIInsights(u),
                                                     ),
                                                   );
                                                 }).toList(),
@@ -2840,7 +3182,7 @@ class _MotherProfilePageState extends State<MotherProfilePage>
                                                   p['lab_tests'],
                                                 ).map((l) {
                                                   final date =
-                                                      fmtDate(
+                                                      _fmtDate(
                                                         l['lab_test_date'],
                                                       ) ??
                                                       '—';
@@ -2849,7 +3191,7 @@ class _MotherProfilePageState extends State<MotherProfilePage>
                                                         l['lab_test_image'],
                                                       );
                                                   final tags = <String>[];
-                                                  final worker = fmtValue(
+                                                  final worker = _fmtValue(
                                                     l['health_worker_name'],
                                                   );
                                                   if (worker != '—')
@@ -2860,7 +3202,7 @@ class _MotherProfilePageState extends State<MotherProfilePage>
                                                     icon: Icons.science,
                                                     title:
                                                         '${l['lab_test_type'] ?? 'Lab Test'} • $date',
-                                                    subtitle: fmtValue(
+                                                    subtitle: _fmtValue(
                                                       l['lab_test_location'],
                                                     ),
                                                     tags: tags,
@@ -2872,49 +3214,50 @@ class _MotherProfilePageState extends State<MotherProfilePage>
                                                       rows: [
                                                         MapEntry(
                                                           'Type',
-                                                          fmtValue(
+                                                          _fmtValue(
                                                             l['lab_test_type'],
                                                           ),
                                                         ),
                                                         MapEntry(
                                                           'Date',
-                                                          fmtValue(
-                                                            fmtDate(
+                                                          _fmtValue(
+                                                            _fmtDate(
                                                               l['lab_test_date'],
                                                             ),
                                                           ),
                                                         ),
                                                         MapEntry(
                                                           'Location',
-                                                          fmtValue(
+                                                          _fmtValue(
                                                             l['lab_test_location'],
                                                           ),
                                                         ),
                                                         MapEntry(
                                                           'Health Worker',
-                                                          fmtValue(
+                                                          _fmtValue(
                                                             l['health_worker_name'],
                                                           ),
                                                         ),
                                                         MapEntry(
                                                           'Institution',
-                                                          fmtValue(
+                                                          _fmtValue(
                                                             l['health_worker_institution'],
                                                           ),
                                                         ),
                                                         MapEntry(
                                                           'Profession',
-                                                          fmtValue(
+                                                          _fmtValue(
                                                             l['health_worker_profession'],
                                                           ),
                                                         ),
                                                         MapEntry(
                                                           'Remarks',
-                                                          fmtValue(
+                                                          _fmtValue(
                                                             l['remarks'],
                                                           ),
                                                         ),
                                                       ],
+                                                      aiAnalysis: _generateLabTestAIInsights(l),
                                                     ),
                                                   );
                                                 }).toList(),
