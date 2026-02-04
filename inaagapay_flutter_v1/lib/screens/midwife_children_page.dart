@@ -48,6 +48,11 @@ class _MidwifeChildrenPageState extends State<MidwifeChildrenPage> {
     _loadContextAndChildren();
   }
 
+  void _safeSetState(VoidCallback fn) {
+    if (!mounted) return;
+    setState(fn);
+  }
+
   Future<void> _loadContextAndChildren() async {
     await _loadContext();
     await _loadChildren();
@@ -67,7 +72,7 @@ class _MidwifeChildrenPageState extends State<MidwifeChildrenPage> {
       final decoded = jsonDecode(res.body);
       if (decoded['success'] == true) {
         final bhcName = decoded['bhc_name']?.toString();
-        setState(() {
+        _safeSetState(() {
           _assignedBhcName = bhcName;
           _bhcFilter = bhcName ?? 'All BHCs';
         });
@@ -75,13 +80,13 @@ class _MidwifeChildrenPageState extends State<MidwifeChildrenPage> {
     } catch (_) {
       // ignore context errors
     } finally {
-      if (mounted) setState(() => _bhcLoading = false);
+      _safeSetState(() => _bhcLoading = false);
     }
   }
 
   /// ================= FETCH CHILDREN =================
   Future<void> _loadChildren() async {
-    setState(() {
+    _safeSetState(() {
       _isLoading = true;
     });
 
@@ -110,11 +115,9 @@ class _MidwifeChildrenPageState extends State<MidwifeChildrenPage> {
       _allChildren = [];
       _filteredChildren = [];
     } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+      _safeSetState(() {
+        _isLoading = false;
+      });
     }
   }
 
@@ -152,7 +155,7 @@ class _MidwifeChildrenPageState extends State<MidwifeChildrenPage> {
     final searchQuery = query ?? _searchController.text;
     final selectedBhc = _normalizeBhc(_bhcFilter);
 
-    setState(() {
+    _safeSetState(() {
       final searchLower = searchQuery.toLowerCase();
       _filteredChildren = _allChildren.where((child) {
         final name =
@@ -221,7 +224,7 @@ class _MidwifeChildrenPageState extends State<MidwifeChildrenPage> {
 
   /// ================= CHANGE SORTING =================
   void _changeSort(String newSort) {
-    setState(() {
+    _safeSetState(() {
       _sortBy = newSort;
     });
     _applyFilterAndSort();

@@ -41,7 +41,7 @@ class _MidwifeMothersPageState extends State<MidwifeMothersPage> {
   @override
   void initState() {
     super.initState();
-    _loadContextAndData();
+    _future = _loadContextAndData();
   }
 
   @override
@@ -50,15 +50,20 @@ class _MidwifeMothersPageState extends State<MidwifeMothersPage> {
     super.dispose();
   }
 
-  Future<void> _load() async {
+  Future<void> _reload() async {
+    final future = _loadContextAndData();
     setState(() {
-      _future = fetchMothers();
+      _bhcLoading = true;
+      _future = future;
     });
+    await future;
   }
 
-  Future<void> _loadContextAndData() async {
+  Future<List<Map<String, dynamic>>> _loadContextAndData() async {
     await _loadContext();
-    await _load();
+    final data = await fetchMothers();
+    _filteredMothers = _applyFilters(_allMothers);
+    return data;
   }
 
   Future<void> _loadContext() async {
@@ -306,7 +311,7 @@ class _MidwifeMothersPageState extends State<MidwifeMothersPage> {
       MaterialPageRoute(builder: (_) => MotherProfilePage(motherId: motherId)),
     );
     if (mounted) {
-      _load();
+      _reload();
     }
   }
 
@@ -324,7 +329,7 @@ class _MidwifeMothersPageState extends State<MidwifeMothersPage> {
       /// 🔽 BODY
       body: SafeArea(
         child: RefreshIndicator(
-          onRefresh: _loadContextAndData,
+          onRefresh: _reload,
           child: FutureBuilder<List<Map<String, dynamic>>>(
             future: _future,
             builder: (context, snapshot) {
@@ -350,7 +355,7 @@ class _MidwifeMothersPageState extends State<MidwifeMothersPage> {
                       ),
                       const SizedBox(height: 16),
                       ElevatedButton(
-                        onPressed: _load,
+                        onPressed: _reload,
                         child: const Text('Retry'),
                       ),
                     ],
@@ -566,7 +571,7 @@ class _MidwifeMothersPageState extends State<MidwifeMothersPage> {
             context,
             MaterialPageRoute(builder: (_) => const AddMotherFlow()),
           );
-          if (added == true) _load();
+          if (added == true) _reload();
         },
       ),
     );

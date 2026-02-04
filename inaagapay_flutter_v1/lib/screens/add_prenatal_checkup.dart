@@ -47,6 +47,22 @@ class _AddPrenatalCheckupScreenState extends State<AddPrenatalCheckupScreen> {
   double? aogWeeks;
   String _baselineRisk = 'low';
   bool _riskLoading = true;
+<<<<<<< Updated upstream
+<<<<<<< Updated upstream
+=======
+=======
+>>>>>>> Stashed changes
+  static const List<String> _tdOptions = [
+    'TD 1',
+    'TD 2',
+    'TD 3',
+    'TD 4',
+    'TD 5',
+  ];
+  List<String> _takenTdDoses = [];
+  bool _tdLoading = true;
+  String? _selectedTdDose;
+>>>>>>> Stashed changes
 
   @override
   void initState() {
@@ -425,9 +441,9 @@ class _AddPrenatalCheckupScreenState extends State<AddPrenatalCheckupScreen> {
             ),
           );
         }),
-        const SizedBox(height: 20),
-        _riskCard(),
         const SizedBox(height: 12),
+<<<<<<< Updated upstream
+<<<<<<< Updated upstream
         _controls(),
       ],
     );
@@ -445,13 +461,105 @@ class _AddPrenatalCheckupScreenState extends State<AddPrenatalCheckupScreen> {
                 ? 'Pick a date'
                 : DateFormat('MMM d, yyyy').format(_nextSchedule!),
           ),
+=======
+=======
+>>>>>>> Stashed changes
+        const Text(
+          'Given Medications (fixed)',
+          style: TextStyle(fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 8),
+        AppInputField(
+          hintText: 'Ferrous + FA quantity',
+          controller: _ferrousQty,
+          keyboardType: TextInputType.number,
+          onChanged: (v) => prenatal.ferrousQuantity = int.tryParse(v),
+        ),
+        const SizedBox(height: 12),
+        AppInputField(
+          hintText: 'Calcium quantity',
+          controller: _calciumQty,
+          keyboardType: TextInputType.number,
+          onChanged: (v) => prenatal.calciumQuantity = int.tryParse(v),
+        ),
+        const SizedBox(height: 16),
+        const Text(
+          'Given TD Vaccine',
+          style: TextStyle(fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 8),
+        if (_tdLoading)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: CircularProgressIndicator(),
+          )
+        else if (_availableTdDoses.isEmpty)
+          const Text(
+            'Received Complete TD Vaccination',
+            style: TextStyle(color: AppColors.textSecondary),
+          )
+        else
+          DropdownButtonFormField<String>(
+            value: _selectedTdDose,
+            decoration: const InputDecoration(labelText: 'Select TD dose'),
+            items: _availableTdDoses
+                .map((d) => DropdownMenuItem<String>(value: d, child: Text(d)))
+                .toList(),
+            onChanged: (v) => setState(() {
+              _selectedTdDose = v;
+              prenatal.tdVaccineDose = v;
+            }),
+          ),
+        if (_takenTdDoses.isNotEmpty) ...[
+          const SizedBox(height: 6),
+          Text(
+            'Already given: ${_takenTdDoses.join(', ')}',
+            style: const TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 12,
+            ),
+          ),
+        ],
+        const SizedBox(height: 20),
+        _riskCard(),
+        const SizedBox(height: 12),
+        _controls(),
+      ],
+    );
+  }
+
+  Widget _remarksStep() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          title: Text(
+            _nextSchedule == null
+                ? 'Set next prenatal schedule (optional)'
+                : 'Next schedule: ${DateFormat('MMM d, yyyy').format(_nextSchedule!)}',
+          ),
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
+>>>>>>> Stashed changes
           trailing: const Icon(Icons.calendar_today),
           onTap: () async {
             final picked = await showDatePicker(
               context: context,
+<<<<<<< Updated upstream
+<<<<<<< Updated upstream
               initialDate:
                   _nextSchedule ?? DateTime.now().add(const Duration(days: 30)),
               firstDate: DateTime.now().add(const Duration(days: 1)),
+=======
+              initialDate: _nextSchedule ?? DateTime.now(),
+              firstDate: DateTime.now(),
+>>>>>>> Stashed changes
+=======
+              initialDate: _nextSchedule ?? DateTime.now(),
+              firstDate: DateTime.now(),
+>>>>>>> Stashed changes
               lastDate: DateTime.now().add(const Duration(days: 365)),
             );
             if (picked != null) {
@@ -663,8 +771,27 @@ class _AddPrenatalCheckupScreenState extends State<AddPrenatalCheckupScreen> {
                         if (picked != null) setModalState(() => end = picked);
                       },
                     ),
-                  ] else
-                    ...[],
+                  ] else ...[
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(
+                        givenDate == null
+                            ? 'Date given (defaults to today)'
+                            : 'Date: ${givenDate!.toIso8601String().split('T').first}',
+                      ),
+                      trailing: const Icon(Icons.calendar_today),
+                      onTap: () async {
+                        final picked = await showDatePicker(
+                          context: context,
+                          initialDate: givenDate ?? DateTime.now(),
+                          firstDate: DateTime(1900),
+                          lastDate: DateTime.now(),
+                        );
+                        if (picked != null)
+                          setModalState(() => givenDate = picked);
+                      },
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -702,6 +829,38 @@ class _AddPrenatalCheckupScreenState extends State<AddPrenatalCheckupScreen> {
     }
   }
 
+<<<<<<< Updated upstream
+=======
+  List<String> _extractTakenTdDoses(List<dynamic>? history) {
+    if (history == null) return [];
+    final taken = <String>{};
+    for (final entry in history) {
+      final dose = (entry as Map<String, dynamic>?)?['td_vaccine_dose']
+          ?.toString();
+      if (dose != null && dose.trim().isNotEmpty) {
+        final normalized = _normalizeTdDose(dose);
+        final matched = _tdOptions.firstWhere(
+          (opt) => _normalizeTdDose(opt) == normalized,
+          orElse: () => dose.trim().toUpperCase(),
+        );
+        taken.add(matched);
+      }
+    }
+    return taken.toList()..sort();
+  }
+
+  List<String> get _availableTdDoses {
+    final taken = _takenTdDoses.map(_normalizeTdDose).toSet();
+    return _tdOptions
+        .where((d) => !taken.contains(_normalizeTdDose(d)))
+        .toList();
+  }
+
+  String _normalizeTdDose(String dose) {
+    return dose.replaceAll(RegExp(r'\s+'), '').toUpperCase();
+  }
+
+>>>>>>> Stashed changes
   Widget _riskCard() {
     final result = _computeLocalRisk();
     final level = result.$1;
@@ -780,7 +939,7 @@ class _AddPrenatalCheckupScreenState extends State<AddPrenatalCheckupScreen> {
       reasons.add('Current risk: ${_baselineRisk.toUpperCase()}');
     }
 
-    if (bpSys != null && bpSys >= 140 || bpDia != null && bpDia >= 90) {
+    if ((bpSys != null && bpSys >= 140) || (bpDia != null && bpDia >= 90)) {
       score += 3;
       reasons.add('High blood pressure');
     }
