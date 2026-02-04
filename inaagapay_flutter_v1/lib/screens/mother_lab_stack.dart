@@ -11,13 +11,20 @@ class MotherLabStack extends StatefulWidget {
 
 class _MotherLabStackState extends State<MotherLabStack> {
   int _index = 0;
+  Map<String, dynamic> _selectedLabTest = {};
 
-  void _goToDetails() {
-    setState(() => _index = 1);
+  void _goToDetails(Map<String, dynamic> labTestData) {
+    setState(() {
+      _selectedLabTest = labTestData;
+      _index = 1;
+    });
   }
 
   void _goBack() {
-    setState(() => _index = 0);
+    setState(() {
+      _selectedLabTest = {};
+      _index = 0;
+    });
   }
 
   @override
@@ -30,6 +37,7 @@ class _MotherLabStackState extends State<MotherLabStack> {
         ),
         MotherLabDetails(
           onBack: _goBack,
+          labTestData: _selectedLabTest,
         ),
       ],
     );

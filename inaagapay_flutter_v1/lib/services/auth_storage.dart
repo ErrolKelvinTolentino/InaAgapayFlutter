@@ -24,4 +24,26 @@ class AuthStorage {
     final token = await getToken();
     return token != null && token.isNotEmpty;
   }
+
+  // NEW: Save mother ID
+  static Future<void> saveMotherId(int motherId) async {
+    await _storage.write(key: 'mother_id', value: motherId.toString());
+  }
+
+  // NEW: Get mother ID
+  static Future<int?> getMotherId() async {
+    final value = await _storage.read(key: 'mother_id');
+    if (value == null) return null;
+    return int.tryParse(value);
+  }
+
+  // NEW: Clear mother ID
+  static Future<void> clearMotherId() async {
+    await _storage.delete(key: 'mother_id');
+  }
+
+  // NEW: Clear all auth data
+  static Future<void> clearAll() async {
+    await _storage.deleteAll();
+  }
 }

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 import 'mother_prenatal_overview.dart';
 import 'mother_growth.dart';
 import 'mother_checkup_details.dart';
@@ -11,16 +10,26 @@ class MotherPrenatalStack extends StatefulWidget {
   State<MotherPrenatalStack> createState() => _MotherPrenatalStackState();
 }
 
-
 class _MotherPrenatalStackState extends State<MotherPrenatalStack> {
   int _currentIndex = 0;
+  Map<String, dynamic> _selectedCheckup = {};
 
-  void _goTo(int index) {
-    setState(() => _currentIndex = index);
+  void _goToGrowth() {
+    setState(() => _currentIndex = 1);
+  }
+
+  void _goToCheckupDetails(Map<String, dynamic> checkupData) {
+    setState(() {
+      _selectedCheckup = checkupData;
+      _currentIndex = 2;
+    });
   }
 
   void _goBackToOverview() {
-    setState(() => _currentIndex = 0);
+    setState(() {
+      _selectedCheckup = {};
+      _currentIndex = 0;
+    });
   }
 
   @override
@@ -30,8 +39,8 @@ class _MotherPrenatalStackState extends State<MotherPrenatalStack> {
       children: [
         // 🟢 INDEX 0 — OVERVIEW
         MotherPrenatalOverview(
-          onViewGrowth: () => _goTo(1),
-          onViewCheckupDetails: () => _goTo(2),
+          onViewGrowth: _goToGrowth,
+          onViewCheckupDetails: _goToCheckupDetails,
         ),
 
         // 🟡 INDEX 1 — GROWTH
@@ -42,6 +51,7 @@ class _MotherPrenatalStackState extends State<MotherPrenatalStack> {
         // 🔵 INDEX 2 — CHECKUP DETAILS
         MotherCheckupDetailsPage(
           onBack: _goBackToOverview,
+          checkupData: _selectedCheckup,
         ),
       ],
     );
