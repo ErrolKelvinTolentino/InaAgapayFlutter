@@ -23,13 +23,25 @@ class _MidwifeMothersPageState extends State<MidwifeMothersPage> {
   final TextEditingController _searchController = TextEditingController();
   String _riskFilter = 'all';
   String _sort = 'name';
+  String _bhcFilter = 'All BHCs';
+  String? _assignedBhcName;
+  bool _bhcLoading = true;
   List<Map<String, dynamic>> _allMothers = [];
   List<Map<String, dynamic>> _filteredMothers = [];
+
+  static const List<String> _bhcOptions = [
+    'San Jose',
+    'Tarcan',
+    'Sta. Barbara',
+    'Tiaong',
+    'Pinagbarilan',
+    'No Assigned BHC',
+  ];
 
   @override
   void initState() {
     super.initState();
-    _load();
+    _loadContextAndData();
   }
 
   @override
@@ -42,6 +54,37 @@ class _MidwifeMothersPageState extends State<MidwifeMothersPage> {
     setState(() {
       _future = fetchMothers();
     });
+  }
+
+  Future<void> _loadContextAndData() async {
+    await _loadContext();
+    await _load();
+  }
+
+  Future<void> _loadContext() async {
+    try {
+      final token = await AuthStorage.getToken();
+      if (token == null) return;
+      final res = await http.get(
+        Uri.parse('https://inaagapay.alwaysdata.net/api/midwife/context.php'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Accept': 'application/json',
+        },
+      );
+      final decoded = jsonDecode(res.body);
+      if (decoded['success'] == true) {
+        final bhcName = decoded['bhc_name']?.toString();
+        setState(() {
+          _assignedBhcName = bhcName;
+          _bhcFilter = bhcName ?? 'All BHCs';
+        });
+      }
+    } catch (_) {
+      // ignore context errors; fallback to all
+    } finally {
+      if (mounted) setState(() => _bhcLoading = false);
+    }
   }
 
   Future<List<Map<String, dynamic>>> fetchMothers() async {
@@ -65,10 +108,10 @@ class _MidwifeMothersPageState extends State<MidwifeMothersPage> {
 
     final List list = decoded['data'] ?? [];
     _allMothers = list.cast<Map<String, dynamic>>();
-    
+
     // Fetch risk data for each mother from their profile
     await _enhanceMothersWithRiskData();
-    
+
     _filteredMothers = _applyFilters(_allMothers);
     return _allMothers;
   }
@@ -85,19 +128,25 @@ class _MidwifeMothersPageState extends State<MidwifeMothersPage> {
           Uri.parse(
             'https://inaagapay.alwaysdata.net/api/midwife/mother_profile.php?mother_id=$motherId',
           ),
-          headers: {'Authorization': 'Bearer $token', 'Accept': 'application/json'},
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Accept': 'application/json',
+          },
         );
 
         if (profileRes.statusCode == 200) {
           final profileData = jsonDecode(profileRes.body);
           if (profileData['success'] == true && profileData['mother'] != null) {
             // Use the risk from the profile (same calculation as mother_profile.php)
-            mother['pregnancy_risk_level'] = profileData['mother']['pregnancy_risk_level'] ?? 
-                                             mother['pregnancy_risk_level'] ?? 'low';
-            
+            mother['pregnancy_risk_level'] =
+                profileData['mother']['pregnancy_risk_level'] ??
+                mother['pregnancy_risk_level'] ??
+                'low';
+
             // Also store the complete risk object if available
             if (profileData['mother']['pregnancy_risk'] != null) {
-              mother['pregnancy_risk'] = profileData['mother']['pregnancy_risk'];
+              mother['pregnancy_risk'] =
+                  profileData['mother']['pregnancy_risk'];
             }
           }
         }
@@ -111,6 +160,17 @@ class _MidwifeMothersPageState extends State<MidwifeMothersPage> {
   List<Map<String, dynamic>> _applyFilters(List<Map<String, dynamic>> list) {
     final query = _searchController.text.trim().toLowerCase();
     List<Map<String, dynamic>> filtered = list.where((m) {
+      final motherBhc = _normalizeBhc(
+        m['barangay'] ?? m['bhc_name'] ?? m['assigned_bhc'] ?? '',
+      );
+      final selectedBhc = _normalizeBhc(_bhcFilter);
+
+      final matchesBhc = _bhcFilter == 'All BHCs'
+          ? true
+          : (_bhcFilter == 'No Assigned BHC'
+                ? motherBhc.isEmpty
+                : motherBhc == selectedBhc);
+
       final matchesSearch = query.isEmpty
           ? true
           : ([
@@ -127,7 +187,7 @@ class _MidwifeMothersPageState extends State<MidwifeMothersPage> {
           : (m['pregnancy_risk_level']?.toString().toLowerCase() ==
                 _riskFilter);
 
-      return matchesSearch && matchesRisk;
+      return matchesSearch && matchesRisk && matchesBhc;
     }).toList();
 
     int levelRank(String? level) {
@@ -182,23 +242,26 @@ class _MidwifeMothersPageState extends State<MidwifeMothersPage> {
     }
 
     try {
-      final lmp = DateTime.parse(lastMenstrualDate.split(' ')[0]); // Handle "YYYY-MM-DD" format
+      final lmp = DateTime.parse(
+        lastMenstrualDate.split(' ')[0],
+      ); // Handle "YYYY-MM-DD" format
       final now = DateTime.now();
-      
+
       // Ensure LMP is not in the future
       if (lmp.isAfter(now)) {
         return 'Invalid LMP date';
       }
-      
+
       final difference = now.difference(lmp);
       final weeks = (difference.inDays / 7).floor();
       final days = difference.inDays % 7;
-      
+
       if (weeks < 0) return '0 weeks';
       if (weeks >= 42) return 'Post-term (42+ weeks)';
       if (weeks >= 40) return 'Full term (40+ weeks)';
-      if (weeks >= 37) return 'Late term ($weeks+${days > 0 ? '$days' : ''} weeks)';
-      
+      if (weeks >= 37)
+        return 'Late term ($weeks+${days > 0 ? '$days' : ''} weeks)';
+
       return '$weeks${days > 0 ? '+$days' : ''} weeks';
     } catch (e) {
       return 'Invalid date format';
@@ -223,13 +286,24 @@ class _MidwifeMothersPageState extends State<MidwifeMothersPage> {
     });
   }
 
+  List<DropdownMenuItem<String>> _bhcDropdownItems() {
+    final opts = <String>{'All BHCs', ..._bhcOptions};
+    if (_assignedBhcName != null && _assignedBhcName!.isNotEmpty) {
+      opts.add(_assignedBhcName!);
+    }
+    return opts
+        .map((b) => DropdownMenuItem<String>(value: b, child: Text(b)))
+        .toList();
+  }
+
+  String _normalizeBhc(String value) =>
+      value.replaceAll(RegExp(r'\s+'), '').toLowerCase();
+
   void _openMotherProfile(Map<String, dynamic> mother) async {
     final motherId = int.tryParse(mother['mother_id']?.toString() ?? '') ?? 0;
     await Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (_) => MotherProfilePage(motherId: motherId),
-      ),
+      MaterialPageRoute(builder: (_) => MotherProfilePage(motherId: motherId)),
     );
     if (mounted) {
       _load();
@@ -240,19 +314,17 @@ class _MidwifeMothersPageState extends State<MidwifeMothersPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
-      
+
       /// 🔝 HEADER
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(72),
-        child: MainHeader(
-          title: 'MOTHERS',
-        ),
+        child: MainHeader(title: 'MOTHERS'),
       ),
 
       /// 🔽 BODY
       body: SafeArea(
         child: RefreshIndicator(
-          onRefresh: _load,
+          onRefresh: _loadContextAndData,
           child: FutureBuilder<List<Map<String, dynamic>>>(
             future: _future,
             builder: (context, snapshot) {
@@ -265,7 +337,11 @@ class _MidwifeMothersPageState extends State<MidwifeMothersPage> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.error_outline, color: Colors.red, size: 48),
+                      const Icon(
+                        Icons.error_outline,
+                        color: Colors.red,
+                        size: 48,
+                      ),
                       const SizedBox(height: 16),
                       Text(
                         snapshot.error.toString(),
@@ -283,7 +359,10 @@ class _MidwifeMothersPageState extends State<MidwifeMothersPage> {
               }
 
               return SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 16,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -318,7 +397,8 @@ class _MidwifeMothersPageState extends State<MidwifeMothersPage> {
                                       ),
                                     ),
                                     TextSpan(
-                                      text: '${_filteredMothers.length} Mothers!',
+                                      text:
+                                          '${_filteredMothers.length} Mothers!',
                                       style: const TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.w600,
@@ -348,6 +428,26 @@ class _MidwifeMothersPageState extends State<MidwifeMothersPage> {
                       trailingIcon: Icons.search,
                       onTrailingTap: () {},
                       onChanged: (_) => _applyFiltersAndSort(),
+                    ),
+                    const SizedBox(height: 8),
+
+                    /// BHC FILTER
+                    DropdownButtonFormField<String>(
+                      value: _bhcFilter,
+                      decoration: const InputDecoration(
+                        labelText: 'Filter by BHC',
+                      ),
+                      isExpanded: true,
+                      items: _bhcDropdownItems(),
+                      onChanged: _bhcLoading
+                          ? null
+                          : (v) {
+                              if (v == null) return;
+                              setState(() {
+                                _bhcFilter = v;
+                                _applyFiltersAndSort();
+                              });
+                            },
                     ),
                     const SizedBox(height: 8),
 
@@ -427,7 +527,8 @@ class _MidwifeMothersPageState extends State<MidwifeMothersPage> {
                         child: Padding(
                           padding: const EdgeInsets.all(32.0),
                           child: Text(
-                            _searchController.text.isNotEmpty || _riskFilter != 'all'
+                            _searchController.text.isNotEmpty ||
+                                    _riskFilter != 'all'
                                 ? 'No mothers match your search'
                                 : 'No mothers found',
                             style: const TextStyle(
@@ -477,11 +578,7 @@ class MotherCard extends StatelessWidget {
   final Map<String, dynamic> mother;
   final VoidCallback onTap;
 
-  const MotherCard({
-    super.key,
-    required this.mother,
-    required this.onTap,
-  });
+  const MotherCard({super.key, required this.mother, required this.onTap});
 
   String getFullName() {
     return [
@@ -498,7 +595,8 @@ class MotherCard extends StatelessWidget {
     if (edd != null && edd.isNotEmpty) {
       try {
         final eddDate = DateTime.parse(edd.split(' ')[0]);
-        final formattedEdd = "${eddDate.year}-${eddDate.month.toString().padLeft(2, '0')}-${eddDate.day.toString().padLeft(2, '0')}";
+        final formattedEdd =
+            "${eddDate.year}-${eddDate.month.toString().padLeft(2, '0')}-${eddDate.day.toString().padLeft(2, '0')}";
         return '$weeks • EDD: $formattedEdd';
       } catch (e) {
         return '$weeks • EDD: $edd';
@@ -513,23 +611,26 @@ class MotherCard extends StatelessWidget {
     }
 
     try {
-      final lmp = DateTime.parse(lastMenstrualDate.split(' ')[0]); // Handle "YYYY-MM-DD" format
+      final lmp = DateTime.parse(
+        lastMenstrualDate.split(' ')[0],
+      ); // Handle "YYYY-MM-DD" format
       final now = DateTime.now();
-      
+
       // Ensure LMP is not in the future
       if (lmp.isAfter(now)) {
         return 'Invalid LMP date';
       }
-      
+
       final difference = now.difference(lmp);
       final weeks = (difference.inDays / 7).floor();
       final days = difference.inDays % 7;
-      
+
       if (weeks < 0) return '0 weeks';
       if (weeks >= 42) return 'Post-term (42+ weeks)';
       if (weeks >= 40) return 'Full term (40+ weeks)';
-      if (weeks >= 37) return 'Late term ($weeks+${days > 0 ? '$days' : ''} weeks)';
-      
+      if (weeks >= 37)
+        return 'Late term ($weeks+${days > 0 ? '$days' : ''} weeks)';
+
       return '$weeks${days > 0 ? '+$days' : ''} weeks';
     } catch (e) {
       return 'Invalid date format';
@@ -621,7 +722,10 @@ class MotherCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   // Risk level badge
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
                       color: riskColor.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(8),

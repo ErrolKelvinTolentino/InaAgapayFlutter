@@ -39,6 +39,8 @@ class _AddPrenatalCheckupScreenState extends State<AddPrenatalCheckupScreen> {
   final TextEditingController _fetalBeat = TextEditingController();
   final TextEditingController _fetalTone = TextEditingController();
   final TextEditingController _remarks = TextEditingController();
+  final TextEditingController _ferrousQty = TextEditingController();
+  final TextEditingController _calciumQty = TextEditingController();
   DateTime? _nextSchedule;
 
   int step = 0;
@@ -47,6 +49,10 @@ class _AddPrenatalCheckupScreenState extends State<AddPrenatalCheckupScreen> {
   double? aogWeeks;
   String _baselineRisk = 'low';
   bool _riskLoading = true;
+  static const List<String> _tdOptions = ['TD 1', 'TD 2', 'TD 3', 'TD 4', 'TD 5'];
+  List<String> _takenTdDoses = [];
+  bool _tdLoading = true;
+  String? _selectedTdDose;
 
   @override
   void initState() {
@@ -63,6 +69,8 @@ class _AddPrenatalCheckupScreenState extends State<AddPrenatalCheckupScreen> {
     _fetalBeat.dispose();
     _fetalTone.dispose();
     _remarks.dispose();
+    _ferrousQty.dispose();
+    _calciumQty.dispose();
     super.dispose();
   }
 
@@ -90,16 +98,27 @@ class _AddPrenatalCheckupScreenState extends State<AddPrenatalCheckupScreen> {
       );
       final decoded = jsonDecode(res.body);
       if (decoded['success'] == true) {
-        final risk = decoded['mother']?['current_pregnancy']?['risk'];
+        final mother = decoded['mother'];
+        final risk = mother?['current_pregnancy']?['risk'];
+        final history = mother?['prenatal_checkups'] as List<dynamic>?;
+        final taken = _extractTakenTdDoses(history);
         setState(() {
           _baselineRisk = (risk?['level'] ?? 'low').toString();
           _riskLoading = false;
+          _takenTdDoses = taken;
+          _selectedTdDose = prenatal.tdVaccineDose;
+          _tdLoading = false;
         });
       } else {
         throw Exception(decoded['message'] ?? 'Failed to load risk');
       }
     } catch (_) {
-      if (mounted) setState(() => _riskLoading = false);
+      if (mounted) {
+        setState(() {
+          _riskLoading = false;
+          _tdLoading = false;
+        });
+      }
     }
   }
 
@@ -431,34 +450,66 @@ class _AddPrenatalCheckupScreenState extends State<AddPrenatalCheckupScreen> {
         _controls(),
       ],
     );
-  }
-
-  Widget _remarksStep() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        ListTile(
-          contentPadding: EdgeInsets.zero,
-          title: const Text('Next scheduled checkup'),
-          subtitle: Text(
-            _nextSchedule == null
-                ? 'Pick a date'
-                : DateFormat('MMM d, yyyy').format(_nextSchedule!),
+        const Text(
+          'Given Medications',
+          style: TextStyle(fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 8),
+        AppInputField(
+          hintText: 'Ferrous + FA quantity',
+          controller: _ferrousQty,
+          keyboardType: TextInputType.number,
+          onChanged: (v) => prenatal.ferrousQuantity = int.tryParse(v),
+        ),
+        const SizedBox(height: 12),
+        AppInputField(
+          hintText: 'Calcium quantity',
+          controller: _calciumQty,
+          keyboardType: TextInputType.number,
+          onChanged: (v) => prenatal.calciumQuantity = int.tryParse(v),
+        ),
+        const SizedBox(height: 16),
+        const Text(
+          'Given TD Vaccine',
+          style: TextStyle(fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 8),
+        if (_tdLoading)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: CircularProgressIndicator(),
+          )
+        else if (_availableTdDoses.isEmpty)
+          const Text(
+            'Received Complete TD Vaccination',
+            style: TextStyle(color: AppColors.textSecondary),
+          )
+        else
+          DropdownButtonFormField<String>(
+            value: _selectedTdDose,
+            decoration: const InputDecoration(
+              labelText: 'Select TD dose',
+            ),
+            items: _availableTdDoses
+                .map(
+                  (d) => DropdownMenuItem<String>(
+                    value: d,
+                    child: Text(d),
+                  ),
+                )
+                .toList(),
+            onChanged: (v) => setState(() {
+              _selectedTdDose = v;
+              prenatal.tdVaccineDose = v;
+            }),
           ),
-          trailing: const Icon(Icons.calendar_today),
-          onTap: () async {
-            final picked = await showDatePicker(
-              context: context,
-              initialDate: _nextSchedule ?? DateTime.now().add(const Duration(days: 30)),
-              firstDate: DateTime.now().add(const Duration(days: 1)),
-              lastDate: DateTime.now().add(const Duration(days: 365)),
-            );
-            if (picked != null) {
-              setState(() {
-                _nextSchedule = picked;
-                prenatal.nextSchedule = picked;
-              });
-            }
+        if (_takenTdDoses.isNotEmpty) ...[
+          const SizedBox(height: 6),
+          Text(
+            'Already given: ${_takenTdDoses.join(', ')}',
+            style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+          ),
+        ],
           },
         ),
         const SizedBox(height: 8),
@@ -691,14 +742,37 @@ class _AddPrenatalCheckupScreenState extends State<AddPrenatalCheckupScreen> {
             ..startDate = start
             ..endDate = end;
           prenatal.motherMedications.add(entry);
-        } else {
-          final entry = GivenMedicationEntry(name: name.text.trim())
-            ..quantity = int.tryParse(qty.text.trim())
-            ..dateGiven = givenDate ?? DateTime.now();
-          prenatal.givenMedications.add(entry);
         }
       });
     }
+  }
+
+  List<String> _extractTakenTdDoses(List<dynamic>? history) {
+    if (history == null) return [];
+    final taken = <String>{};
+    for (final entry in history) {
+      final dose = (entry as Map<String, dynamic>?)?['td_vaccine_dose']?.toString();
+      if (dose != null && dose.trim().isNotEmpty) {
+        final normalized = _normalizeTdDose(dose);
+        final matched = _tdOptions.firstWhere(
+          (opt) => _normalizeTdDose(opt) == normalized,
+          orElse: () => dose.trim().toUpperCase(),
+        );
+        taken.add(matched);
+      }
+    }
+    return taken.toList()..sort();
+  }
+
+  List<String> get _availableTdDoses {
+    final taken = _takenTdDoses.map(_normalizeTdDose).toSet();
+    return _tdOptions
+        .where((d) => !taken.contains(_normalizeTdDose(d)))
+        .toList();
+  }
+
+  String _normalizeTdDose(String dose) {
+    return dose.replaceAll(RegExp(r'\s+'), '').toUpperCase();
   }
 
   Widget _riskCard() {

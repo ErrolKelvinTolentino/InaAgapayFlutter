@@ -26,14 +26,57 @@ class _MidwifeChildrenPageState extends State<MidwifeChildrenPage> {
   List<Map<String, dynamic>> _allChildren = [];
   List<Map<String, dynamic>> _filteredChildren = [];
   bool _isLoading = true;
-  
+  String _bhcFilter = 'All BHCs';
+  String? _assignedBhcName;
+  bool _bhcLoading = true;
+
   // Added: Sorting functionality
   String _sortBy = 'recent'; // 'recent' or 'name'
+
+  static const List<String> _bhcOptions = [
+    'San Jose',
+    'Tarcan',
+    'Sta. Barbara',
+    'Tiaong',
+    'Pinagbarilan',
+    'No Assigned BHC',
+  ];
 
   @override
   void initState() {
     super.initState();
-    _loadChildren();
+    _loadContextAndChildren();
+  }
+
+  Future<void> _loadContextAndChildren() async {
+    await _loadContext();
+    await _loadChildren();
+  }
+
+  Future<void> _loadContext() async {
+    try {
+      final token = await AuthStorage.getToken();
+      if (token == null) return;
+      final res = await http.get(
+        Uri.parse('https://inaagapay.alwaysdata.net/api/midwife/context.php'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Accept': 'application/json',
+        },
+      );
+      final decoded = jsonDecode(res.body);
+      if (decoded['success'] == true) {
+        final bhcName = decoded['bhc_name']?.toString();
+        setState(() {
+          _assignedBhcName = bhcName;
+          _bhcFilter = bhcName ?? 'All BHCs';
+        });
+      }
+    } catch (_) {
+      // ignore context errors
+    } finally {
+      if (mounted) setState(() => _bhcLoading = false);
+    }
   }
 
   /// ================= FETCH CHILDREN =================
@@ -50,9 +93,7 @@ class _MidwifeChildrenPageState extends State<MidwifeChildrenPage> {
         Uri.parse(
           'https://inaagapay.alwaysdata.net/api/midwife/midwife_children.php',
         ),
-        headers: {
-          'Authorization': 'Bearer $token',
-        },
+        headers: {'Authorization': 'Bearer $token'},
       );
 
       final decoded = jsonDecode(res.body);
@@ -109,25 +150,39 @@ class _MidwifeChildrenPageState extends State<MidwifeChildrenPage> {
   /// ================= APPLY FILTER AND SORT =================
   void _applyFilterAndSort({String? query}) {
     final searchQuery = query ?? _searchController.text;
-    
+    final selectedBhc = _normalizeBhc(_bhcFilter);
+
     setState(() {
-      if (searchQuery.isEmpty) {
-        _filteredChildren = List.from(_allChildren);
-      } else {
-        _filteredChildren = _allChildren.where((child) {
-          final name = '${child['first_name'] ?? ''} ${child['middle_name'] ?? ''} ${child['last_name'] ?? ''}'
-              .toLowerCase();
-          final motherName = (child['mother_name'] ?? '').toString().toLowerCase();
-          return name.contains(searchQuery.toLowerCase()) ||
-                 motherName.contains(searchQuery.toLowerCase());
-        }).toList();
-      }
+      final searchLower = searchQuery.toLowerCase();
+      _filteredChildren = _allChildren.where((child) {
+        final name =
+            '${child['first_name'] ?? ''} ${child['middle_name'] ?? ''} ${child['last_name'] ?? ''}'
+                .toLowerCase();
+        final motherName = (child['mother_name'] ?? '')
+            .toString()
+            .toLowerCase();
+        final bhc = _normalizeBhc(
+          child['bhc_name'] ?? child['barangay'] ?? child['assigned_bhc'] ?? '',
+        );
+        final matchesBhc = _bhcFilter == 'All BHCs'
+            ? true
+            : (_bhcFilter == 'No Assigned BHC'
+                  ? bhc.isEmpty
+                  : bhc == selectedBhc);
+
+        if (!matchesBhc) return false;
+        if (searchLower.isEmpty) return true;
+
+        return name.contains(searchLower) || motherName.contains(searchLower);
+      }).toList();
 
       // Apply sorting
       if (_sortBy == 'name') {
         _filteredChildren.sort((a, b) {
-          final nameA = '${(a['last_name'] ?? '').toString()}${(a['first_name'] ?? '').toString()}';
-          final nameB = '${(b['last_name'] ?? '').toString()}${(b['first_name'] ?? '').toString()}';
+          final nameA =
+              '${(a['last_name'] ?? '').toString()}${(a['first_name'] ?? '').toString()}';
+          final nameB =
+              '${(b['last_name'] ?? '').toString()}${(b['first_name'] ?? '').toString()}';
           return nameA.toLowerCase().compareTo(nameB.toLowerCase());
         });
       } else {
@@ -137,19 +192,32 @@ class _MidwifeChildrenPageState extends State<MidwifeChildrenPage> {
             if (value == null) return null;
             return DateTime.tryParse(value.toString());
           }
-          
+
           final dateA = parseDate(a['created_at'] ?? a['added_at']);
           final dateB = parseDate(b['created_at'] ?? b['added_at']);
-          
+
           if (dateA == null && dateB == null) return 0;
           if (dateA == null) return 1;
           if (dateB == null) return -1;
-          
+
           return dateB.compareTo(dateA); // Descending order (most recent first)
         });
       }
     });
   }
+
+  List<DropdownMenuItem<String>> _bhcDropdownItems() {
+    final opts = <String>{'All BHCs', ..._bhcOptions};
+    if (_assignedBhcName != null && _assignedBhcName!.isNotEmpty) {
+      opts.add(_assignedBhcName!);
+    }
+    return opts
+        .map((b) => DropdownMenuItem<String>(value: b, child: Text(b)))
+        .toList();
+  }
+
+  String _normalizeBhc(String value) =>
+      value.replaceAll(RegExp(r'\s+'), '').toLowerCase();
 
   /// ================= CHANGE SORTING =================
   void _changeSort(String newSort) {
@@ -165,7 +233,7 @@ class _MidwifeChildrenPageState extends State<MidwifeChildrenPage> {
     // For now, we'll use a simple placeholder logic
     final childId = child['child_id'].toString();
     final lastDigit = int.tryParse(childId.substring(childId.length - 1)) ?? 0;
-    
+
     if (lastDigit % 3 == 0) {
       return VaccineScheduleStatus.overdue;
     } else if (lastDigit % 3 == 1) {
@@ -182,11 +250,7 @@ class _MidwifeChildrenPageState extends State<MidwifeChildrenPage> {
     if (id != null) {
       Navigator.push(
         context,
-        MaterialPageRoute(
-          builder: (_) => ChildProfilePage(
-            childId: id,
-          ),
-        ),
+        MaterialPageRoute(builder: (_) => ChildProfilePage(childId: id)),
       );
     }
   }
@@ -195,19 +259,17 @@ class _MidwifeChildrenPageState extends State<MidwifeChildrenPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
-      
+
       // 🔝 Header
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(72),
-        child: MainHeader(
-          title: 'CHILDREN',
-        ),
+        child: MainHeader(title: 'CHILDREN'),
       ),
 
       // 🔽 Body
       body: SafeArea(
         child: RefreshIndicator(
-          onRefresh: _loadChildren,
+          onRefresh: _loadContextAndChildren,
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
             physics: const AlwaysScrollableScrollPhysics(),
@@ -289,7 +351,26 @@ class _MidwifeChildrenPageState extends State<MidwifeChildrenPage> {
                         onChanged: _filterChildren,
                       ),
                       const SizedBox(height: 12),
-                      
+
+                      DropdownButtonFormField<String>(
+                        value: _bhcFilter,
+                        decoration: const InputDecoration(
+                          labelText: 'Filter by BHC',
+                        ),
+                        isExpanded: true,
+                        items: _bhcDropdownItems(),
+                        onChanged: _bhcLoading
+                            ? null
+                            : (v) {
+                                if (v == null) return;
+                                setState(() {
+                                  _bhcFilter = v;
+                                });
+                                _applyFilterAndSort();
+                              },
+                      ),
+                      const SizedBox(height: 12),
+
                       // Sort Dropdown
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -301,20 +382,29 @@ class _MidwifeChildrenPageState extends State<MidwifeChildrenPage> {
                           child: DropdownButton<String>(
                             value: _sortBy,
                             isExpanded: true,
-                            icon: const Icon(Icons.arrow_drop_down, color: AppColors.textSecondary),
+                            icon: const Icon(
+                              Icons.arrow_drop_down,
+                              color: AppColors.textSecondary,
+                            ),
                             items: const [
                               DropdownMenuItem(
                                 value: 'recent',
                                 child: Padding(
                                   padding: EdgeInsets.symmetric(horizontal: 12),
-                                  child: Text('Sort: Most Recent', style: TextStyle(fontSize: 14)),
+                                  child: Text(
+                                    'Sort: Most Recent',
+                                    style: TextStyle(fontSize: 14),
+                                  ),
                                 ),
                               ),
                               DropdownMenuItem(
                                 value: 'name',
                                 child: Padding(
                                   padding: EdgeInsets.symmetric(horizontal: 12),
-                                  child: Text('Sort: Name A-Z', style: TextStyle(fontSize: 14)),
+                                  child: Text(
+                                    'Sort: Name A-Z',
+                                    style: TextStyle(fontSize: 14),
+                                  ),
                                 ),
                               ),
                             ],
@@ -326,7 +416,7 @@ class _MidwifeChildrenPageState extends State<MidwifeChildrenPage> {
                           ),
                         ),
                       ),
-                      
+
                       // Count Text
                       const SizedBox(height: 8),
                       Align(
@@ -379,7 +469,8 @@ class _MidwifeChildrenPageState extends State<MidwifeChildrenPage> {
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 12),
                         child: ChildCard(
-                          fullName: '${child['first_name']} ${child['last_name']}',
+                          fullName:
+                              '${child['first_name']} ${child['last_name']}',
                           ageText: calculateAge(child['birthdate']),
                           vaccineStatus: _getVaccineStatus(child),
                           image: const AssetImage('assets/images/child.png'),
@@ -399,9 +490,7 @@ class _MidwifeChildrenPageState extends State<MidwifeChildrenPage> {
         onPressed: () {
           Navigator.push(
             context,
-            MaterialPageRoute(
-              builder: (_) => const AddChildStep1Parent(),
-            ),
+            MaterialPageRoute(builder: (_) => const AddChildStep1Parent()),
           );
         },
       ),

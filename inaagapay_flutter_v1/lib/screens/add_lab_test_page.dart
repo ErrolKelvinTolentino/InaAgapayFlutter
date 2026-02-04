@@ -28,18 +28,32 @@ class _AddLabTestPageState extends State<AddLabTestPage> {
   static const int _totalSteps = 3;
   final ImagePicker _picker = ImagePicker();
   XFile? _imageFile;
+  static const List<String> _pregnancyLabTests = [
+    'Complete Blood Count (CBC)',
+    'Urinalysis',
+    'OGTT (Oral Glucose Tolerance Test)',
+    'Fasting Blood Sugar',
+    'Hepatitis B (HBsAg)',
+    'HIV Screening',
+    'Syphilis (VDRL/RPR)',
+    'Blood Typing',
+    'Glucose Challenge Test',
+    'Thyroid Function (TSH)',
+    'Stool Examination',
+    'Other (specify in remarks)',
+  ];
   static const List<String> _labProfessions = [
     'Medical Technologist',
     'Pathologist',
     'Nurse',
   ];
 
-  final _typeCtrl = TextEditingController();
   final _locationCtrl = TextEditingController();
   final _remarksCtrl = TextEditingController();
   final _workerNameCtrl = TextEditingController();
   final _institutionCtrl = TextEditingController();
   String? _profession;
+  String? _selectedLabType;
 
   @override
   void initState() {
@@ -49,7 +63,6 @@ class _AddLabTestPageState extends State<AddLabTestPage> {
 
   @override
   void dispose() {
-    _typeCtrl.dispose();
     _locationCtrl.dispose();
     _remarksCtrl.dispose();
     _workerNameCtrl.dispose();
@@ -95,7 +108,7 @@ class _AddLabTestPageState extends State<AddLabTestPage> {
       request.headers['Authorization'] = 'Bearer $token';
       request.fields.addAll({
         'pregnancy_id': _pregnancyId.toString(),
-        'lab_test_type': _typeCtrl.text,
+        'lab_test_type': _selectedLabType ?? '',
         'lab_test_date': DateFormat('yyyy-MM-dd').format(_date!),
         'lab_test_location': _locationCtrl.text,
         'remarks': _remarksCtrl.text,
@@ -141,10 +154,12 @@ class _AddLabTestPageState extends State<AddLabTestPage> {
     String? message;
     switch (_step) {
       case 0:
-        if (_typeCtrl.text.trim().isEmpty) {
+        if (_selectedLabType == null) {
           message = 'Lab test type is required.';
         } else if (_date == null) {
           message = 'Lab test date is required.';
+        } else if (_date!.isAfter(DateTime.now())) {
+          message = 'Future lab test dates are not allowed.';
         }
         break;
     }
@@ -169,11 +184,13 @@ class _AddLabTestPageState extends State<AddLabTestPage> {
   }
 
   Future<void> _pickDate() async {
+    final today = DateTime.now();
+    final initial = _date != null && !_date!.isAfter(today) ? _date! : today;
     final picked = await showDatePicker(
       context: context,
       firstDate: DateTime(2020),
-      lastDate: DateTime(2035),
-      initialDate: _date ?? DateTime.now(),
+      lastDate: today,
+      initialDate: initial,
     );
     if (picked != null) {
       setState(() => _date = picked);
@@ -312,10 +329,19 @@ class _AddLabTestPageState extends State<AddLabTestPage> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            AppInputField(
-              hintText: 'Lab Test Type',
-              controller: _typeCtrl,
-              isRequired: true,
+            DropdownButtonFormField<String>(
+              value: _selectedLabType,
+              isExpanded: true,
+              decoration: const InputDecoration(
+                labelText: 'Lab Test Type',
+                border: OutlineInputBorder(),
+              ),
+              items: _pregnancyLabTests
+                  .map(
+                    (t) => DropdownMenuItem<String>(value: t, child: Text(t)),
+                  )
+                  .toList(),
+              onChanged: (v) => setState(() => _selectedLabType = v),
             ),
             const SizedBox(height: 12),
             ListTile(

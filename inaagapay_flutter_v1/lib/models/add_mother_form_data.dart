@@ -147,6 +147,8 @@ class PrenatalCheckInput {
   double? ageOfGestationWeeks;
   bool missedScheduledCheckups = false;
   DateTime? nextSchedule;
+  int? ferrousQuantity;
+  int? calciumQuantity;
 
   final List<MotherMedicationEntry> motherMedications = [];
   final List<GivenMedicationEntry> givenMedications = [];
@@ -168,7 +170,23 @@ class PrenatalCheckInput {
     'missed_scheduled_checkups': missedScheduledCheckups,
     'next_schedule': _fmtDate(nextSchedule),
     'mother_medications': motherMedications.map((m) => m.toJson()).toList(),
-    'given_medications': givenMedications.map((g) => g.toJson()).toList(),
+    'given_medications': [
+      if (ferrousQuantity != null && ferrousQuantity! > 0)
+        {
+          'given_medication_name': 'Ferrous + FA',
+          'medicine_name': 'Ferrous + FA',
+          'quantity': ferrousQuantity,
+          'date_given': _fmtDate(DateTime.now()),
+        },
+      if (calciumQuantity != null && calciumQuantity! > 0)
+        {
+          'given_medication_name': 'Calcium',
+          'medicine_name': 'Calcium',
+          'quantity': calciumQuantity,
+          'date_given': _fmtDate(DateTime.now()),
+        },
+      ...givenMedications.map((g) => g.toJson()),
+    ],
   };
 }
 

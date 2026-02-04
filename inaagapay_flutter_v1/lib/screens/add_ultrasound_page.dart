@@ -138,6 +138,8 @@ class _AddUltrasoundPageState extends State<AddUltrasoundPage> {
       case 0:
         if (_date == null) {
           message = 'Ultrasound date is required.';
+        } else if (_date!.isAfter(DateTime.now())) {
+          message = 'Future ultrasound dates are not allowed.';
         }
         break;
     }
@@ -162,11 +164,13 @@ class _AddUltrasoundPageState extends State<AddUltrasoundPage> {
   }
 
   Future<void> _pickDate() async {
+    final today = DateTime.now();
+    final initial = _date != null && _date!.isBefore(today) ? _date! : today;
     final picked = await showDatePicker(
       context: context,
       firstDate: DateTime(2020),
-      lastDate: DateTime(2035),
-      initialDate: _date ?? DateTime.now(),
+      lastDate: today,
+      initialDate: initial,
     );
     if (picked != null) {
       setState(() => _date = picked);
