@@ -12,6 +12,8 @@ import '../widgets/main_button.dart';
 import '../widgets/dialog_box.dart';
 import '../widgets/confirmation_dialog_box.dart';
 import '../widgets/validation_message.dart';
+import '../models/vaccine_model.dart';
+import '../services/vaccine_service.dart';
 
 class AddImmunizationPage extends StatefulWidget {
   final int childId;
@@ -34,7 +36,10 @@ class _AddImmunizationPageState extends State<AddImmunizationPage> {
   int? _selectedVaccineId;
   DateTime? _selectedDate;
   bool _isLoading = false;
-  List<Map<String, dynamic>> _vaccines = [];
+  List<VaccineModel> _vaccines = [];
+  bool _vaccinesLoading = true;
+  Set<int> _takenVaccineIds = {};
+  Set<String> _takenVaccineNames = {};
 
   @override
   void initState() {
@@ -42,109 +47,169 @@ class _AddImmunizationPageState extends State<AddImmunizationPage> {
     _loadVaccines();
   }
 
+  @override
+  void dispose() {
+    _remarksController.dispose();
+    super.dispose();
+  }
+
   /// --------------------------------------------------
-  /// LOAD VACCINES FROM API
+  /// LOAD VACCINES FROM API WITH TAKEN VACCINES CHECK
   /// --------------------------------------------------
   Future<void> _loadVaccines() async {
     try {
-      final token = await AuthStorage.getToken();
-      if (token == null) throw Exception('Not authenticated');
+      // First, load available vaccines
+      final data = await VaccineService.fetchVaccines();
+      
+      // Then, load already taken vaccines for this child
+      final taken = await _fetchTakenVaccines();
 
-      final response = await http.get(
-        Uri.parse('https://inaagapay.alwaysdata.net/api/midwife/vaccines.php'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Accept': 'application/json',
-        },
-      );
-
-      if (response.statusCode == 200) {
-        final decoded = jsonDecode(response.body);
-        if (decoded['success'] == true) {
-          setState(() {
-            _vaccines = List<Map<String, dynamic>>.from(decoded['data'] ?? []);
-          });
-        }
-      }
+      setState(() {
+        _vaccines = data;
+        _takenVaccineIds = taken.$1;
+        _takenVaccineNames = taken.$2;
+        _vaccinesLoading = false;
+      });
     } catch (e) {
       // If API fails, use default vaccines
       _setDefaultVaccines();
     }
   }
 
+  Future<(Set<int>, Set<String>)> _fetchTakenVaccines() async {
+    try {
+      final token = await AuthStorage.getToken();
+      if (token == null) return (<int>{}, <String>{});
+
+      final response = await http.get(
+        Uri.parse(
+          'https://inaagapay.alwaysdata.net/api/midwife/child_immunization_list.php?child_id=${widget.childId}',
+        ),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      if (response.statusCode == 200) {
+        final decoded = jsonDecode(response.body);
+        final records = decoded['records'] is List ? decoded['records'] : [];
+
+        final ids = <int>{};
+        final names = <String>{};
+        for (final r in records) {
+          final id = int.tryParse(r['vaccine_id']?.toString() ?? '');
+          if (id != null) ids.add(id);
+          final name = r['vaccine_name']?.toString().trim();
+          if (name != null && name.isNotEmpty) names.add(name);
+        }
+
+        return (ids, names);
+      }
+      return (<int>{}, <String>{});
+    } catch (_) {
+      return (<int>{}, <String>{});
+    }
+  }
+
+  /// --------------------------------------------------
+  /// GET AVAILABLE VACCINES (EXCLUDE ALREADY TAKEN)
+  /// --------------------------------------------------
+  List<VaccineModel> _getAvailableVaccines() {
+    return _vaccines.where((v) {
+      final alreadyTaken = _takenVaccineIds.contains(v.vaccineId) ||
+          _takenVaccineNames.contains(v.vaccineName);
+      return !alreadyTaken;
+    }).toList();
+  }
+
   void _setDefaultVaccines() {
-    _vaccines = [
+    // Convert default vaccines to VaccineModel format
+    final defaultVaccines = [
       {
-        'vaccine_id': 1,
+        'vaccine_id': '1',
         'vaccine_name': 'BCG',
         'dose_number': '1',
-        'recommended_age_weeks': 0,
-        'age_label': 'At Birth'
+        'recommended_age_months': '0',
+        'target_recipients': 'Infants at birth',
+        'notes': 'At Birth'
       },
       {
-        'vaccine_id': 2,
+        'vaccine_id': '2',
         'vaccine_name': 'Hepatitis B',
         'dose_number': '1',
-        'recommended_age_weeks': 0,
-        'age_label': 'At Birth'
+        'recommended_age_months': '0',
+        'target_recipients': 'Infants at birth',
+        'notes': 'At Birth'
       },
       {
-        'vaccine_id': 3,
+        'vaccine_id': '3',
         'vaccine_name': 'Pentavalent',
         'dose_number': '1',
-        'recommended_age_weeks': 6,
-        'age_label': '6 Weeks'
+        'recommended_age_months': '1.5',
+        'target_recipients': 'Infants at 6 weeks',
+        'notes': '6 Weeks'
       },
       {
-        'vaccine_id': 4,
+        'vaccine_id': '4',
         'vaccine_name': 'OPV',
         'dose_number': '1',
-        'recommended_age_weeks': 6,
-        'age_label': '6 Weeks'
+        'recommended_age_months': '1.5',
+        'target_recipients': 'Infants at 6 weeks',
+        'notes': '6 Weeks'
       },
       {
-        'vaccine_id': 5,
+        'vaccine_id': '5',
         'vaccine_name': 'PCV',
         'dose_number': '1',
-        'recommended_age_weeks': 6,
-        'age_label': '6 Weeks'
+        'recommended_age_months': '1.5',
+        'target_recipients': 'Infants at 6 weeks',
+        'notes': '6 Weeks'
       },
       {
-        'vaccine_id': 6,
+        'vaccine_id': '6',
         'vaccine_name': 'Rotavirus',
         'dose_number': '1',
-        'recommended_age_weeks': 6,
-        'age_label': '6 Weeks'
+        'recommended_age_months': '1.5',
+        'target_recipients': 'Infants at 6 weeks',
+        'notes': '6 Weeks'
       },
       {
-        'vaccine_id': 7,
+        'vaccine_id': '7',
         'vaccine_name': 'Pentavalent',
         'dose_number': '2',
-        'recommended_age_weeks': 10,
-        'age_label': '10 Weeks'
+        'recommended_age_months': '2.5',
+        'target_recipients': 'Infants at 10 weeks',
+        'notes': '10 Weeks'
       },
       {
-        'vaccine_id': 8,
+        'vaccine_id': '8',
         'vaccine_name': 'OPV',
         'dose_number': '2',
-        'recommended_age_weeks': 10,
-        'age_label': '10 Weeks'
+        'recommended_age_months': '2.5',
+        'target_recipients': 'Infants at 10 weeks',
+        'notes': '10 Weeks'
       },
       {
-        'vaccine_id': 9,
+        'vaccine_id': '9',
         'vaccine_name': 'PCV',
         'dose_number': '2',
-        'recommended_age_weeks': 10,
-        'age_label': '10 Weeks'
+        'recommended_age_months': '2.5',
+        'target_recipients': 'Infants at 10 weeks',
+        'notes': '10 Weeks'
       },
       {
-        'vaccine_id': 10,
+        'vaccine_id': '10',
         'vaccine_name': 'Rotavirus',
         'dose_number': '2',
-        'recommended_age_weeks': 10,
-        'age_label': '10 Weeks'
+        'recommended_age_months': '2.5',
+        'target_recipients': 'Infants at 10 weeks',
+        'notes': '10 Weeks'
       },
     ];
+
+    _vaccines = defaultVaccines.map((v) {
+      return VaccineModel.fromJson(v);
+    }).toList();
+    
+    _vaccinesLoading = false;
   }
 
   /// --------------------------------------------------
@@ -173,13 +238,15 @@ class _AddImmunizationPageState extends State<AddImmunizationPage> {
   }
 
   /// --------------------------------------------------
-  /// GROUP VACCINES BY AGE
+  /// GROUP VACCINES BY AGE (ONLY AVAILABLE ONES)
   /// --------------------------------------------------
-  Map<String, List<Map<String, dynamic>>> _groupVaccinesByAge() {
-    final Map<String, List<Map<String, dynamic>>> grouped = {};
+  Map<String, List<VaccineModel>> _groupVaccinesByAge() {
+    final Map<String, List<VaccineModel>> grouped = {};
+    final availableVaccines = _getAvailableVaccines();
     
-    for (final vaccine in _vaccines) {
-      final ageLabel = vaccine['age_label']?.toString() ?? 'Other';
+    for (final vaccine in availableVaccines) {
+      // Use notes as age label if available, otherwise use target_recipients
+      final ageLabel = vaccine.notes ?? vaccine.targetRecipients;
       grouped.putIfAbsent(ageLabel, () => []);
       grouped[ageLabel]!.add(vaccine);
     }
@@ -188,10 +255,27 @@ class _AddImmunizationPageState extends State<AddImmunizationPage> {
   }
 
   /// --------------------------------------------------
-  /// VACCINE DROPDOWN (CALCULATOR STYLE)
+  /// VACCINE DROPDOWN (CALCULATOR STYLE) - ONLY SHOW AVAILABLE
   /// --------------------------------------------------
   void _openVaccineDropdown() {
+    if (_vaccinesLoading) return;
+    
     final groupedVaccines = _groupVaccinesByAge();
+    final availableVaccines = _getAvailableVaccines();
+
+    if (availableVaccines.isEmpty) {
+      showDialog(
+        context: context,
+        builder: (_) => DialogBox(
+          type: DialogType.info,
+          title: 'No Vaccines Available',
+          subtitle: 'All recorded vaccines are already taken for this child.',
+          buttonText: 'OK',
+          onPressed: () => Navigator.pop(context),
+        ),
+      );
+      return;
+    }
 
     showDialog(
       context: context,
@@ -214,82 +298,97 @@ class _AddImmunizationPageState extends State<AddImmunizationPage> {
           ),
           child: SingleChildScrollView(
             child: Column(
-              children: groupedVaccines.entries.map((entry) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    /// AGE LABEL
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
-                      child: Text(
-                        entry.key,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.textSecondary,
+              children: [
+                /// NO DUPLICATES MESSAGE
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Text(
+                    'Only showing vaccines not yet recorded for this child',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textSecondary,
+                      fontStyle: FontStyle.italic,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                
+                /// FIXED: Removed unnecessary .toList() from spread
+                ...groupedVaccines.entries.map((entry) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      /// AGE LABEL
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
+                        child: Text(
+                          entry.key,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textSecondary,
+                          ),
                         ),
                       ),
-                    ),
 
-                    /// VACCINES
-                    ...entry.value.map((vaccine) {
-                      final vaccineId = vaccine['vaccine_id']?.toString() ?? '';
-                      final vaccineName = vaccine['vaccine_name']?.toString() ?? '';
-                      final doseNumber = vaccine['dose_number']?.toString() ?? '';
-                      final displayName = doseNumber.isNotEmpty
-                          ? '$vaccineName (Dose $doseNumber)'
-                          : vaccineName;
+                      /// VACCINES
+                      ...entry.value.map((vaccine) {
+                        final vaccineId = vaccine.vaccineId.toString();
+                        final vaccineName = vaccine.vaccineName;
+                        final doseNumber = vaccine.doseNumber;
+                        final displayName = '$vaccineName (Dose $doseNumber)';
 
-                      return InkWell(
-                        onTap: () {
-                          setState(() {
-                            _selectedVaccineKey = vaccineId;
-                            _selectedVaccineId = int.tryParse(vaccineId);
-                            _vaccineController.text = displayName;
-                          });
-                          Navigator.pop(context);
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 14,
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.circle_outlined,
-                                size: 18,
-                                color: _selectedVaccineKey == vaccineId
-                                    ? AppColors.brandPrimary
-                                    : AppColors.textSecondary,
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  displayName,
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w500,
-                                    color: _selectedVaccineKey == vaccineId
-                                        ? AppColors.brandPrimary
-                                        : AppColors.textPrimary,
+                        return InkWell(
+                          onTap: () {
+                            setState(() {
+                              _selectedVaccineKey = vaccineId;
+                              _selectedVaccineId = vaccine.vaccineId;
+                              _vaccineController.text = displayName;
+                            });
+                            Navigator.pop(context);
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 14,
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.circle_outlined,
+                                  size: 18,
+                                  color: _selectedVaccineKey == vaccineId
+                                      ? AppColors.brandPrimary
+                                      : AppColors.textSecondary,
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    displayName,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                      color: _selectedVaccineKey == vaccineId
+                                          ? AppColors.brandPrimary
+                                          : AppColors.textPrimary,
+                                    ),
                                   ),
                                 ),
-                              ),
-                              if (_selectedVaccineKey == vaccineId)
-                                const Icon(
-                                  Icons.check,
-                                  size: 18,
-                                  color: AppColors.brandPrimary,
-                                ),
-                            ],
+                                if (_selectedVaccineKey == vaccineId)
+                                  const Icon(
+                                    Icons.check,
+                                    size: 18,
+                                    color: AppColors.brandPrimary,
+                                  ),
+                              ],
+                            ),
                           ),
-                        ),
-                      );
-                    }),
-                  ],
-                );
-              }).toList(),
+                        );
+                      }),
+                    ],
+                  );
+                }),
+              ],
             ),
           ),
         ),
@@ -298,36 +397,22 @@ class _AddImmunizationPageState extends State<AddImmunizationPage> {
   }
 
   /// --------------------------------------------------
-  /// SUBMIT IMMUNIZATION
+  /// SUBMIT IMMUNIZATION USING VACCINE SERVICE
   /// --------------------------------------------------
   Future<bool> _submitImmunization() async {
     if (_selectedVaccineId == null || _selectedDate == null) {
       return false;
     }
 
-    final token = await AuthStorage.getToken();
-    if (token == null) return false;
-
     try {
-      final response = await http.post(
-        Uri.parse('https://inaagapay.alwaysdata.net/api/midwife/add_immunization.php'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({
-          'child_id': widget.childId,
-          'vaccine_id': _selectedVaccineId,
-          'vaccination_date': DateFormat('yyyy-MM-dd').format(_selectedDate!),
-          'remarks': _remarksController.text.trim(),
-        }),
+      final success = await VaccineService.addImmunization(
+        childId: widget.childId,
+        vaccineId: _selectedVaccineId!,
+        vaccinationDate: _selectedDate!,
+        remarks: _remarksController.text.trim(),
       );
 
-      if (response.statusCode == 200) {
-        final decoded = jsonDecode(response.body);
-        return decoded['success'] == true;
-      }
-      return false;
+      return success;
     } catch (e) {
       return false;
     }
@@ -390,6 +475,9 @@ class _AddImmunizationPageState extends State<AddImmunizationPage> {
 
   @override
   Widget build(BuildContext context) {
+    final availableVaccines = _getAvailableVaccines();
+    final hasAvailableVaccines = availableVaccines.isNotEmpty;
+
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
 
@@ -418,6 +506,14 @@ class _AddImmunizationPageState extends State<AddImmunizationPage> {
 
               const SizedBox(height: 16),
 
+              /// LOADING INDICATOR FOR VACCINES
+              if (_vaccinesLoading)
+                const Center(
+                  child: CircularProgressIndicator(
+                    color: AppColors.brandPrimary,
+                  ),
+                ),
+
               /// SELECT VACCINE
               AppInputField(
                 hintText: 'Select Vaccine',
@@ -425,9 +521,23 @@ class _AddImmunizationPageState extends State<AddImmunizationPage> {
                 leadingIcon: Icons.vaccines_outlined,
                 trailingIcon: Icons.keyboard_arrow_down_rounded,
                 readOnly: false,
-                onTap: _openVaccineDropdown,
+                onTap: _vaccinesLoading ? null : _openVaccineDropdown,
                 isRequired: true,
               ),
+
+              /// NO AVAILABLE VACCINES MESSAGE
+              if (!_vaccinesLoading && !hasAvailableVaccines)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8.0, left: 8.0),
+                  child: Text(
+                    'All recorded vaccines are already taken for this child.',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textSecondary,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ),
 
               const SizedBox(height: 16),
 
@@ -469,7 +579,7 @@ class _AddImmunizationPageState extends State<AddImmunizationPage> {
                     )
                   : MainButton(
                       label: 'Add Immunization Record',
-                      onPressed: _isFormValid ? _submit : null,
+                      onPressed: (_isFormValid && hasAvailableVaccines) ? _submit : null,
                     ),
 
               const SizedBox(height: 24),

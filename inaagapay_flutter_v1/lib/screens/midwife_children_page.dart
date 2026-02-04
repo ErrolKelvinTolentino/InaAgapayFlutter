@@ -26,6 +26,9 @@ class _MidwifeChildrenPageState extends State<MidwifeChildrenPage> {
   List<Map<String, dynamic>> _allChildren = [];
   List<Map<String, dynamic>> _filteredChildren = [];
   bool _isLoading = true;
+  
+  // Added: Sorting functionality
+  String _sortBy = 'recent'; // 'recent' or 'name'
 
   @override
   void initState() {
@@ -39,37 +42,48 @@ class _MidwifeChildrenPageState extends State<MidwifeChildrenPage> {
       _isLoading = true;
     });
 
-    final token = await AuthStorage.getToken();
+    try {
+      final token = await AuthStorage.getToken();
+      if (token == null) return;
 
-    final res = await http.get(
-      Uri.parse(
-        'https://inaagapay.alwaysdata.net/api/midwife/midwife_children.php',
-      ),
-      headers: {
-        'Authorization': 'Bearer $token',
-      },
-    );
+      final res = await http.get(
+        Uri.parse(
+          'https://inaagapay.alwaysdata.net/api/midwife/midwife_children.php',
+        ),
+        headers: {
+          'Authorization': 'Bearer $token',
+        },
+      );
 
-    final decoded = jsonDecode(res.body);
+      final decoded = jsonDecode(res.body);
+      final data = decoded['data'] is List ? decoded['data'] : [];
 
-    if (decoded['success'] == true) {
-      _allChildren = List<Map<String, dynamic>>.from(decoded['data'] ?? []);
-      _filteredChildren = List.from(_allChildren);
-    } else {
+      if (decoded['success'] == true) {
+        _allChildren = List<Map<String, dynamic>>.from(data);
+        _applyFilterAndSort();
+      } else {
+        _allChildren = [];
+        _filteredChildren = [];
+      }
+    } catch (_) {
       _allChildren = [];
       _filteredChildren = [];
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
-
-    setState(() {
-      _isLoading = false;
-    });
   }
 
   /// ================= AGE CALCULATOR =================
   String calculateAge(String? birthdate) {
     if (birthdate == null) return '-';
 
-    final birth = DateTime.parse(birthdate);
+    final birth = DateTime.tryParse(birthdate);
+    if (birth == null) return '-';
+
     final now = DateTime.now();
 
     int years = now.year - birth.year;
@@ -89,18 +103,60 @@ class _MidwifeChildrenPageState extends State<MidwifeChildrenPage> {
 
   /// ================= SEARCH FILTER =================
   void _filterChildren(String query) {
+    _applyFilterAndSort(query: query);
+  }
+
+  /// ================= APPLY FILTER AND SORT =================
+  void _applyFilterAndSort({String? query}) {
+    final searchQuery = query ?? _searchController.text;
+    
     setState(() {
-      if (query.isEmpty) {
+      if (searchQuery.isEmpty) {
         _filteredChildren = List.from(_allChildren);
       } else {
         _filteredChildren = _allChildren.where((child) {
-          final fullName = '${child['first_name']} ${child['last_name']}'.toLowerCase();
-          final motherName = (child['mother_name'] ?? '').toLowerCase();
-          return fullName.contains(query.toLowerCase()) ||
-                 motherName.contains(query.toLowerCase());
+          final name = '${child['first_name'] ?? ''} ${child['middle_name'] ?? ''} ${child['last_name'] ?? ''}'
+              .toLowerCase();
+          final motherName = (child['mother_name'] ?? '').toString().toLowerCase();
+          return name.contains(searchQuery.toLowerCase()) ||
+                 motherName.contains(searchQuery.toLowerCase());
         }).toList();
       }
+
+      // Apply sorting
+      if (_sortBy == 'name') {
+        _filteredChildren.sort((a, b) {
+          final nameA = '${(a['last_name'] ?? '').toString()}${(a['first_name'] ?? '').toString()}';
+          final nameB = '${(b['last_name'] ?? '').toString()}${(b['first_name'] ?? '').toString()}';
+          return nameA.toLowerCase().compareTo(nameB.toLowerCase());
+        });
+      } else {
+        // Sort by recent (created_at or added_at)
+        _filteredChildren.sort((a, b) {
+          DateTime? parseDate(dynamic value) {
+            if (value == null) return null;
+            return DateTime.tryParse(value.toString());
+          }
+          
+          final dateA = parseDate(a['created_at'] ?? a['added_at']);
+          final dateB = parseDate(b['created_at'] ?? b['added_at']);
+          
+          if (dateA == null && dateB == null) return 0;
+          if (dateA == null) return 1;
+          if (dateB == null) return -1;
+          
+          return dateB.compareTo(dateA); // Descending order (most recent first)
+        });
+      }
     });
+  }
+
+  /// ================= CHANGE SORTING =================
+  void _changeSort(String newSort) {
+    setState(() {
+      _sortBy = newSort;
+    });
+    _applyFilterAndSort();
   }
 
   /// ================= VACCINE STATUS =================
@@ -122,14 +178,17 @@ class _MidwifeChildrenPageState extends State<MidwifeChildrenPage> {
 
   /// ================= NAVIGATION TO CHILD PROFILE =================
   void _openChildProfile(Map<String, dynamic> child) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => ChildProfilePage(
-          childId: int.parse(child['child_id'].toString()),
+    final id = int.tryParse(child['child_id']?.toString() ?? '');
+    if (id != null) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ChildProfilePage(
+            childId: id,
+          ),
         ),
-      ),
-    );
+      );
+    }
   }
 
   @override
@@ -147,123 +206,191 @@ class _MidwifeChildrenPageState extends State<MidwifeChildrenPage> {
 
       // 🔽 Body
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // 🧸 TOP INFO CARD
-              Container(
-                height: 96,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                  image: const DecorationImage(
-                    image: AssetImage('assets/images/pinkbg.png'),
-                    fit: BoxFit.cover,
-                    opacity: 0.5,
+        child: RefreshIndicator(
+          onRefresh: _loadChildren,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 🧸 TOP INFO CARD
+                Container(
+                  height: 96,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    image: const DecorationImage(
+                      image: AssetImage('assets/images/pinkbg.png'),
+                      fit: BoxFit.cover,
+                      opacity: 0.5,
+                    ),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 16,
+                    ),
+                    child: Row(
+                      children: [
+                        // 📝 Text
+                        Expanded(
+                          child: RichText(
+                            text: TextSpan(
+                              children: [
+                                const TextSpan(
+                                  text: 'There are\n',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: AppColors.textPrimary,
+                                    height: 1.4,
+                                  ),
+                                ),
+                                TextSpan(
+                                  text: '${_filteredChildren.length} Children!',
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.brandText,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        // 👶 Image
+                        Image.asset(
+                          'assets/images/baby.png',
+                          height: 72,
+                          width: 72,
+                          fit: BoxFit.contain,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 16,
+                const SizedBox(height: 20),
+
+                // 🔍 Search and Sort Container
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppColors.borderPrimary),
                   ),
-                  child: Row(
+                  child: Column(
                     children: [
-                      // 📝 Text
-                      Expanded(
-                        child: RichText(
-                          text: TextSpan(
-                            children: [
-                              const TextSpan(
-                                text: 'There are\n',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: AppColors.textPrimary,
-                                  height: 1.4,
+                      // Search Field
+                      AppInputField(
+                        hintText: 'Search Child',
+                        controller: _searchController,
+                        trailingIcon: Icons.search,
+                        onTrailingTap: () {},
+                        onChanged: _filterChildren,
+                      ),
+                      const SizedBox(height: 12),
+                      
+                      // Sort Dropdown
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColors.borderPrimary),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            value: _sortBy,
+                            isExpanded: true,
+                            icon: const Icon(Icons.arrow_drop_down, color: AppColors.textSecondary),
+                            items: const [
+                              DropdownMenuItem(
+                                value: 'recent',
+                                child: Padding(
+                                  padding: EdgeInsets.symmetric(horizontal: 12),
+                                  child: Text('Sort: Most Recent', style: TextStyle(fontSize: 14)),
                                 ),
                               ),
-                              TextSpan(
-                                text: '${_filteredChildren.length} Children!',
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.brandText,
+                              DropdownMenuItem(
+                                value: 'name',
+                                child: Padding(
+                                  padding: EdgeInsets.symmetric(horizontal: 12),
+                                  child: Text('Sort: Name A-Z', style: TextStyle(fontSize: 14)),
                                 ),
                               ),
                             ],
+                            onChanged: (value) {
+                              if (value != null) {
+                                _changeSort(value);
+                              }
+                            },
                           ),
                         ),
                       ),
-                      // 👶 Image
-                      Image.asset(
-                        'assets/images/baby.png',
-                        height: 72,
-                        width: 72,
-                        fit: BoxFit.contain,
+                      
+                      // Count Text
+                      const SizedBox(height: 8),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          'Showing ${_filteredChildren.length} of ${_allChildren.length} children',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
                       ),
                     ],
                   ),
                 ),
-              ),
-              const SizedBox(height: 20),
+                const SizedBox(height: 8),
 
-              // 🔍 Search
-              AppInputField(
-                hintText: 'Search Child',
-                controller: _searchController,
-                trailingIcon: Icons.search,
-                onTrailingTap: () {},
-                onChanged: _filterChildren,
-              ),
-              const SizedBox(height: 8),
+                const SmallDescription(
+                  text: 'Tap a child to view health records',
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 20),
 
-              const SmallDescription(
-                text: 'Tap a child to view health records',
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 20),
-
-              // 👶 CHILD LIST
-              if (_isLoading)
-                const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(32.0),
-                    child: CircularProgressIndicator(),
-                  ),
-                )
-              else if (_filteredChildren.isEmpty)
-                Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(32.0),
-                    child: Text(
-                      _searchController.text.isNotEmpty
-                          ? 'No children match your search'
-                          : 'No children found',
-                      style: const TextStyle(
-                        color: Colors.black54,
-                        fontSize: 16,
+                // 👶 CHILD LIST
+                if (_isLoading)
+                  const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(32.0),
+                      child: CircularProgressIndicator(),
+                    ),
+                  )
+                else if (_filteredChildren.isEmpty)
+                  Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(32.0),
+                      child: Text(
+                        _searchController.text.isNotEmpty
+                            ? 'No children match your search'
+                            : 'No children found',
+                        style: const TextStyle(
+                          color: Colors.black54,
+                          fontSize: 16,
+                        ),
                       ),
                     ),
+                  )
+                else
+                  Column(
+                    children: _filteredChildren.map((child) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: ChildCard(
+                          fullName: '${child['first_name']} ${child['last_name']}',
+                          ageText: calculateAge(child['birthdate']),
+                          vaccineStatus: _getVaccineStatus(child),
+                          image: const AssetImage('assets/images/child.png'),
+                          onTap: () => _openChildProfile(child),
+                        ),
+                      );
+                    }).toList(),
                   ),
-                )
-              else
-                Column(
-                  children: _filteredChildren.map((child) {
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: ChildCard(
-                        fullName: '${child['first_name']} ${child['last_name']}',
-                        ageText: calculateAge(child['birthdate']),
-                        vaccineStatus: _getVaccineStatus(child),
-                        image: const AssetImage('assets/images/child.png'),
-                        onTap: () => _openChildProfile(child),
-                      ),
-                    );
-                  }).toList(),
-                ),
-              const SizedBox(height: 24),
-            ],
+                const SizedBox(height: 24),
+              ],
+            ),
           ),
         ),
       ),
