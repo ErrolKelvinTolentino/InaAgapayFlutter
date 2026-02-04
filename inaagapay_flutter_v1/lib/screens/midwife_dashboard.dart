@@ -339,7 +339,7 @@ class _MidwifeDashboardState extends State<MidwifeDashboard> {
                                 Expanded(
                                   child: OverviewInfo(
                                     value: dashboardData.ferrousGiven,
-                                    label: 'Ferrous FA\ngiven',
+                                    label: 'Ferrous + FA\ngiven',
                                     icon: Icons.medication,
                                   ),
                                 ),
@@ -393,9 +393,11 @@ class _MidwifeDashboardState extends State<MidwifeDashboard> {
                               unit: 'visits',
                               lineColor: AppColors.brandPrimary,
                               startingLabel: 'Lowest',
-                              startingValue: '${dashboardData.lowestVisitCount} visits',
+                              startingValue:
+                                  '${dashboardData.lowestVisitCount} visits',
                               latestLabel: 'Highest',
-                              latestValue: '${dashboardData.highestVisitCount} visits',
+                              latestValue:
+                                  '${dashboardData.highestVisitCount} visits',
                               insightText: dashboardData.insightText,
                             ),
                             const SizedBox(height: 32),
@@ -503,46 +505,52 @@ class DashboardData {
 
   factory DashboardData.fromJson(Map<String, dynamic> json) {
     int safe(dynamic v) => int.tryParse(v?.toString() ?? '0') ?? 0;
-    
+
     // Parse trimester data
     final trimesterData = json['trimester'] as Map<String, dynamic>? ?? {};
     final firstTri = safe(trimesterData['first_trimester']);
     final secondTri = safe(trimesterData['second_trimester']);
     final thirdTri = safe(trimesterData['third_trimester']);
-    
+
     // Parse registered counts
     final registeredData = json['registered'] as Map<String, dynamic>? ?? {};
-    
+
     // Parse medication data
     final medicationData = json['medications'] as Map<String, dynamic>? ?? {};
-    
+
     // Parse recent visits
     final recentVisitsJson = json['recent_visits'] as List<dynamic>? ?? [];
     final recentVisits = recentVisitsJson.map((item) {
       return RecentVisit.fromJson(item as Map<String, dynamic>);
     }).toList();
-    
+
     // Parse chart data
     final chartData = json['chart_data'] as Map<String, dynamic>? ?? {};
-    final chartValues = (chartData['values'] as List<dynamic>? ?? List.filled(7, 0))
-        .map((v) => (v as num).toDouble())
-        .toList();
-    final chartLabels = (chartData['labels'] as List<dynamic>? ?? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'])
-        .map((v) => v.toString())
-        .toList();
-    
+    final chartValues =
+        (chartData['values'] as List<dynamic>? ?? List.filled(7, 0))
+            .map((v) => (v as num).toDouble())
+            .toList();
+    final chartLabels =
+        (chartData['labels'] as List<dynamic>? ??
+                ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'])
+            .map((v) => v.toString())
+            .toList();
+
     final highest = safe(chartData['highest']);
     final lowest = safe(chartData['lowest']);
-    
+
     // Generate insight text
     String insightText = 'No visits data available';
     if (chartValues.isNotEmpty && chartLabels.isNotEmpty) {
-      final maxIndex = chartValues.indexOf(chartValues.reduce((a, b) => a > b ? a : b));
+      final maxIndex = chartValues.indexOf(
+        chartValues.reduce((a, b) => a > b ? a : b),
+      );
       if (maxIndex < chartLabels.length) {
-        insightText = '${chartLabels[maxIndex]} had the most prenatal visits this week!';
+        insightText =
+            '${chartLabels[maxIndex]} had the most prenatal visits this week!';
       }
     }
-    
+
     return DashboardData(
       registeredChildren: safe(registeredData['children']),
       registeredMothers: safe(registeredData['mothers']),

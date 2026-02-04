@@ -322,8 +322,23 @@ class _AddMotherFlowState extends State<AddMotherFlow> {
         }
         break;
       case 3:
-        if (form.birthdate == null) {
-          message = 'Birthdate is required.';
+        final issues = <String>[];
+        if (form.birthdate == null) issues.add('Birthdate');
+        final heightVal = double.tryParse(_height.text.trim());
+        final weightVal = double.tryParse(_weight.text.trim());
+
+        if (heightVal == null || heightVal <= 0) {
+          issues.add('Height (cm)');
+        }
+        if (weightVal == null || weightVal <= 0) {
+          issues.add('Weight (kg)');
+        }
+
+        if (issues.isNotEmpty) {
+          message = 'Please provide: ${issues.join(', ')}.';
+        } else {
+          form.heightCm = heightVal;
+          form.weightKg = weightVal;
         }
         break;
       case 6:
@@ -821,6 +836,7 @@ class _AddMotherFlowState extends State<AddMotherFlow> {
         AppInputField(
           hintText: 'Height (cm)',
           controller: _height,
+          isRequired: true,
           keyboardType: TextInputType.number,
           onChanged: (v) {
             form.heightCm = double.tryParse(v);
@@ -831,6 +847,7 @@ class _AddMotherFlowState extends State<AddMotherFlow> {
         AppInputField(
           hintText: 'Weight (kg)',
           controller: _weight,
+          isRequired: true,
           keyboardType: TextInputType.number,
           onChanged: (v) {
             form.weightKg = double.tryParse(v);
