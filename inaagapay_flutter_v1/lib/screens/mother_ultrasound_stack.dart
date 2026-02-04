@@ -12,13 +12,20 @@ class MotherUltrasoundStack extends StatefulWidget {
 
 class _MotherUltrasoundStackState extends State<MotherUltrasoundStack> {
   int _index = 0;
+  Map<String, dynamic> _selectedUltrasound = {};
 
-  void _goToDetails() {
-    setState(() => _index = 1);
+  void _goToDetails(Map<String, dynamic> ultrasoundData) {
+    setState(() {
+      _selectedUltrasound = ultrasoundData;
+      _index = 1;
+    });
   }
 
   void _goBack() {
-    setState(() => _index = 0);
+    setState(() {
+      _selectedUltrasound = {};
+      _index = 0;
+    });
   }
 
   @override
@@ -31,6 +38,7 @@ class _MotherUltrasoundStackState extends State<MotherUltrasoundStack> {
         ),
         MotherUltrasoundDetailsPage(
           onBack: _goBack,
+          ultrasoundData: _selectedUltrasound,
         ),
       ],
     );
