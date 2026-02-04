@@ -65,8 +65,47 @@ class _MidwifeMothersPageState extends State<MidwifeMothersPage> {
 
     final List list = decoded['data'] ?? [];
     _allMothers = list.cast<Map<String, dynamic>>();
+    
+    // Fetch risk data for each mother from their profile
+    await _enhanceMothersWithRiskData();
+    
     _filteredMothers = _applyFilters(_allMothers);
     return _allMothers;
+  }
+
+  Future<void> _enhanceMothersWithRiskData() async {
+    final token = await AuthStorage.getToken();
+    if (token == null) return;
+
+    for (var mother in _allMothers) {
+      final motherId = mother['mother_id'];
+      try {
+        // Fetch the mother's profile to get accurate risk calculation
+        final profileRes = await http.get(
+          Uri.parse(
+            'https://inaagapay.alwaysdata.net/api/midwife/mother_profile.php?mother_id=$motherId',
+          ),
+          headers: {'Authorization': 'Bearer $token', 'Accept': 'application/json'},
+        );
+
+        if (profileRes.statusCode == 200) {
+          final profileData = jsonDecode(profileRes.body);
+          if (profileData['success'] == true && profileData['mother'] != null) {
+            // Use the risk from the profile (same calculation as mother_profile.php)
+            mother['pregnancy_risk_level'] = profileData['mother']['pregnancy_risk_level'] ?? 
+                                             mother['pregnancy_risk_level'] ?? 'low';
+            
+            // Also store the complete risk object if available
+            if (profileData['mother']['pregnancy_risk'] != null) {
+              mother['pregnancy_risk'] = profileData['mother']['pregnancy_risk'];
+            }
+          }
+        }
+      } catch (e) {
+        // If we can't fetch the profile, keep the existing risk level
+        print('Error fetching risk for mother $motherId: $e');
+      }
+    }
   }
 
   List<Map<String, dynamic>> _applyFilters(List<Map<String, dynamic>> list) {
@@ -139,20 +178,30 @@ class _MidwifeMothersPageState extends State<MidwifeMothersPage> {
   /// ================= CALCULATE PREGNANCY WEEKS =================
   String calculatePregnancyWeeks(String? lastMenstrualDate) {
     if (lastMenstrualDate == null || lastMenstrualDate.isEmpty) {
-      return 'Unknown weeks';
+      return 'No LMP recorded';
     }
 
     try {
-      final lmp = DateTime.parse(lastMenstrualDate);
+      final lmp = DateTime.parse(lastMenstrualDate.split(' ')[0]); // Handle "YYYY-MM-DD" format
       final now = DateTime.now();
+      
+      // Ensure LMP is not in the future
+      if (lmp.isAfter(now)) {
+        return 'Invalid LMP date';
+      }
+      
       final difference = now.difference(lmp);
       final weeks = (difference.inDays / 7).floor();
+      final days = difference.inDays % 7;
       
       if (weeks < 0) return '0 weeks';
-      if (weeks >= 40) return '40+ weeks';
-      return '$weeks weeks pregnant';
+      if (weeks >= 42) return 'Post-term (42+ weeks)';
+      if (weeks >= 40) return 'Full term (40+ weeks)';
+      if (weeks >= 37) return 'Late term ($weeks+${days > 0 ? '$days' : ''} weeks)';
+      
+      return '$weeks${days > 0 ? '+$days' : ''} weeks';
     } catch (e) {
-      return 'Unknown weeks';
+      return 'Invalid date format';
     }
   }
 
@@ -444,30 +493,46 @@ class MotherCard extends StatelessWidget {
   }
 
   String getPregnancyText() {
-    final weeks = calculatePregnancyWeeks(mother['last_menstrual_date']);
+    final weeks = calculatePregnancyWeeks(mother['last_menstrual_period']);
     final edd = mother['expected_date_of_delivery']?.toString();
     if (edd != null && edd.isNotEmpty) {
-      return '$weeks • EDD: $edd';
+      try {
+        final eddDate = DateTime.parse(edd.split(' ')[0]);
+        final formattedEdd = "${eddDate.year}-${eddDate.month.toString().padLeft(2, '0')}-${eddDate.day.toString().padLeft(2, '0')}";
+        return '$weeks • EDD: $formattedEdd';
+      } catch (e) {
+        return '$weeks • EDD: $edd';
+      }
     }
     return weeks;
   }
 
   String calculatePregnancyWeeks(String? lastMenstrualDate) {
     if (lastMenstrualDate == null || lastMenstrualDate.isEmpty) {
-      return 'Unknown weeks';
+      return 'No LMP recorded';
     }
 
     try {
-      final lmp = DateTime.parse(lastMenstrualDate);
+      final lmp = DateTime.parse(lastMenstrualDate.split(' ')[0]); // Handle "YYYY-MM-DD" format
       final now = DateTime.now();
+      
+      // Ensure LMP is not in the future
+      if (lmp.isAfter(now)) {
+        return 'Invalid LMP date';
+      }
+      
       final difference = now.difference(lmp);
       final weeks = (difference.inDays / 7).floor();
+      final days = difference.inDays % 7;
       
       if (weeks < 0) return '0 weeks';
-      if (weeks >= 40) return '40+ weeks';
-      return '$weeks weeks pregnant';
+      if (weeks >= 42) return 'Post-term (42+ weeks)';
+      if (weeks >= 40) return 'Full term (40+ weeks)';
+      if (weeks >= 37) return 'Late term ($weeks+${days > 0 ? '$days' : ''} weeks)';
+      
+      return '$weeks${days > 0 ? '+$days' : ''} weeks';
     } catch (e) {
-      return 'Unknown weeks';
+      return 'Invalid date format';
     }
   }
 
@@ -484,6 +549,7 @@ class MotherCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Use the risk level that was fetched from the profile API
     final riskLevel = mother['pregnancy_risk_level']?.toString() ?? 'low';
     final riskColor = _getRiskColor(riskLevel);
 

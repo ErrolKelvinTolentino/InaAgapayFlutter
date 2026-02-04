@@ -37,23 +37,36 @@ class _ChildProfilePageState extends State<ChildProfilePage> {
       (map[key] ?? '').toString().trim();
 
   Future<void> fetchProfile() async {
-    final token = await AuthStorage.getToken();
+    setState(() => loading = true);
+    
+    try {
+      final token = await AuthStorage.getToken();
+      if (token == null) {
+        throw Exception('Not authenticated');
+      }
 
-    final res = await http.get(
-      Uri.parse(
-        'https://inaagapay.alwaysdata.net/api/midwife/child_profile.php?child_id=${widget.childId}',
-      ),
-      headers: {
-        'Authorization': 'Bearer $token',
-      },
-    );
+      final res = await http.get(
+        Uri.parse(
+          'https://inaagapay.alwaysdata.net/api/midwife/child_profile.php?child_id=${widget.childId}',
+        ),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Accept': 'application/json',
+        },
+      );
 
-    final decoded = jsonDecode(res.body);
+      final decoded = jsonDecode(res.body);
 
-    setState(() {
-      response = decoded;
-      loading = false;
-    });
+      setState(() {
+        response = decoded;
+        loading = false;
+      });
+    } catch (e) {
+      setState(() {
+        response = {'success': false, 'message': e.toString()};
+        loading = false;
+      });
+    }
   }
 
   String calculateAge(String? birthdate) {
@@ -95,11 +108,9 @@ class _ChildProfilePageState extends State<ChildProfilePage> {
     if (bmi == null) return StatusIndicatorType.onTime;
     
     // Simple BMI categories for children (simplified)
-    // Check what StatusIndicatorType values are available
-    // If 'warning' doesn't exist, use 'overdue' or 'atRisk' or whatever is available
-    if (bmi < 16) return StatusIndicatorType.overdue; // Use 'overdue' instead of 'warning'
+    if (bmi < 16) return StatusIndicatorType.overdue;
     if (bmi >= 16 && bmi <= 24) return StatusIndicatorType.onTime;
-    if (bmi > 24 && bmi <= 30) return StatusIndicatorType.overdue; // Use 'overdue' instead of 'warning'
+    if (bmi > 24 && bmi <= 30) return StatusIndicatorType.overdue;
     return StatusIndicatorType.overdue;
   }
 
@@ -394,13 +405,19 @@ class _ChildProfilePageState extends State<ChildProfilePage> {
               ImportantButton(
                 label: 'Add Growth Record',
                 leadingIcon: Icons.add_chart,
-                onPressed: () {
-                  Navigator.push(
+                onPressed: () async {
+                  // Wait for the result from AddGrowthStep1
+                  final result = await Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (_) => AddGrowthStep1(childId: widget.childId),
                     ),
                   );
+
+                  // If result is true, refresh the profile data
+                  if (result == true && mounted) {
+                    await fetchProfile();
+                  }
                 },
               ),
 
@@ -419,8 +436,7 @@ class _ChildProfilePageState extends State<ChildProfilePage> {
                   );
 
                   // Refresh profile when immunization is added
-                  if (result == true) {
-                    setState(() => loading = true);
+                  if (result == true && mounted) {
                     await fetchProfile();
                   }
                 },

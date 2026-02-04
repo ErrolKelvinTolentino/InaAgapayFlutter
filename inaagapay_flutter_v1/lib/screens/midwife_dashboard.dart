@@ -90,7 +90,12 @@ class _MidwifeDashboardState extends State<MidwifeDashboard> {
     );
 
     if (res.statusCode == 200) {
-      return DashboardData.fromJson(jsonDecode(res.body));
+      final data = jsonDecode(res.body);
+      if (data['success'] == true) {
+        return DashboardData.fromJson(data);
+      } else {
+        throw Exception(data['error'] ?? 'Failed to load dashboard data');
+      }
     }
 
     throw Exception('Failed to load dashboard data');
@@ -367,29 +372,19 @@ class _MidwifeDashboardState extends State<MidwifeDashboard> {
                             ),
                             const SizedBox(height: 20),
 
-                            /// 🕘 RECENT VISITS - TODO: Replace with real data
-                            const MidwifeHistoryCard(
-                              visits: [
-                                MidwifeVisitItem(
-                                  fullName: 'First Name Last Name',
-                                  visitType: 'Prenatal Check-up',
-                                  timeLabel: 'Today',
-                                ),
-                                MidwifeVisitItem(
-                                  fullName: 'First Name Last Name',
-                                  visitType: 'Prenatal Check-up',
-                                  timeLabel: 'Yesterday',
-                                ),
-                                MidwifeVisitItem(
-                                  fullName: 'First Name Last Name',
-                                  visitType: 'Prenatal Check-up',
-                                  timeLabel: '2 days ago',
-                                ),
-                              ],
+                            /// 🕘 RECENT VISITS - Using real data from API
+                            MidwifeHistoryCard(
+                              visits: dashboardData.recentVisits.map((visit) {
+                                return MidwifeVisitItem(
+                                  fullName: visit.fullName,
+                                  visitType: visit.visitType,
+                                  timeLabel: visit.timeLabel,
+                                );
+                              }).toList(),
                             ),
                             const SizedBox(height: 20),
 
-                            /// 📈 BHC VISITS CHART - TODO: Replace with real data
+                            /// 📈 BHC VISITS CHART - Using real data
                             ChartCard(
                               title: 'BHC Daily Visits Chart',
                               headerIcon: Icons.show_chart_rounded,
@@ -398,11 +393,10 @@ class _MidwifeDashboardState extends State<MidwifeDashboard> {
                               unit: 'visits',
                               lineColor: AppColors.brandPrimary,
                               startingLabel: 'Lowest',
-                              startingValue: '3 visits',
+                              startingValue: '${dashboardData.lowestVisitCount} visits',
                               latestLabel: 'Highest',
-                              latestValue: '9 visits',
-                              insightText:
-                                  'Tuesday had the most prenatal visits this week!',
+                              latestValue: '${dashboardData.highestVisitCount} visits',
+                              insightText: dashboardData.insightText,
                             ),
                             const SizedBox(height: 32),
                           ],
@@ -482,10 +476,12 @@ class DashboardData {
   final int firstTrimester;
   final int secondTrimester;
   final int thirdTrimester;
-
-  // For chart data (you'll need to fetch this from your API)
+  final List<RecentVisit> recentVisits;
   final List<double> bhcVisitValues;
   final List<String> bhcVisitDays;
+  final int highestVisitCount;
+  final int lowestVisitCount;
+  final String insightText;
 
   DashboardData({
     required this.registeredChildren,
@@ -497,33 +493,92 @@ class DashboardData {
     required this.firstTrimester,
     required this.secondTrimester,
     required this.thirdTrimester,
-    List<double>? bhcVisitValues,
-    List<String>? bhcVisitDays,
-  }) : bhcVisitValues = bhcVisitValues ?? [5, 7, 6, 8, 9, 4, 3],
-       bhcVisitDays =
-           bhcVisitDays ?? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    required this.recentVisits,
+    required this.bhcVisitValues,
+    required this.bhcVisitDays,
+    required this.highestVisitCount,
+    required this.lowestVisitCount,
+    required this.insightText,
+  });
 
   factory DashboardData.fromJson(Map<String, dynamic> json) {
     int safe(dynamic v) => int.tryParse(v?.toString() ?? '0') ?? 0;
-
+    
     // Parse trimester data
     final trimesterData = json['trimester'] as Map<String, dynamic>? ?? {};
     final firstTri = safe(trimesterData['first_trimester']);
     final secondTri = safe(trimesterData['second_trimester']);
     final thirdTri = safe(trimesterData['third_trimester']);
-
-    // TODO: Update these to match your actual API response structure
-    // You'll need to adjust these based on what your API returns
+    
+    // Parse registered counts
+    final registeredData = json['registered'] as Map<String, dynamic>? ?? {};
+    
+    // Parse medication data
+    final medicationData = json['medications'] as Map<String, dynamic>? ?? {};
+    
+    // Parse recent visits
+    final recentVisitsJson = json['recent_visits'] as List<dynamic>? ?? [];
+    final recentVisits = recentVisitsJson.map((item) {
+      return RecentVisit.fromJson(item as Map<String, dynamic>);
+    }).toList();
+    
+    // Parse chart data
+    final chartData = json['chart_data'] as Map<String, dynamic>? ?? {};
+    final chartValues = (chartData['values'] as List<dynamic>? ?? List.filled(7, 0))
+        .map((v) => (v as num).toDouble())
+        .toList();
+    final chartLabels = (chartData['labels'] as List<dynamic>? ?? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'])
+        .map((v) => v.toString())
+        .toList();
+    
+    final highest = safe(chartData['highest']);
+    final lowest = safe(chartData['lowest']);
+    
+    // Generate insight text
+    String insightText = 'No visits data available';
+    if (chartValues.isNotEmpty && chartLabels.isNotEmpty) {
+      final maxIndex = chartValues.indexOf(chartValues.reduce((a, b) => a > b ? a : b));
+      if (maxIndex < chartLabels.length) {
+        insightText = '${chartLabels[maxIndex]} had the most prenatal visits this week!';
+      }
+    }
+    
     return DashboardData(
-      registeredChildren: safe(json['registered_children'] ?? 0),
-      registeredMothers: safe(json['registered_mothers'] ?? 0),
-      ferrousGiven: safe(json['ferrous_given'] ?? 0),
-      calciumGiven: safe(json['calcium_given'] ?? 0),
-      tdDosesGiven: safe(json['td_doses_given'] ?? 0),
+      registeredChildren: safe(registeredData['children']),
+      registeredMothers: safe(registeredData['mothers']),
+      ferrousGiven: safe(medicationData['ferrous_given']),
+      calciumGiven: safe(medicationData['calcium_given']),
+      tdDosesGiven: safe(medicationData['td_doses_given']),
       totalPregnancies: firstTri + secondTri + thirdTri,
       firstTrimester: firstTri,
       secondTrimester: secondTri,
       thirdTrimester: thirdTri,
+      recentVisits: recentVisits,
+      bhcVisitValues: chartValues,
+      bhcVisitDays: chartLabels,
+      highestVisitCount: highest,
+      lowestVisitCount: lowest,
+      insightText: insightText,
+    );
+  }
+}
+
+class RecentVisit {
+  final String fullName;
+  final String visitType;
+  final String timeLabel;
+
+  RecentVisit({
+    required this.fullName,
+    required this.visitType,
+    required this.timeLabel,
+  });
+
+  factory RecentVisit.fromJson(Map<String, dynamic> json) {
+    return RecentVisit(
+      fullName: json['full_name']?.toString() ?? 'Unknown Mother',
+      visitType: json['visit_type']?.toString() ?? 'Prenatal Check-up',
+      timeLabel: json['time_label']?.toString() ?? 'Recently',
     );
   }
 }

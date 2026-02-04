@@ -322,35 +322,7 @@ class _MidwifeSchedulesPageState extends State<MidwifeSchedulesPage> {
                                 fontSize: 14,
                               ),
                             ),
-                            const SizedBox(height: 24),
-                            ElevatedButton(
-                              onPressed: () {
-                                // Navigate to add schedule or show other dates
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: const Text('Add new schedule feature coming soon!'),
-                                    backgroundColor: AppColors.brandPrimary,
-                                  ),
-                                );
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.brandPrimary,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 24,
-                                  vertical: 12,
-                                ),
-                              ),
-                              child: const Text(
-                                'Add New Schedule',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
+                            // REMOVED: Add New Schedule button
                           ],
                         ),
                       );

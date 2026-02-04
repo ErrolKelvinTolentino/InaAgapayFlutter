@@ -114,39 +114,69 @@ class _AddGrowthStep1State extends State<AddGrowthStep1> {
   /// --------------------------------------------------
   Future<bool> _saveGrowthRecord() async {
     final token = await AuthStorage.getToken();
-    if (token == null) return false;
+    if (token == null) {
+      _showErrorDialog('Authentication error. Please log in again.');
+      return false;
+    }
 
     try {
       final response = await http.post(
         Uri.parse('https://inaagapay.alwaysdata.net/api/midwife/add_child_growth.php'),
         headers: {
           'Authorization': 'Bearer $token',
+          'Accept': 'application/json',
           'Content-Type': 'application/json',
         },
         body: jsonEncode({
           'child_id': widget.childId,
-          'height': _heightController.text,
-          'weight': _weightController.text,
-          'bmi': _bmiController.text,
+          'height': double.tryParse(_heightController.text) ?? 0.0,
+          'weight': double.tryParse(_weightController.text) ?? 0.0,
+          'bmi': double.tryParse(_bmiController.text) ?? 0.0,
           'remarks': _remarksController.text.trim(),
         }),
       );
 
       if (response.statusCode == 200) {
         final decoded = jsonDecode(response.body);
-        return decoded['success'] == true;
+        if (decoded['success'] == true) {
+          return true;
+        } else {
+          _showErrorDialog(decoded['message'] ?? 'Failed to save growth record');
+          return false;
+        }
+      } else {
+        _showErrorDialog('Server error (${response.statusCode}). Please try again.');
+        return false;
       }
-      return false;
     } catch (e) {
+      _showErrorDialog('Network error: $e');
       return false;
     }
   }
 
-  /// --------------------------------------------------
-  /// SUBMIT FLOW
-  /// --------------------------------------------------
-  void _submit() {
+  /// Helper method to show error dialog
+  void _showErrorDialog(String message) {
     showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return DialogBox(
+          type: DialogType.error,
+          title: 'Save Failed',
+          subtitle: message,
+          buttonText: 'OK',
+          onPressed: () => Navigator.pop(context),
+        );
+      },
+    );
+  }
+
+  /// --------------------------------------------------
+  /// SUBMIT FLOW - SIMPLIFIED VERSION
+  /// --------------------------------------------------
+  void _submit() async {
+    // First show confirmation dialog
+    final bool? confirm = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
       builder: (context) {
@@ -155,52 +185,35 @@ class _AddGrowthStep1State extends State<AddGrowthStep1> {
           subtitle: 'Please make sure the details are correct. Growth records cannot be edited once added.',
           confirmText: 'Confirm',
           cancelText: 'Cancel',
-          onCancel: () => Navigator.pop(context),
-          onConfirm: () async {
-            Navigator.pop(context);
-            
-            setState(() => _isLoading = true);
-            
-            final success = await _saveGrowthRecord();
-            
-            setState(() => _isLoading = false);
-            
-            if (success) {
-              showDialog(
-                context: context,
-                barrierDismissible: false,
-                builder: (context) {
-                  return DialogBox(
-                    type: DialogType.success,
-                    title: 'Growth Record Added',
-                    subtitle: 'The child\'s growth information has been successfully recorded.',
-                    buttonText: 'OK',
-                    onPressed: () {
-                      Navigator.pop(context);
-                      Navigator.pop(context, true); // Return true to refresh parent
-                    },
-                  );
-                },
-              );
-            } else {
-              showDialog(
-                context: context,
-                barrierDismissible: false,
-                builder: (context) {
-                  return DialogBox(
-                    type: DialogType.error,
-                    title: 'Failed to Add',
-                    subtitle: 'There was an error saving the growth record. Please try again.',
-                    buttonText: 'OK',
-                    onPressed: () => Navigator.pop(context),
-                  );
-                },
-              );
-            }
-          },
+          onCancel: () => Navigator.pop(context, false),
+          onConfirm: () => Navigator.pop(context, true),
         );
       },
     );
+
+    // If user didn't confirm, stop here
+    if (confirm != true) return;
+
+    // Start loading
+    setState(() => _isLoading = true);
+
+    try {
+      // Save the record
+      final success = await _saveGrowthRecord();
+      
+      setState(() => _isLoading = false);
+
+      if (success) {
+        // SUCCESS: Immediately pop back to profile page with true value
+        if (mounted) {
+          Navigator.pop(context, true);
+        }
+      }
+      // Error is already shown in _saveGrowthRecord
+    } catch (e) {
+      setState(() => _isLoading = false);
+      _showErrorDialog('Unexpected error: $e');
+    }
   }
 
   @override

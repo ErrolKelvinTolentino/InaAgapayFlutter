@@ -268,6 +268,7 @@ try {
     $edema = $first['edema'] ?? 'none';
     $remarks = $first['remarks'] ?? null;
 
+    // 1. Insert into prenatal_checkups table
     $prenatalStmt = $conn->prepare("INSERT INTO prenatal_checkups (pregnancy_id, midwife_id, age_of_gestation, checkup_weight, blood_pressure_systolic, blood_pressure_diastolic, fetal_position, fetal_heart_beat, fetal_heart_tone, td_vaccine_dose, edema, remarks, checkup_datetime, next_schedule) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
     $prenatalStmt->bind_param(
         'iiddiisissssss',
@@ -289,7 +290,27 @@ try {
     $prenatalStmt->execute();
     $prenatalId = $conn->insert_id;
 
-    // medication plans
+    // 2. Insert into checkup_schedule table for NEXT scheduled checkup (if provided)
+    if ($nextSchedule) {
+        // Update any existing scheduled checkups for this date to 'completed'
+        $updateStmt = $conn->prepare("UPDATE checkup_schedule SET status = 'completed' WHERE mother_id = ? AND scheduled_date = ? AND status = 'scheduled'");
+        $updateStmt->bind_param('is', $motherId, $checkupDateOnly);
+        $updateStmt->execute();
+        
+        // Insert new scheduled checkup
+        $scheduleStmt = $conn->prepare("INSERT INTO checkup_schedule (mother_id, scheduled_date, notes, status) VALUES (?, ?, ?, 'scheduled')");
+        $scheduleNotes = "Next prenatal checkup - AOG: " . ($ageOfGestation ? round($ageOfGestation, 1) . " weeks" : "Unknown");
+        $scheduleStmt->bind_param('iss', $motherId, $nextSchedule, $scheduleNotes);
+        $scheduleStmt->execute();
+        $scheduleId = $conn->insert_id;
+    }
+
+    // 3. Also mark current checkup date as completed in checkup_schedule if exists
+    $completeStmt = $conn->prepare("UPDATE checkup_schedule SET status = 'completed' WHERE mother_id = ? AND scheduled_date = ? AND status = 'scheduled'");
+    $completeStmt->bind_param('is', $motherId, $checkupDateOnly);
+    $completeStmt->execute();
+
+    // 4. medication plans
     if (!empty($first['mother_medications'])) {
         $medPlanStmt = $conn->prepare("INSERT INTO mother_medications (mother_id, mother_medication_name, frequency, quantity, start_date, end_date, status) VALUES (?, ?, ?, ?, ?, ?, ?)");
         $medName = null;
@@ -322,7 +343,7 @@ try {
         }
     }
 
-    // given medications
+    // 5. given medications
     if (!empty($first['given_medications'])) {
         $givenStmt = $conn->prepare("INSERT INTO given_medications (mother_id, given_medication_name, quantity, date_given) VALUES (?, ?, ?, ?)");
         $givenName = null;
@@ -346,7 +367,7 @@ try {
         }
     }
 
-    // Recompute pregnancy risk level based on latest checkup
+    // 6. Recompute pregnancy risk level based on latest checkup
     $profileStmt = $conn->prepare("SELECT birthdate, height, weight FROM mothers WHERE mother_id = ? LIMIT 1");
     $profileStmt->bind_param('i', $motherId);
     $profileStmt->execute();
@@ -387,6 +408,7 @@ try {
     echo json_encode([
         'success' => true,
         'prenatal_checkup_id' => $prenatalId,
+        'schedule_id' => $scheduleId ?? null,
         'pregnancy_id' => $pregnancyId,
         'mother_id' => $motherId,
         'age_of_gestation' => $ageOfGestation,

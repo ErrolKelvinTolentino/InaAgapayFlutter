@@ -176,7 +176,7 @@ class _AddPrenatalCheckupScreenState extends State<AddPrenatalCheckupScreen> {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Prenatal checkup saved. Redirecting to profile...'),
+            content: Text('Prenatal checkup saved and schedule updated.'),
           ),
         );
         Navigator.pop(context, true);
@@ -254,6 +254,11 @@ class _AddPrenatalCheckupScreenState extends State<AddPrenatalCheckupScreen> {
           aogWeeks != null
               ? '${aogWeeks!.toStringAsFixed(1)} weeks'
               : 'Set once LMP is available',
+        ),
+        const SizedBox(height: 12),
+        _infoChip(
+          'Current checkup date',
+          DateFormat('MMM d, yyyy').format(prenatal.checkupDateTime),
         ),
         const SizedBox(height: 12),
         _riskCard(),
@@ -444,8 +449,8 @@ class _AddPrenatalCheckupScreenState extends State<AddPrenatalCheckupScreen> {
           onTap: () async {
             final picked = await showDatePicker(
               context: context,
-              initialDate: _nextSchedule ?? DateTime.now(),
-              firstDate: DateTime.now().subtract(const Duration(days: 1)),
+              initialDate: _nextSchedule ?? DateTime.now().add(const Duration(days: 30)),
+              firstDate: DateTime.now().add(const Duration(days: 1)),
               lastDate: DateTime.now().add(const Duration(days: 365)),
             );
             if (picked != null) {
@@ -477,6 +482,11 @@ class _AddPrenatalCheckupScreenState extends State<AddPrenatalCheckupScreen> {
               ? '${aogWeeks!.toStringAsFixed(1)} weeks'
               : 'Not set',
         ),
+        if (_nextSchedule != null)
+          _infoChip(
+            'Next schedule',
+            DateFormat('MMM d, yyyy').format(_nextSchedule!),
+          ),
         const SizedBox(height: 8),
         _riskCard(),
         const SizedBox(height: 20),
