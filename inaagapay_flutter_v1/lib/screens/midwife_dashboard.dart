@@ -11,6 +11,34 @@ import '../widgets/midwife_history_card.dart';
 import '../widgets/chart_card.dart';
 import '../services/auth_storage.dart';
 
+class _ProfileMenuRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool isDestructive;
+
+  const _ProfileMenuRow({
+    required this.icon,
+    required this.label,
+    this.isDestructive = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final Color color = isDestructive ? Colors.red : AppColors.textPrimary;
+
+    return Row(
+      children: [
+        Icon(icon, size: 20, color: color),
+        const SizedBox(width: 10),
+        Text(
+          label,
+          style: TextStyle(color: color, fontWeight: FontWeight.w500),
+        ),
+      ],
+    );
+  }
+}
+
 class MidwifeDashboard extends StatefulWidget {
   const MidwifeDashboard({super.key});
 
@@ -21,6 +49,7 @@ class MidwifeDashboard extends StatefulWidget {
 class _MidwifeDashboardState extends State<MidwifeDashboard> {
   late Future<DashboardData> _dashboardFuture;
   late Future<GreetingModel> _greetingFuture;
+  final GlobalKey _avatarKey = GlobalKey();
 
   @override
   void initState() {
@@ -69,18 +98,92 @@ class _MidwifeDashboardState extends State<MidwifeDashboard> {
 
   Future<void> _logout() async {
     final token = await AuthStorage.getToken();
-
-    if (token != null) {
-      await http.post(
-        Uri.parse('https://inaagapay.alwaysdata.net/api/auth/logout.php'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Accept': 'application/json',
-        },
-      );
+    try {
+      if (token != null && token.isNotEmpty) {
+        await http.post(
+          Uri.parse('https://inaagapay.alwaysdata.net/api/auth/logout.php'),
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Accept': 'application/json',
+          },
+        );
+      }
+    } catch (_) {
+      // Ignore network errors; still clear local session.
     }
 
     await AuthStorage.clearToken();
+
+    if (!mounted) return;
+    if (Navigator.canPop(context)) {
+      Navigator.popUntil(context, (route) => route.isFirst);
+    }
+    Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+  }
+
+  Future<void> _showProfileMenu() async {
+    final RenderBox? avatarBox =
+        _avatarKey.currentContext?.findRenderObject() as RenderBox?;
+    final RenderBox? overlay =
+        Overlay.of(context).context.findRenderObject() as RenderBox?;
+
+    if (avatarBox == null || overlay == null) return;
+
+    final Offset offset = avatarBox.localToGlobal(
+      Offset.zero,
+      ancestor: overlay,
+    );
+    final RelativeRect position = RelativeRect.fromRect(
+      Rect.fromLTWH(
+        offset.dx,
+        offset.dy + avatarBox.size.height + 8,
+        avatarBox.size.width,
+        avatarBox.size.height,
+      ),
+      Offset.zero & overlay.size,
+    );
+
+    final String? selected = await showMenu<String>(
+      context: context,
+      position: position,
+      items: const [
+        PopupMenuItem(
+          value: 'profile',
+          child: _ProfileMenuRow(icon: Icons.person, label: 'Profile'),
+        ),
+        PopupMenuItem(
+          value: 'settings',
+          child: _ProfileMenuRow(icon: Icons.settings, label: 'Settings'),
+        ),
+        PopupMenuItem(
+          value: 'logout',
+          child: _ProfileMenuRow(
+            icon: Icons.logout,
+            label: 'Logout',
+            isDestructive: true,
+          ),
+        ),
+      ],
+      elevation: 8,
+    );
+
+    if (!mounted || selected == null) return;
+
+    switch (selected) {
+      case 'profile':
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Profile coming soon')));
+        break;
+      case 'settings':
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Settings coming soon')));
+        break;
+      case 'logout':
+        await _logout();
+        break;
+    }
   }
 
   Future<void> _refreshData() async {
@@ -102,7 +205,9 @@ class _MidwifeDashboardState extends State<MidwifeDashboard> {
           /// 🔝 HEADER
           MainHeader(
             title: 'Home',
-            // Remove undefined parameters
+            onNotificationTap: () {},
+            onAvatarTap: _showProfileMenu,
+            avatarKey: _avatarKey,
           ),
 
           /// 🔽 BODY

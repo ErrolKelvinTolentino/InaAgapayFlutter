@@ -6,6 +6,7 @@ class MainHeader extends StatelessWidget {
   final VoidCallback? onNotificationTap;
   final ImageProvider? avatarImage;
   final VoidCallback? onAvatarTap;
+  final Key? avatarKey;
 
   const MainHeader({
     super.key,
@@ -13,6 +14,7 @@ class MainHeader extends StatelessWidget {
     this.onNotificationTap,
     this.avatarImage,
     this.onAvatarTap,
+    this.avatarKey,
   });
 
   @override
@@ -69,23 +71,24 @@ class MainHeader extends StatelessWidget {
 
             const SizedBox(width: 14),
 
-          // 👤 Avatar
-          GestureDetector(
-            onTap: onAvatarTap,
-            child: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.brandPrimary,
-                image: avatarImage != null
-                    ? DecorationImage(image: avatarImage!, fit: BoxFit.cover)
-                    : null,
+            // 👤 Avatar
+            GestureDetector(
+              onTap: onAvatarTap,
+              child: Container(
+                key: avatarKey,
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.brandPrimary,
+                  image: avatarImage != null
+                      ? DecorationImage(image: avatarImage!, fit: BoxFit.cover)
+                      : null,
+                ),
               ),
             ),
-          ),
-        ],
-      ),
+          ],
+        ),
       ),
     );
   }

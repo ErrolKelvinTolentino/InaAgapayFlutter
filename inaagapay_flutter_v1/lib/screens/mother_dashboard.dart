@@ -34,6 +34,69 @@ class MotherDashboard extends StatelessWidget {
     return res;
   }
 
+  Future<void> _logout(BuildContext context) async {
+    final token = await AuthStorage.getToken();
+
+    try {
+      if (token != null && token.isNotEmpty) {
+        await ApiService.post('auth/logout.php', const {}, token: token);
+      }
+    } catch (_) {
+      // Ignore network errors and continue clearing local session.
+    }
+
+    await AuthStorage.clearToken();
+
+    // Navigate back to login
+    if (context.mounted) {
+      Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+    }
+  }
+
+  void _showProfileSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.person),
+              title: const Text('Profile'),
+              onTap: () {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Profile coming soon')),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.settings),
+              title: const Text('Settings'),
+              onTap: () {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Settings coming soon')),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.logout, color: Colors.red),
+              title: const Text('Logout'),
+              onTap: () async {
+                Navigator.pop(context);
+                await _logout(context);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -44,7 +107,7 @@ class MotherDashboard extends StatelessWidget {
         child: MainHeader(
           title: 'HOME',
           onNotificationTap: () {},
-          onAvatarTap: () {},
+          onAvatarTap: () => _showProfileSheet(context),
         ),
       ),
 
