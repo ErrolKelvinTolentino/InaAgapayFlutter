@@ -7,6 +7,7 @@ import '../widgets/validation_message.dart';
 import '../widgets/clickable_text.dart';
 import '../widgets/dialog_box.dart';
 import '../widgets/page_title.dart';
+import '../services/verify_service.dart'; // Keep service integration
 
 class AccountVerificationRegistration extends StatefulWidget {
   const AccountVerificationRegistration({super.key});
@@ -25,18 +26,14 @@ class _AccountVerificationRegistrationState
 
   String _code = '';
   bool _hasError = false;
-  bool _loading = false;
+  bool _loading = false; // Add loading state
 
   late String _email;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-
-    // Extract email from route arguments
     _email = ModalRoute.of(context)!.settings.arguments as String;
-
-    // Start the countdown timer
     _startTimer();
   }
 
@@ -59,55 +56,41 @@ class _AccountVerificationRegistrationState
     return '$minutes:$seconds';
   }
 
-  void _verifyCode() {
-    // ❌ Invalid code
-    if (_code != '123456' && _code != '654321') {
-      setState(() {
-        _hasError = true;
-      });
-      return;
-    }
+  Future<void> _verifyCode() async {
+    setState(() => _loading = true);
 
-    // 🧪 Existing account linked
-    if (_code == '654321') {
+    final success = await VerifyService.verifyCode(email: _email, code: _code);
+
+    setState(() {
+      _loading = false;
+      _hasError = !success;
+    });
+
+    if (success && mounted) {
+      // Check if this is a linked account or new account
+      // You'll need to update VerifyService to return this information
+      // For now, using the same logic as File 1
+
+      // TODO: Update VerifyService to return account type (new/linked)
+      // For now, always show "Account Verified!" for new accounts
       showDialog(
         context: context,
         barrierDismissible: false,
         builder: (_) => DialogBox(
-          title: 'Account Linked',
-          subtitle: 'You have existing data from a Barangay Health Center',
+          title: 'Account Verified!',
           buttonText: 'Continue',
           type: DialogType.success,
           onPressed: () {
+            Navigator.pop(context); // Close dialog
             Navigator.pushNamedAndRemoveUntil(
               context,
-              '/mother-dashboard',
+              '/login',
               (route) => false,
             );
           },
         ),
       );
-      return;
     }
-
-    // ✅ New account verified
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => DialogBox(
-        title: 'Account Verified!',
-        buttonText: 'Continue',
-        type: DialogType.success,
-        onPressed: () {
-          Navigator.pop(context);
-          Navigator.pushNamedAndRemoveUntil(
-            context,
-            '/login',
-            (route) => false,
-          );
-        },
-      ),
-    );
   }
 
   void _resendCode() {
@@ -123,10 +106,6 @@ class _AccountVerificationRegistrationState
         onPressed: () => Navigator.pop(context),
       ),
     );
-
-    // NOTE:
-    // You already generate OTP in register.php.
-    // If later you want resend support, we add another endpoint.
   }
 
   @override
@@ -135,7 +114,8 @@ class _AccountVerificationRegistrationState
       backgroundColor: AppColors.bgPrimary,
       body: SafeArea(
         child: SingleChildScrollView(
-          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+          keyboardDismissBehavior:
+              ScrollViewKeyboardDismissBehavior.onDrag, // Add this
           padding: const EdgeInsets.symmetric(horizontal: 28),
           child: Column(
             children: [
@@ -153,7 +133,7 @@ class _AccountVerificationRegistrationState
 
               const SizedBox(height: 16),
 
-              // Show the email address that received the code
+              // Use RichText from File 1 to show email
               RichText(
                 textAlign: TextAlign.center,
                 text: TextSpan(
@@ -198,7 +178,7 @@ class _AccountVerificationRegistrationState
               const SizedBox(height: 32),
 
               MainButton(
-                label: _loading ? 'Verifying...' : 'Verify',
+                label: _loading ? 'Verifying...' : 'Verify', // Add loading text
                 showIcons: false,
                 onPressed: _code.length == 6 && !_loading ? _verifyCode : null,
               ),
