@@ -704,6 +704,39 @@ class _MotherProfilePageState extends State<MotherProfilePage>
           final givenMeds = listOrEmpty(m['given_medications']);
           final children = listOrEmpty(m['children']);
 
+          List<String> _takenTdDosesFromCheckups(List<dynamic> raw) {
+            final taken = <String>{};
+            for (final entry in raw.whereType<Map<String, dynamic>>()) {
+              final doseRaw = entry['td_vaccine_dose']?.toString().trim();
+              if (doseRaw == null || doseRaw.isEmpty) continue;
+              final normalized = doseRaw
+                  .replaceAll(RegExp(r'\s+'), '')
+                  .toUpperCase();
+              switch (normalized) {
+                case 'TD1':
+                  taken.add('TD 1');
+                  break;
+                case 'TD2':
+                  taken.add('TD 2');
+                  break;
+                case 'TD3':
+                  taken.add('TD 3');
+                  break;
+                case 'TD4':
+                  taken.add('TD 4');
+                  break;
+                case 'TD5':
+                  taken.add('TD 5');
+                  break;
+                default:
+                  taken.add(doseRaw);
+              }
+            }
+            final list = taken.toList();
+            list.sort();
+            return list;
+          }
+
           Future<void> addPrenatalCheckup() async {
             final pregnancyId =
                 currentPreg?['pregnancy_id'] ?? m['pregnancy_id'];
@@ -730,6 +763,9 @@ class _MotherProfilePageState extends State<MotherProfilePage>
                   pregnancyId: int.parse(pregnancyId.toString()),
                   lmp: lmp,
                   motherWeight: null,
+                  takenTdDoses: _takenTdDosesFromCheckups(
+                    listOrEmpty(currentPreg?['checkups']),
+                  ),
                 ),
               ),
             );
@@ -2139,12 +2175,39 @@ class _MotherProfilePageState extends State<MotherProfilePage>
                                               final wt = fmtValue(
                                                 c['checkup_weight'],
                                               );
+                                              final tdDose = fmtValue(
+                                                c['td_vaccine_dose'],
+                                              );
+                                              final ferrousGiven =
+                                                  int.tryParse(
+                                                    c['ferrous_given']
+                                                            ?.toString() ??
+                                                        '0',
+                                                  ) ??
+                                                  0;
+                                              final calciumGiven =
+                                                  int.tryParse(
+                                                    c['calcium_given']
+                                                            ?.toString() ??
+                                                        '0',
+                                                  ) ??
+                                                  0;
                                               final tags = <String>[];
                                               if (bp != null) tags.add(bp);
                                               if (aog != '—')
                                                 tags.add('AOG: $aog');
                                               if (wt != '—')
                                                 tags.add('Wt: $wt kg');
+                                              if (tdDose != '—')
+                                                tags.add('TD: $tdDose');
+                                              if (ferrousGiven > 0)
+                                                tags.add(
+                                                  'Ferrous+FA: $ferrousGiven',
+                                                );
+                                              if (calciumGiven > 0)
+                                                tags.add(
+                                                  'Calcium: $calciumGiven',
+                                                );
 
                                               final next = fmtDate(
                                                 c['next_schedule'],
@@ -2187,6 +2250,24 @@ class _MotherProfilePageState extends State<MotherProfilePage>
                                                     MapEntry(
                                                       'Blood Pressure',
                                                       '${fmtValue(c['blood_pressure_systolic'])}/${fmtValue(c['blood_pressure_diastolic'])}',
+                                                    ),
+                                                    MapEntry(
+                                                      'TD Vaccine Dose',
+                                                      fmtValue(
+                                                        c['td_vaccine_dose'],
+                                                      ),
+                                                    ),
+                                                    MapEntry(
+                                                      'Ferrous + FA Given',
+                                                      ferrousGiven > 0
+                                                          ? '$ferrousGiven'
+                                                          : '—',
+                                                    ),
+                                                    MapEntry(
+                                                      'Calcium Given',
+                                                      calciumGiven > 0
+                                                          ? '$calciumGiven'
+                                                          : '—',
                                                     ),
                                                     MapEntry(
                                                       'Fetal Position',
@@ -2855,5 +2936,3 @@ class _MotherProfilePageState extends State<MotherProfilePage>
     );
   }
 }
-
-

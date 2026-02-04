@@ -80,18 +80,17 @@ $stmt->close();
 /* ================= MEDICATION/VACCINE STATS (LAST 30 DAYS FOR CURRENT BHC) ================= */
 $medicationSql = "
 SELECT
-  COALESCE(SUM(CASE WHEN td_vaccine_dose IS NOT NULL AND td_vaccine_dose != '' THEN 1 ELSE 0 END), 0) AS td_doses_given,
-  -- Since we don't have specific medication tables, we'll count medications from mother_medications
-  (SELECT COALESCE(SUM(quantity), 0) FROM mother_medications mm 
-   JOIN mothers m ON mm.mother_id = m.mother_id 
-   WHERE m.assigned_bhc_id = ? 
-   AND mm.mother_medication_name LIKE '%ferrous%'
-   AND mm.status = 'active') AS ferrous_given,
-  (SELECT COALESCE(SUM(quantity), 0) FROM mother_medications mm 
-   JOIN mothers m ON mm.mother_id = m.mother_id 
-   WHERE m.assigned_bhc_id = ? 
-   AND mm.mother_medication_name LIKE '%calcium%'
-   AND mm.status = 'active') AS calcium_given
+  COALESCE(SUM(CASE WHEN REPLACE(UPPER(pc.td_vaccine_dose), ' ', '') IN ('TD1','TD2','TD3','TD4','TD5') THEN 1 ELSE 0 END), 0) AS td_doses_given,
+  (SELECT COALESCE(SUM(gm.quantity), 0) FROM given_medications gm 
+   JOIN mothers m2 ON gm.mother_id = m2.mother_id 
+   WHERE m2.assigned_bhc_id = ?
+     AND gm.date_given >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+     AND LOWER(gm.given_medication_name) LIKE '%ferrous%') AS ferrous_given,
+  (SELECT COALESCE(SUM(gm.quantity), 0) FROM given_medications gm 
+   JOIN mothers m3 ON gm.mother_id = m3.mother_id 
+   WHERE m3.assigned_bhc_id = ?
+     AND gm.date_given >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+     AND LOWER(gm.given_medication_name) LIKE '%calcium%') AS calcium_given
 FROM prenatal_checkups pc
 JOIN pregnancies p ON pc.pregnancy_id = p.pregnancy_id
 JOIN mothers m ON p.mother_id = m.mother_id

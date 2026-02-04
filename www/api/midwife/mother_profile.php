@@ -315,6 +315,38 @@ while ($p = $pregRes->fetch_assoc()) {
     $chkStmt->execute();
     $checkups = $chkStmt->get_result()->fetch_all(MYSQLI_ASSOC);
 
+    // Attach supplement totals per checkup (from given_medications)
+    foreach ($checkups as &$chk) {
+        $chkDateRaw = $chk['checkup_datetime'] ?? $chk['checkup_date'] ?? null;
+        $chkDate = $chkDateRaw ? date('Y-m-d', strtotime($chkDateRaw)) : null;
+        $ferrousGiven = 0;
+        $calciumGiven = 0;
+
+        if ($chkDate !== null) {
+            foreach ($givenMedications as $gm) {
+                $gmDateRaw = $gm['date_given'] ?? null;
+                $gmDate = $gmDateRaw ? date('Y-m-d', strtotime($gmDateRaw)) : null;
+                if ($gmDate !== $chkDate) {
+                    continue;
+                }
+
+                $name = strtolower($gm['given_medication_name'] ?? '');
+                $qty = (int) ($gm['quantity'] ?? 0);
+
+                if (strpos($name, 'ferrous') !== false) {
+                    $ferrousGiven += $qty;
+                }
+                if (strpos($name, 'calcium') !== false) {
+                    $calciumGiven += $qty;
+                }
+            }
+        }
+
+        $chk['ferrous_given'] = $ferrousGiven;
+        $chk['calcium_given'] = $calciumGiven;
+    }
+    unset($chk);
+
     // Ultrasounds
     $usStmt = $conn->prepare("SELECT * FROM ultrasounds WHERE pregnancy_id = ? ORDER BY ultrasound_date DESC");
     $usStmt->bind_param('i', $pid);

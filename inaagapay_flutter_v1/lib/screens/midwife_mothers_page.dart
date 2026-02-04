@@ -338,15 +338,13 @@ class _MidwifeMothersPageState extends State<MidwifeMothersPage> {
 
       final difference = now.difference(lmp);
       final weeks = (difference.inDays / 7).floor();
-      final days = difference.inDays % 7;
 
       if (weeks < 0) return '0 weeks';
       if (weeks >= 42) return 'Post-term (42+ weeks)';
       if (weeks >= 40) return 'Full term (40+ weeks)';
-      if (weeks >= 37)
-        return 'Late term ($weeks+${days > 0 ? '$days' : ''} weeks)';
+      if (weeks >= 37) return 'Late term ($weeks weeks)';
 
-      return '$weeks${days > 0 ? '+$days' : ''} weeks';
+      return '$weeks weeks';
     } catch (e) {
       return 'Invalid date format';
     }
@@ -699,7 +697,7 @@ class MotherCard extends StatelessWidget {
 
   String calculatePregnancyWeeks(String? lastMenstrualDate) {
     if (lastMenstrualDate == null || lastMenstrualDate.isEmpty) {
-      return 'No LMP recorded';
+      return 'No Pregnancy recorded';
     }
 
     try {
@@ -712,15 +710,13 @@ class MotherCard extends StatelessWidget {
 
       final difference = now.difference(lmp);
       final weeks = (difference.inDays / 7).floor();
-      final days = difference.inDays % 7;
 
       if (weeks < 0) return '0 weeks';
       if (weeks >= 42) return 'Post-term (42+ weeks)';
       if (weeks >= 40) return 'Full term (40+ weeks)';
-      if (weeks >= 37)
-        return 'Late term ($weeks+${days > 0 ? '$days' : ''} weeks)';
+      if (weeks >= 37) return 'Late term ($weeks weeks)';
 
-      return '$weeks${days > 0 ? '+$days' : ''} weeks';
+      return '$weeks weeks';
     } catch (e) {
       return 'Invalid date format';
     }

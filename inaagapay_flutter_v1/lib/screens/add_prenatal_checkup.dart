@@ -18,12 +18,14 @@ class AddPrenatalCheckupScreen extends StatefulWidget {
     required this.pregnancyId,
     this.lmp,
     this.motherWeight,
+    this.takenTdDoses,
   });
 
   final int motherId;
   final int pregnancyId;
   final DateTime? lmp;
   final double? motherWeight;
+  final List<String>? takenTdDoses;
 
   @override
   State<AddPrenatalCheckupScreen> createState() =>
@@ -66,7 +68,8 @@ class _AddPrenatalCheckupScreenState extends State<AddPrenatalCheckupScreen> {
     super.initState();
     _prefill();
     _loadBaselineRisk();
-    _loadTakenTdDoses();
+    _takenTdDoses = List<String>.from(widget.takenTdDoses ?? const []);
+    _tdLoading = false;
   }
 
   @override
@@ -117,58 +120,6 @@ class _AddPrenatalCheckupScreenState extends State<AddPrenatalCheckupScreen> {
     } catch (_) {
       if (mounted) setState(() => _riskLoading = false);
     }
-  }
-
-  Future<void> _loadTakenTdDoses() async {
-    try {
-      final token = await AuthStorage.getToken();
-      if (token == null) throw Exception('Not authenticated');
-
-      final res = await http.get(
-        Uri.parse(
-          'https://inaagapay.alwaysdata.net/api/midwife/get_td_history.php?pregnancy_id=${widget.pregnancyId}',
-        ),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Accept': 'application/json',
-        },
-      );
-
-      if (res.statusCode == 200) {
-        final decoded = jsonDecode(res.body);
-        if (decoded['success'] == true) {
-          final history = decoded['td_history'] as List<dynamic>?;
-          setState(() {
-            _takenTdDoses = _extractTakenTdDoses(history);
-            _tdLoading = false;
-          });
-        } else {
-          setState(() => _tdLoading = false);
-        }
-      } else {
-        setState(() => _tdLoading = false);
-      }
-    } catch (e) {
-      if (mounted) setState(() => _tdLoading = false);
-    }
-  }
-
-  List<String> _extractTakenTdDoses(List<dynamic>? history) {
-    if (history == null) return [];
-    final taken = <String>{};
-    for (final entry in history) {
-      final dose = (entry as Map<String, dynamic>?)?['td_vaccine_dose']
-          ?.toString();
-      if (dose != null && dose.trim().isNotEmpty) {
-        final normalized = _normalizeTdDose(dose);
-        final matched = _tdOptions.firstWhere(
-          (opt) => _normalizeTdDose(opt) == normalized,
-          orElse: () => dose.trim().toUpperCase(),
-        );
-        taken.add(matched);
-      }
-    }
-    return taken.toList()..sort();
   }
 
   List<String> get _availableTdDoses {
