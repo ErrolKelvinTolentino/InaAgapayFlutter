@@ -45,7 +45,7 @@ class _MotherChildVaccinePageState extends State<MotherChildVaccinePage> {
       case 'pending':
         return StatusIndicatorType.ongoing;
       default:
-        return StatusIndicatorType.onTime;
+        return StatusIndicatorType.ongoing;
     }
   }
 

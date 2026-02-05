@@ -66,17 +66,21 @@ class _ChildGrowthAIPageState extends State<ChildGrowthAIPage> {
       final decoded = jsonDecode(growthRes.body);
       allRecords = decoded['records'] ?? [];
 
-      // ================= FILTER OUT BIRTH / NEONATAL DATA =================
+      // ================= FIXED FILTERING =================
+      // Changed from w > 4 to w >= 4 to include records with weight = 4.0
       filteredRecords = allRecords.where((r) {
         final h = double.tryParse(r['child_height'].toString()) ?? 0;
         final w = double.tryParse(r['child_weight'].toString()) ?? 0;
-        return h > 55 && w > 4;
+        // FIX: Changed w > 4 to w >= 4 to include weight of 4.0 kg
+        return h > 55 && w >= 4;
       }).toList();
 
-      // ================= SORT OLDEST → NEWEST =================
+      // ================= SORT BY CHILD_DETAILS_ID (PRIMARY KEY ORDER) =================
+      // Sort by child_details_id ASC so lowest ID = first inserted = starting
+      // Highest ID = last inserted = latest
       filteredRecords.sort(
-        (a, b) => DateTime.parse(a['created_at'] ?? '2000-01-01')
-            .compareTo(DateTime.parse(b['created_at'] ?? '2000-01-01')),
+        (a, b) => (int.tryParse(a['child_details_id'].toString()) ?? 0)
+            .compareTo(int.tryParse(b['child_details_id'].toString()) ?? 0),
       );
 
       // ================= DEFAULT AI STATE =================
@@ -213,29 +217,33 @@ class _ChildGrowthAIPageState extends State<ChildGrowthAIPage> {
 
   String getLatestHeight() {
     if (filteredRecords.isEmpty) return '-- cm';
-    final last = filteredRecords.last;
-    final height = double.tryParse(last['child_height'].toString()) ?? 0;
+    // Since we sorted by child_details_id ASC, last item has highest ID = latest
+    final latest = filteredRecords.last;
+    final height = double.tryParse(latest['child_height'].toString()) ?? 0;
     return '${height.toStringAsFixed(1)} cm';
   }
 
   String getLatestWeight() {
     if (filteredRecords.isEmpty) return '-- kg';
-    final last = filteredRecords.last;
-    final weight = double.tryParse(last['child_weight'].toString()) ?? 0;
+    // Since we sorted by child_details_id ASC, last item has highest ID = latest
+    final latest = filteredRecords.last;
+    final weight = double.tryParse(latest['child_weight'].toString()) ?? 0;
     return '${weight.toStringAsFixed(1)} kg';
   }
 
   String getStartingHeight() {
     if (filteredRecords.isEmpty) return '-- cm';
-    final first = filteredRecords.first;
-    final height = double.tryParse(first['child_height'].toString()) ?? 0;
+    // Since we sorted by child_details_id ASC, first item has lowest ID = starting
+    final starting = filteredRecords.first;
+    final height = double.tryParse(starting['child_height'].toString()) ?? 0;
     return '${height.toStringAsFixed(1)} cm';
   }
 
   String getStartingWeight() {
     if (filteredRecords.isEmpty) return '-- kg';
-    final first = filteredRecords.first;
-    final weight = double.tryParse(first['child_weight'].toString()) ?? 0;
+    // Since we sorted by child_details_id ASC, first item has lowest ID = starting
+    final starting = filteredRecords.first;
+    final weight = double.tryParse(starting['child_weight'].toString()) ?? 0;
     return '${weight.toStringAsFixed(1)} kg';
   }
 

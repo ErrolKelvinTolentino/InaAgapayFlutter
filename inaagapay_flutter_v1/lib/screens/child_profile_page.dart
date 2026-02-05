@@ -32,6 +32,7 @@ class ChildProfilePage extends StatefulWidget {
 class _ChildProfilePageState extends State<ChildProfilePage> {
   bool loading = true;
   Map<String, dynamic>? response;
+  Map<String, dynamic>? latestGrowthRecord;
 
   String v(Map<String, dynamic> map, String key) =>
       (map[key] ?? '').toString().trim();
@@ -45,6 +46,7 @@ class _ChildProfilePageState extends State<ChildProfilePage> {
         throw Exception('Not authenticated');
       }
 
+      // Fetch child profile
       final res = await http.get(
         Uri.parse(
           'https://inaagapay.alwaysdata.net/api/midwife/child_profile.php?child_id=${widget.childId}',
@@ -56,6 +58,27 @@ class _ChildProfilePageState extends State<ChildProfilePage> {
       );
 
       final decoded = jsonDecode(res.body);
+      
+      // Also fetch growth records to get the actual latest one
+      final growthRes = await http.get(
+        Uri.parse(
+          'https://inaagapay.alwaysdata.net/api/midwife/child_growth_list.php?child_id=${widget.childId}',
+        ),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      
+      final growthDecoded = jsonDecode(growthRes.body);
+      List allGrowthRecords = growthDecoded['records'] ?? [];
+      
+      // Find latest record by child_details_id (highest ID = latest)
+      if (allGrowthRecords.isNotEmpty) {
+        allGrowthRecords.sort((a, b) {
+          final idA = int.tryParse(a['child_details_id'].toString()) ?? 0;
+          final idB = int.tryParse(b['child_details_id'].toString()) ?? 0;
+          return idB.compareTo(idA); // Descending - highest first
+        });
+        latestGrowthRecord = allGrowthRecords.first;
+      }
 
       setState(() {
         response = decoded;
@@ -194,6 +217,25 @@ class _ChildProfilePageState extends State<ChildProfilePage> {
     final String sex = v(child, 'sex').toUpperCase();
     final String birthPlace = '${v(birth, 'birthplace_city_municipality')}, ${v(birth, 'birthplace_province')}';
 
+    // Use latestGrowthRecord if available, otherwise fall back to API growth data
+    final String displayHeight = latestGrowthRecord != null 
+        ? '${(double.tryParse(latestGrowthRecord!['child_height'].toString()) ?? 0).toStringAsFixed(1)} cm'
+        : v(growth, 'child_height').isNotEmpty
+            ? '${v(growth, 'child_height')} cm'
+            : 'Not recorded';
+            
+    final String displayWeight = latestGrowthRecord != null
+        ? '${(double.tryParse(latestGrowthRecord!['child_weight'].toString()) ?? 0).toStringAsFixed(1)} kg'
+        : v(growth, 'child_weight').isNotEmpty
+            ? '${v(growth, 'child_weight')} kg'
+            : 'Not recorded';
+            
+    final String displayBMI = latestGrowthRecord != null
+        ? '${(double.tryParse(latestGrowthRecord!['bmi'].toString()) ?? 0).toStringAsFixed(1)} kg/m²'
+        : v(growth, 'bmi').isNotEmpty
+            ? '${v(growth, 'bmi')} kg/m²'
+            : 'Not recorded';
+
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
 
@@ -265,10 +307,8 @@ class _ChildProfilePageState extends State<ChildProfilePage> {
                   RecordItem(
                     leadingIcon: Icons.height,
                     label: 'Height',
-                    value: v(growth, 'child_height').isNotEmpty
-                        ? '${v(growth, 'child_height')} cm'
-                        : 'Not recorded',
-                    trailingWidget: v(growth, 'child_height').isNotEmpty
+                    value: displayHeight,
+                    trailingWidget: displayHeight != 'Not recorded'
                         ? const Icon(
                             Icons.trending_up,
                             size: 14,
@@ -289,10 +329,8 @@ class _ChildProfilePageState extends State<ChildProfilePage> {
                   RecordItem(
                     leadingIcon: Icons.monitor_weight,
                     label: 'Weight',
-                    value: v(growth, 'child_weight').isNotEmpty
-                        ? '${v(growth, 'child_weight')} kg'
-                        : 'Not recorded',
-                    trailingWidget: v(growth, 'child_weight').isNotEmpty
+                    value: displayWeight,
+                    trailingWidget: displayWeight != 'Not recorded'
                         ? const Icon(
                             Icons.trending_up,
                             size: 14,
@@ -313,14 +351,7 @@ class _ChildProfilePageState extends State<ChildProfilePage> {
                   RecordItem(
                     leadingIcon: Icons.calculate,
                     label: 'BMI',
-                    value: v(growth, 'bmi').isNotEmpty
-                        ? '${v(growth, 'bmi')} kg/m²'
-                        : 'Not recorded',
-                    trailingWidget: v(growth, 'bmi').isNotEmpty
-                        ? StatusIndicator(
-                            status: _getBMIIndicator(double.tryParse(v(growth, 'bmi'))),
-                          )
-                        : null,
+                    value: displayBMI,
                   ),
                 ],
               ),
